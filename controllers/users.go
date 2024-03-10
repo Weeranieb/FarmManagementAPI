@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/henvo/golang-gin-gorm-starter/models"
+	"boonmafarm/api/models"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetUsers gets all existing users.

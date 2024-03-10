@@ -1,4 +1,4 @@
-module github.com/henvo/golang-gin-gorm-starter
+module boonmafarm/api
 
 go 1.15
 

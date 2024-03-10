@@ -1,8 +1,9 @@
 package routes
 
 import (
+	"boonmafarm/api/controllers"
+
 	"github.com/gin-gonic/gin"
-	"github.com/henvo/golang-gin-gorm-starter/controllers"
 )
 
 // SetupRouter sets up the router.

@@ -1,8 +1,9 @@
 package models
 
 import (
+	"boonmafarm/api/helper"
 	"fmt"
-	"github.com/henvo/golang-gin-gorm-starter/helper"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
