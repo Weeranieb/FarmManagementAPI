@@ -1,7 +1,7 @@
 package main
 
 import (
-	"boonmafarm/api/models"
+	"boonmafarm/api/pkg/models"
 
 	"boonmafarm/api/routes"
 )

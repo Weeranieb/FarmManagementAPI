@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"boonmafarm/api/models"
+	"boonmafarm/api/pkg/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
