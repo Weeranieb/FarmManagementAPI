@@ -1,19 +1,17 @@
 postgres:
-	docker run --name myfarm -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:12-alpine
+	docker run --name FarmManagement -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:12-alpine
 createdb:
-	docker exec -it myfarm createdb --username=root --owner=root boonma_farm
+	docker exec -it FarmManagement createdb --username=root --owner=root FarmManagementDB
 dropdb:
-	docker exec -it myfarm dropdb boonma_farm
+	docker exec -it FarmManagement dropdb FarmManagementDB
 migrateup:
-	migrate -path pkg/db/migration -database "postgresql://root:secret@localhost:5432/boonma_farm?sslmode=disable" -verbose up
+	migrate -path migrations -database "postgresql://root:secret@localhost:5432/FarmManagementDB?sslmode=disable" -verbose up
 migrateup1:
-	migrate -path pkg/db/migration -database "postgresql://root:secret@localhost:5432/boonma_farm?sslmode=disable" -verbose up 1
+	migrate -path migrations -database "postgresql://root:secret@localhost:5432/FarmManagementDB?sslmode=disable" -verbose up 1
 migratedown:
-	migrate -path pkg/db/migration -database "postgresql://root:secret@localhost:5432/boonma_farm?sslmode=disable" -verbose down
+	migrate -path migrations -database "postgresql://root:secret@localhost:5432/FarmManagementDB?sslmode=disable" -verbose down
 migratedown1:
-	migrate -path pkg/db/migration -database "postgresql://root:secret@localhost:5432/boonma_farm?sslmode=disable" -verbose down 1	
-sqlc:
-	sqlc generate
+	migrate -path migrations -database "postgresql://root:secret@localhost:5432/FarmManagementDB?sslmode=disable" -verbose down 1	
 test:
 	go test -v -cover ./...	
 server:
