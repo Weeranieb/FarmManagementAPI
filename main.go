@@ -1,19 +1,59 @@
 package main
 
 import (
-	"boonmafarm/api/pkg/models"
+	"boonmafarm/api/controllers"
+	"boonmafarm/api/middlewares"
+	"boonmafarm/api/pkg/repositories"
+	"boonmafarm/api/pkg/services"
+	"fmt"
 
-	"boonmafarm/api/routes"
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // Entrypoint for app.
 func main() {
-	// Load the routes
-	r := routes.SetupRouter()
+	viper.SetConfigName("config") // get config filename
+	viper.AddConfigPath(".")      // set path file config
+	viper.AutomaticEnv()          // set ENV variable
 
-	// Initialize database
-	models.SetupDatabase()
+	// read config
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("fatal error config file: %s", err))
+	}
 
-	// Start the HTTP API
-	r.Run()
+	// connection db to gorm
+	cfg := viper.GetString("postgres.connection")
+	dsn := cfg
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
+	if err != nil {
+		return
+	}
+
+	// gin
+	router := gin.Default()
+
+	// cors
+	router.Use(middlewares.Cors())
+
+	// repositories
+	userRepo := repositories.NewUserRepository(db)
+
+	// services
+	userService := services.NewUserService(userRepo)
+
+	// controllers
+	userController := controllers.NewUserController(userService)
+
+	// apply route
+	userController.ApplyRoute(router)
+
+	// run server
+	router.Run(":8080")
 }

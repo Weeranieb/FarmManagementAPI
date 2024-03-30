@@ -12,3 +12,12 @@ type User struct {
 	IsAdmin       bool    `json:"isAdmin" gorm:"column:IsAdmin"`
 	Base
 }
+
+type AddUsers struct {
+	Username      string  `json:"username" gorm:"column:Username"`
+	Password      string  `json:"password" gorm:"column:Password"`
+	FirstName     string  `json:"firstName" gorm:"column:FirstName"`
+	LastName      *string `json:"lastName" gorm:"column:LastName"`
+	ContactNumber *string `json:"contactNumber" gorm:"column:ContactNumber"`
+	IsAdmin       bool    `json:"isAdmin" gorm:"column:IsAdmin"`
+}

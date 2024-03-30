@@ -1,0 +1,2 @@
+postgres:
+  connection: postgresql://root:secret@localhost:5432/FarmManagementDB?sslmode=disable
