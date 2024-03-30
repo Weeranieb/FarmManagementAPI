@@ -3,12 +3,14 @@ package services
 import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories"
+	"errors"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type IUserService interface {
-	Create(request models.AddUsers, userIdentity string) (*models.User, error)
+	Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error)
 	WithTrx(trxHandle *gorm.DB) IUserService
 }
 
@@ -27,7 +29,40 @@ func (sv userServiceImp) WithTrx(trxHandle *gorm.DB) IUserService {
 	return sv
 }
 
-func (sv userServiceImp) Create(request models.AddUsers, userIdentity string) (*models.User, error) {
-	// TODO implement business logic
-	return sv.UserRepo.Create(&models.User{})
+func (sv userServiceImp) Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error) {
+	// validate request
+	if err := request.Validation(); err != nil {
+		return nil, err
+	}
+
+	// check user if exist
+	checkUser, err := sv.UserRepo.FirstByQuery("Username = ?", request.Username)
+	if err != nil {
+		return nil, err
+	}
+
+	if checkUser != nil {
+		return nil, errors.New("user already exist")
+	}
+
+	// hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	newUser := &models.User{}
+	request.Transfer(newUser)
+	newUser.Password = string(hashedPassword)
+	newUser.ClientId = clientId
+	newUser.UpdatedBy = userIdentity
+	newUser.CreatedBy = userIdentity
+
+	// create user
+	newUser, err = sv.UserRepo.Create(newUser)
+	if err != nil {
+		return nil, err
+	}
+
+	return newUser, nil
 }

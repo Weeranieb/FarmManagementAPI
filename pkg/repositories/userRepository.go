@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"boonmafarm/api/pkg/models"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -9,6 +10,7 @@ import (
 
 type IUserRepository interface {
 	Create(user *models.User) (*models.User, error)
+	FirstByQuery(query interface{}, args ...interface{}) (*models.User, error)
 	WithTrx(trxHandle *gorm.DB) IUserRepository
 }
 
@@ -27,6 +29,18 @@ func (rp userRepositoryImp) Create(request *models.User) (*models.User, error) {
 		return nil, err
 	}
 	return request, nil
+}
+
+func (rp userRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.User, error) {
+	var result *models.User
+	if err := rp.dbContext.Table("Users").Where(query, args...).First(&result).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		fmt.Println("Record not found User FirstByQuery", query)
+		return nil, nil
+	}
+	return result, nil
 }
 
 func (rp userRepositoryImp) WithTrx(trxHandle *gorm.DB) IUserRepository {

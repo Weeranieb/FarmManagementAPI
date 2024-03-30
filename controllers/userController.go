@@ -36,7 +36,7 @@ func (c userControllerImp) ApplyRoute(router *gin.Engine) {
 
 func (c userControllerImp) AddUser(ctx *gin.Context) {
 	var response httputil.ResponseModel
-	var addUser models.AddUsers
+	var addUser models.AddUser
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -56,7 +56,7 @@ func (c userControllerImp) AddUser(ctx *gin.Context) {
 		return
 	}
 
-	newUser, err := c.UserService.Create(addUser, "")
+	newUser, err := c.UserService.Create(addUser, "", 1)
 	if err != nil {
 		httputil.NewError(ctx, "Err_User_AddUser_03", err)
 		return
