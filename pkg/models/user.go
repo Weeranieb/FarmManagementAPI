@@ -1,58 +1,14 @@
 package models
 
-import (
-	"time"
-)
-
 // User is the main user model.
 type User struct {
-	ID        uint      `json:"id" gorm:"->;primaryKey"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email" gorm:"index:,unique"`
-}
-
-// GetUsers queries the database for all users.
-func GetUsers(users *[]User) (err error) {
-	if err = DB.Find(users).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// CreateUser creates a new user.
-func CreateUser(user *User) (err error) {
-	if err = DB.Create(user).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// UpdateUser creates a new user.
-func UpdateUser(user *User) (err error) {
-	if err = DB.Save(user).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// GetUser queries the database for all users.
-func GetUser(user *User, id string) (err error) {
-	if err = DB.First(user, id).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// DeleteUser queries the database for all users.
-func DeleteUser(user *User, id string) (err error) {
-	if err = DB.Delete(user, id).Error; err != nil {
-		return err
-	}
-
-	return nil
+	Id            int    `json:"id" gorm:"column:Id;primaryKey;autoIncrement"`
+	ClientId      int    `json:"clientId" gorm:"column:ClientId"`
+	Username      string `json:"username" gorm:"column:Username"`
+	Password      string `json:"password" gorm:"column:Password"`
+	FirstName     string `json:"firstName" gorm:"column:FirstName"`
+	LastName      string `json:"lastName" gorm:"column:LastName"`
+	ContactNumber string `json:"contactNumber" gorm:"column:ContactNumber"`
+	IsAdmin       bool   `json:"isAdmin" gorm:"column:IsAdmin"`
+	Base
 }

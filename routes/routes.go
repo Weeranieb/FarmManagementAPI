@@ -19,13 +19,13 @@ func SetupRouter() *gin.Engine {
 	// 	users.DELETE("/:id", controllers.DeleteUser)
 	// }
 
-	api := r.Group(apiVersion)
+	// api := r.Group(apiVersion)
 	// api.Use(middlewares...) // Apply the additional middlewares passed to the function
 
 	{
-		feed_document.RegisterHandlers(api)
-		master_data.RegisterHandlers(api)
-		activity.RegisterHandlers(api)
+		// feed_document.RegisterHandlers(api)
+		// master_data.RegisterHandlers(api)
+		// activity.RegisterHandlers(api)
 	}
 
 	return r
