@@ -11,7 +11,7 @@ import (
 )
 
 type IAuthService interface {
-	Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error)
+	Create(request models.AddUser) (*models.User, error)
 	Login(request models.Login) (string, error)
 }
 
@@ -25,7 +25,7 @@ func NewAuthService(userRepo repositories.IUserRepository) IAuthService {
 	}
 }
 
-func (sv authServiceImp) Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error) {
+func (sv authServiceImp) Create(request models.AddUser) (*models.User, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
@@ -50,9 +50,6 @@ func (sv authServiceImp) Create(request models.AddUser, userIdentity string, cli
 	newUser := &models.User{}
 	request.Transfer(newUser)
 	newUser.Password = string(hashedPassword)
-	newUser.ClientId = clientId
-	newUser.UpdatedBy = userIdentity
-	newUser.CreatedBy = userIdentity
 
 	// create user
 	newUser, err = sv.UserRepo.Create(newUser)
