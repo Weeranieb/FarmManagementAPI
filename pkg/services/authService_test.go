@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestCreate(t *testing.T) {
+func TestRegister(t *testing.T) {
 	t.Run("Create user", func(t *testing.T) {
 		// Create a mock user repository
 		mockUserRepo := new(mocks.IUserRepository)
 
 		// Create a new instance of the user service with the mock repository
-		userService := services.NewUserService(mockUserRepo)
+		authService := services.NewAuthService(mockUserRepo)
 
 		// Define test data
 		request := models.AddUser{
@@ -49,7 +49,7 @@ func TestCreate(t *testing.T) {
 		mockUserRepo.On("FirstByQuery", "Username = ?", "testUser").Return(nil, nil)
 
 		// Call the Create method
-		user, err := userService.Create(request, userIdentity, clientId)
+		user, err := authService.Create(request, userIdentity, clientId)
 
 		// Assert the result
 		assert.NoError(t, err)
@@ -61,7 +61,7 @@ func TestCreate(t *testing.T) {
 		mockUserRepo := new(mocks.IUserRepository)
 
 		// Create a new instance of the user service with the mock repository
-		userService := services.NewUserService(mockUserRepo)
+		authService := services.NewAuthService(mockUserRepo)
 
 		// Define test data
 		request := models.AddUser{
@@ -93,7 +93,7 @@ func TestCreate(t *testing.T) {
 		mockUserRepo.On("FirstByQuery", "Username = ?", "testUser").Return(&models.User{}, nil)
 
 		// Call the Create method
-		user, err := userService.Create(request, userIdentity, clientId)
+		user, err := authService.Create(request, userIdentity, clientId)
 
 		// Assert the result
 		assert.Error(t, err)
@@ -105,7 +105,7 @@ func TestCreate(t *testing.T) {
 		mockUserRepo := new(mocks.IUserRepository)
 
 		// Create a new instance of the user service with the mock repository
-		userService := services.NewUserService(mockUserRepo)
+		authService := services.NewAuthService(mockUserRepo)
 
 		// Define test data
 		request := models.AddUser{
@@ -136,7 +136,7 @@ func TestCreate(t *testing.T) {
 		mockUserRepo.On("FirstByQuery", "Username = ?", "testUser").Return(&models.User{}, nil)
 
 		// Call the Create method
-		user, err := userService.Create(request, userIdentity, clientId)
+		user, err := authService.Create(request, userIdentity, clientId)
 
 		// Assert the result
 		assert.Error(t, err)
@@ -148,7 +148,7 @@ func TestCreate(t *testing.T) {
 		mockUserRepo := new(mocks.IUserRepository)
 
 		// Create a new instance of the user service with the mock repository
-		userService := services.NewUserService(mockUserRepo)
+		authService := services.NewAuthService(mockUserRepo)
 
 		// Define test data
 		request := models.AddUser{
@@ -165,7 +165,7 @@ func TestCreate(t *testing.T) {
 		mockUserRepo.On("FirstByQuery", "Username = ?", "testUser").Return(nil, nil)
 
 		// Call the Create method
-		user, err := userService.Create(request, userIdentity, clientId)
+		user, err := authService.Create(request, userIdentity, clientId)
 
 		// Assert the result
 		assert.Error(t, err)
@@ -177,7 +177,7 @@ func TestCreate(t *testing.T) {
 		mockUserRepo := new(mocks.IUserRepository)
 
 		// Create a new instance of the user service with the mock repository
-		userService := services.NewUserService(mockUserRepo)
+		authService := services.NewAuthService(mockUserRepo)
 
 		// Define test data
 		request := models.AddUser{
@@ -194,10 +194,76 @@ func TestCreate(t *testing.T) {
 		mockUserRepo.On("FirstByQuery", "Username = ?", "testUser").Return(nil, errors.New("error on firstByQuery"))
 
 		// Call the Create method
-		user, err := userService.Create(request, userIdentity, clientId)
+		user, err := authService.Create(request, userIdentity, clientId)
 
 		// Assert the result
 		assert.Error(t, err)
 		assert.Nil(t, user)
+	})
+}
+
+func TestLogin(t *testing.T) {
+	// Your existing code here
+
+	t.Run("TestLogin", func(t *testing.T) {
+
+		mockRepo := new(mocks.IUserRepository)
+		authService := services.NewAuthService(mockRepo)
+
+		// Mock user
+		mockUser := &models.User{
+			Username: "testUser",
+			Password: "$2a$10$uHzoME5/vYsXxVlhgIfbQOaWxqPAzaE1xVi0GGiAYU5nfiki5ZVAe", // bcrypt hash of "password"
+			// Add other fields as needed
+		}
+
+		// Expectation for FirstByQuery
+		mockRepo.On("FirstByQuery", "Username = ?", "testUser").Return(mockUser, nil)
+
+		// Perform the login
+		token, err := authService.Login(models.Login{
+			Username: "testUser",
+			Password: "testPassword", // Password to be compared with the hash
+		})
+
+		if err != nil {
+			t.Errorf("Login failed: %v", err)
+		}
+
+		// Check if token is not empty
+		if token == "" {
+			t.Error("Token is empty")
+		}
+	})
+
+	t.Run("TestLogin", func(t *testing.T) {
+
+		mockRepo := new(mocks.IUserRepository)
+		authService := services.NewAuthService(mockRepo)
+
+		// Mock user
+		mockUser := &models.User{
+			Username: "testUser",
+			Password: "$2a$10$uHzoME5/vYsXxVlhgIfbQOaWxqPAzaE1xVi0GGiAYU5nfiki5ZVAe", // bcrypt hash of "password"
+			// Add other fields as needed
+		}
+
+		// Expectation for FirstByQuery
+		mockRepo.On("FirstByQuery", "Username = ?", "testUser").Return(mockUser, nil)
+
+		// Perform the login
+		token, err := authService.Login(models.Login{
+			Username: "testUser",
+			Password: "testPassword", // Password to be compared with the hash
+		})
+
+		if err != nil {
+			t.Errorf("Login failed: %v", err)
+		}
+
+		// Check if token is not empty
+		if token == "" {
+			t.Error("Token is empty")
+		}
 	})
 }

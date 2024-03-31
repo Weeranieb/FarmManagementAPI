@@ -42,6 +42,9 @@ func main() {
 	// cors
 	router.Use(middlewares.Cors())
 
+	// jwt authentication
+	router.Use(middlewares.JWTAuthMiddleware())
+
 	// repositories
 	userRepo := repositories.NewUserRepository(db)
 

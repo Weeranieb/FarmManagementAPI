@@ -6,12 +6,10 @@ import (
 	"errors"
 
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type IUserService interface {
 	Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error)
-	WithTrx(trxHandle *gorm.DB) IUserService
 }
 
 type userServiceImp struct {
@@ -22,11 +20,6 @@ func NewUserService(userRepo repositories.IUserRepository) IUserService {
 	return &userServiceImp{
 		UserRepo: userRepo,
 	}
-}
-
-func (sv userServiceImp) WithTrx(trxHandle *gorm.DB) IUserService {
-	sv.UserRepo = sv.UserRepo.WithTrx(trxHandle)
-	return sv
 }
 
 func (sv userServiceImp) Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error) {

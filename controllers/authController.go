@@ -10,38 +10,38 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type IUserController interface {
+type IAuthController interface {
 	ApplyRoute(router *gin.Engine)
 }
 
-type userControllerImp struct {
-	UserService services.IUserService
+type authControllerImp struct {
+	AuthService services.IUserService
 }
 
-func NewUserController(userService services.IUserService) IUserController {
-	return &userControllerImp{
-		UserService: userService,
+func NewAuthController(authService services.IAuthService) IAuthController {
+	return &authControllerImp{
+		AuthService: authService,
 	}
 }
 
-func (c userControllerImp) ApplyRoute(router *gin.Engine) {
+func (c authControllerImp) ApplyRoute(router *gin.Engine) {
 	v1 := router.Group("/api/v1")
 	{
-		eg := v1.Group("/users")
+		eg := v1.Group("/auth")
 		{
-			eg.POST("", c.AddUser)
+			eg.POST("register", c.Register)
 		}
 	}
 }
 
-func (c userControllerImp) AddUser(ctx *gin.Context) {
+func (c authControllerImp) Register(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addUser models.AddUser
 
 	defer func() {
 		if r := recover(); r != nil {
 			errRes := httputil.ErrorResponseModel{}
-			errRes.Error(ctx, "Err_User_AddUser_01", fmt.Sprint(r))
+			errRes.Error(ctx, "Err_Auth_Register_01", fmt.Sprint(r))
 			response.Error = errRes
 			ctx.JSON(http.StatusOK, response)
 			return
@@ -50,15 +50,15 @@ func (c userControllerImp) AddUser(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(&addUser); err != nil {
 		errRes := httputil.ErrorResponseModel{}
-		errRes.Error(ctx, "Err_User_AddUser_02", err.Error())
+		errRes.Error(ctx, "Err_Auth_Register_02", err.Error())
 		response.Error = errRes
 		ctx.JSON(http.StatusOK, response)
 		return
 	}
 
-	newUser, err := c.UserService.Create(addUser, "", 1)
+	newUser, err := c.AuthService.Create(addUser, "", 1)
 	if err != nil {
-		httputil.NewError(ctx, "Err_User_AddUser_03", err)
+		httputil.NewError(ctx, "Err_Auth_Register_03", err)
 		return
 	}
 

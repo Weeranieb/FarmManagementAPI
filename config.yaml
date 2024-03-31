@@ -1,2 +1,5 @@
 postgres:
   connection: postgresql://root:secret@localhost:5432/FarmManagementDB?sslmode=disable
+authentication:
+  jwt_secret: FarmSecretKey
+  jwt_expiry: 48h

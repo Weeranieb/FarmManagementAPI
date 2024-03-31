@@ -6,7 +6,7 @@ import "errors"
 type User struct {
 	Id            int     `json:"id" gorm:"column:Id;primaryKey;autoIncrement"`
 	ClientId      int     `json:"clientId" gorm:"column:ClientId"`
-	Username      string  `json:"username" gorm:"column:Username"`
+	Username      string  `json:"username" gorm:"column:Username;unique"`
 	Password      string  `json:"password" gorm:"column:Password"`
 	FirstName     string  `json:"firstName" gorm:"column:FirstName"`
 	LastName      *string `json:"lastName" gorm:"column:LastName"`
@@ -16,7 +16,7 @@ type User struct {
 }
 
 type AddUser struct {
-	Username      string  `json:"username" gorm:"column:Username"`
+	Username      string  `json:"username" gorm:"column:Username;unique"`
 	Password      string  `json:"password" gorm:"column:Password"`
 	FirstName     string  `json:"firstName" gorm:"column:FirstName"`
 	LastName      *string `json:"lastName" gorm:"column:LastName"`
@@ -55,3 +55,8 @@ const (
 	ErrPasswordEmpty  = "password is empty"
 	ErrFirstNameEmpty = "first name is empty"
 )
+
+type Login struct {
+	Username string `json:"username" gorm:"column:Username"`
+	Password string `json:"password" gorm:"column:Password"`
+}
