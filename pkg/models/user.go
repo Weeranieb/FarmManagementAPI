@@ -6,7 +6,7 @@ import "errors"
 type User struct {
 	Id            int     `json:"id" gorm:"column:Id;primaryKey;autoIncrement"`
 	ClientId      int     `json:"clientId" gorm:"column:ClientId"`
-	Username      string  `json:"username" gorm:"column:Username;unique"`
+	Username      string  `json:"username" gorm:"column:Username"`
 	Password      string  `json:"password" gorm:"column:Password"`
 	FirstName     string  `json:"firstName" gorm:"column:FirstName"`
 	LastName      *string `json:"lastName" gorm:"column:LastName"`
@@ -17,7 +17,7 @@ type User struct {
 
 type AddUser struct {
 	ClientId      int     `json:"clientId" gorm:"column:ClientId"`
-	Username      string  `json:"username" gorm:"column:Username;unique"`
+	Username      string  `json:"username" gorm:"column:Username"`
 	Password      string  `json:"password" gorm:"column:Password"`
 	FirstName     string  `json:"firstName" gorm:"column:FirstName"`
 	LastName      *string `json:"lastName" gorm:"column:LastName"`

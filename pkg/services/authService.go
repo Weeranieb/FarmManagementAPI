@@ -32,7 +32,7 @@ func (sv authServiceImp) Create(request models.AddUser) (*models.User, error) {
 	}
 
 	// check user if exist
-	checkUser, err := sv.UserRepo.FirstByQuery("Username = ?", request.Username)
+	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ?", request.Username)
 	if err != nil {
 		return nil, err
 	}

@@ -1,10 +1,10 @@
 CREATE TABLE "Clients" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "Name" varchar NOT NULL,
   "OwnerName" varchar NOT NULL,
   "ContactNumber" varchar NOT NULL,
-  "IsActive" bit NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "IsActive" boolean NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -12,15 +12,15 @@ CREATE TABLE "Clients" (
 );
 
 CREATE TABLE "Users" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "ClientId" bigint NOT NULL,
   "Username" varchar NOT NULL,
   "Password" varchar NOT NULL,
   "FirstName" varchar NOT NULL,
   "LastName" varchar,
   "ContactNumber" varchar NOT NULL,
-  "IsAdmin" bit NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "IsAdmin" boolean NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -28,11 +28,11 @@ CREATE TABLE "Users" (
 );
 
 CREATE TABLE "Farms" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "ClientId" bigint NOT NULL,
   "Code" varchar NOT NULL,
   "Name" varchar NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -40,11 +40,11 @@ CREATE TABLE "Farms" (
 );
 
 CREATE TABLE "FarmGroups" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "ClientId" bigint NOT NULL,
   "Code" varchar NOT NULL,
   "Name" varchar NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -52,10 +52,10 @@ CREATE TABLE "FarmGroups" (
 );
 
 CREATE TABLE "FarmOnFarmGroup" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "FarmId" bigint NOT NULL,
   "FarmGroupId" bigint NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -63,11 +63,11 @@ CREATE TABLE "FarmOnFarmGroup" (
 );
 
 CREATE TABLE "Ponds" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "FarmId" bigint NOT NULL,
   "Code" varchar NOT NULL,
   "Name" varchar NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -75,12 +75,12 @@ CREATE TABLE "Ponds" (
 );
 
 CREATE TABLE "ActivePonds" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "PondId" bigint NOT NULL,
   "StartDate" date NOT NULL,
   "EndDate" date,
-  "IsActive" bit NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "IsActive" boolean NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -88,7 +88,7 @@ CREATE TABLE "ActivePonds" (
 );
 
 CREATE TABLE "Activities" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "ActivePondId" bigint NOT NULL,
   "ToActivePondId" bigint,
   "Mode" varchar NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE "Activities" (
   "FishWeight" float,
   "PricePerUnit" float,
   "ActivityDate" date NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -106,11 +106,11 @@ CREATE TABLE "Activities" (
 );
 
 CREATE TABLE "AdditionalCosts" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "ActivityId" bigint NOT NULL,
   "Title" varchar NOT NULL,
   "Cost" float NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -118,11 +118,11 @@ CREATE TABLE "AdditionalCosts" (
 );
 
 CREATE TABLE "Merchants" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "Name" varchar NOT NULL,
   "ContactNumber" varchar NOT NULL,
   "Location" varchar NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -130,14 +130,14 @@ CREATE TABLE "Merchants" (
 );
 
 CREATE TABLE "SellDetails" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "SellId" bigint NOT NULL,
   "Size" varchar NOT NULL,
   "FishType" varchar,
   "Amount" float NOT NULL,
   "FishUnit" varchar NOT NULL,
   "PricePerUnit" float NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -145,13 +145,13 @@ CREATE TABLE "SellDetails" (
 );
 
 CREATE TABLE "Bills" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "Type" varchar NOT NULL,
   "Other" varchar,
   "FarmGroupId" integer NOT NULL,
   "PaidAmount" float NOT NULL,
   "PaymentDate" date NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -159,7 +159,7 @@ CREATE TABLE "Bills" (
 );
 
 CREATE TABLE "Workers" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "ClientId" bigint NOT NULL,
   "FarmGroupId" bigint NOT NULL,
   "FirstName" varchar NOT NULL,
@@ -167,8 +167,8 @@ CREATE TABLE "Workers" (
   "ContactNumber" varchar,
   "Salary" integer NOT NULL,
   "HireDate" date,
-  "IsActive" bit NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "IsActive" boolean NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -176,12 +176,12 @@ CREATE TABLE "Workers" (
 );
 
 CREATE TABLE "FeedCollections" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "ClientId" bigint NOT NULL,
   "Code" varchar NOT NULL,
   "Name" varchar NOT NULL,
   "Unit" varchar NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -189,12 +189,12 @@ CREATE TABLE "FeedCollections" (
 );
 
 CREATE TABLE "DailyFeeds" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "ActivePondId" bigint NOT NULL,
   "FeedCollectionId" bigint NOT NULL,
   "Amount" float NOT NULL,
   "FeedDate" date NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),
@@ -202,11 +202,11 @@ CREATE TABLE "DailyFeeds" (
 );
 
 CREATE TABLE "FeedPriceHistories" (
-  "Id" bigint PRIMARY KEY,
+  "Id" serial PRIMARY KEY,
   "FeedCollectionId" bigint NOT NULL,
   "Price" float NOT NULL,
   "PriceUpdatedDate" date NOT NULL,
-  "DelFlag" bit NOT NULL,
+  "DelFlag" boolean NOT NULL,
   "CreatedDate" timestamp NOT NULL DEFAULT (now()),
   "CreatedBy" varchar NOT NULL,
   "UpdatedDate" timestamp NOT NULL DEFAULT (now()),

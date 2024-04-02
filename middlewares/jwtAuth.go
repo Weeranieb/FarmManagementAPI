@@ -16,6 +16,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			// "/swagger/",
 			// "/application/update/md5",
 			// "/template",
+			"auth/register",
 		}
 
 		for _, path := range paths {

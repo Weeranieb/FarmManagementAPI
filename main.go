@@ -50,12 +50,15 @@ func main() {
 
 	// services
 	userService := services.NewUserService(userRepo)
+	authService := services.NewAuthService(userRepo)
 
 	// controllers
 	userController := controllers.NewUserController(userService)
+	authController := controllers.NewAuthController(authService)
 
 	// apply route
 	userController.ApplyRoute(router)
+	authController.ApplyRoute(router)
 
 	// run server
 	router.Run(":8080")
