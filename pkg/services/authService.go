@@ -52,17 +52,17 @@ func (sv authServiceImp) Create(request models.AddUser) (*models.User, error) {
 	newUser.Password = string(hashedPassword)
 
 	// create user
-	newUser, err = sv.UserRepo.Create(newUser)
+	res, err := sv.UserRepo.Create(newUser)
 	if err != nil {
 		return nil, err
 	}
 
-	return newUser, nil
+	return res, nil
 }
 
 func (sv authServiceImp) Login(request models.Login) (string, error) {
 	// check user if exist
-	checkUser, err := sv.UserRepo.FirstByQuery("Username = ?", request.Username)
+	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ?", request.Username)
 	if err != nil {
 		return "", err
 	}
@@ -83,7 +83,7 @@ func (sv authServiceImp) Login(request models.Login) (string, error) {
 	claims := token.Claims.(jwt.MapClaims)
 	claims["username"] = checkUser.Username
 	claims["clientId"] = checkUser.ClientId
-	claims["isAdmin"] = checkUser.IsAdmin
+	claims["userLevel"] = checkUser.UserLevel
 	claims["exp"] = jwt.TimeFunc().AddDate(0, 0, 1).Unix()
 
 	// Sign and get the complete encoded token as a string

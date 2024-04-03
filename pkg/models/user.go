@@ -10,8 +10,8 @@ type User struct {
 	Password      string  `json:"password" gorm:"column:Password"`
 	FirstName     string  `json:"firstName" gorm:"column:FirstName"`
 	LastName      *string `json:"lastName" gorm:"column:LastName"`
-	ContactNumber *string `json:"contactNumber" gorm:"column:ContactNumber"`
-	IsAdmin       bool    `json:"isAdmin" gorm:"column:IsAdmin"`
+	UserLevel     int     `json:"userLevel" gorm:"column:UserLevel"`
+	ContactNumber string  `json:"contactNumber" gorm:"column:ContactNumber"`
 	Base
 }
 
@@ -21,8 +21,8 @@ type AddUser struct {
 	Password      string  `json:"password" gorm:"column:Password"`
 	FirstName     string  `json:"firstName" gorm:"column:FirstName"`
 	LastName      *string `json:"lastName" gorm:"column:LastName"`
-	ContactNumber *string `json:"contactNumber" gorm:"column:ContactNumber"`
-	IsAdmin       bool    `json:"isAdmin" gorm:"column:IsAdmin"`
+	UserLevel     int     `json:"userLevel" gorm:"column:UserLevel"`
+	ContactNumber string  `json:"contactNumber" gorm:"column:ContactNumber"`
 }
 
 // Validation Add
@@ -51,7 +51,7 @@ func (a AddUser) Transfer(user *User) error {
 	user.FirstName = a.FirstName
 	user.LastName = a.LastName
 	user.ContactNumber = a.ContactNumber
-	user.IsAdmin = a.IsAdmin
+	user.UserLevel = a.UserLevel
 	user.Base.CreatedBy = a.Username
 	user.Base.UpdatedBy = a.Username
 	return nil

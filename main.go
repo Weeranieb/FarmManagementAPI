@@ -47,18 +47,22 @@ func main() {
 
 	// repositories
 	userRepo := repositories.NewUserRepository(db)
+	clientRepo := repositories.NewClientRepository(db)
 
 	// services
 	userService := services.NewUserService(userRepo)
 	authService := services.NewAuthService(userRepo)
+	clientService := services.NewClientService(clientRepo)
 
 	// controllers
 	userController := controllers.NewUserController(userService)
 	authController := controllers.NewAuthController(authService)
+	clientController := controllers.NewClientController(clientService)
 
 	// apply route
 	userController.ApplyRoute(router)
 	authController.ApplyRoute(router)
+	clientController.ApplyRoute(router)
 
 	// run server
 	router.Run(":8080")
