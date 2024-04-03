@@ -13,12 +13,8 @@ import (
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		paths := []string{
-			// "/swagger/",
-			// "/application/update/md5",
-			// "/template",
 			"auth/register",
 			"auth/login",
-			// "client",
 		}
 
 		for _, path := range paths {
@@ -44,7 +40,8 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return viper.GetString("jwt.secret"), nil
+			secret := viper.GetString("authentication.jwt_secret")
+			return []byte(secret), nil
 		})
 		if err != nil || !token.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})

@@ -78,9 +78,11 @@ func (sv authServiceImp) Login(request models.Login) (string, error) {
 	}
 
 	// create jwt token
-	secretKey := viper.GetString("jwt.secret")
+	secretKey := viper.GetString("authentication.jwt_secret")
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
+
+	// custom claims
 	claims["username"] = checkUser.Username
 	claims["clientId"] = checkUser.ClientId
 	claims["userLevel"] = checkUser.UserLevel
