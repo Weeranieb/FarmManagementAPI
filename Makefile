@@ -16,7 +16,9 @@ test:
 	go test -v -cover ./...	
 server:
 	go run main.go
-mock:
-	mockgen -package mockdb -destination db/mock/store.go github.com/Weeranieb/simplebank/db/sqlc Store 
+mockClientRepo:
+	mockery --dir=pkg/repositories --name=IClientRepository --filename=IClientRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockUserRepo:
+	mockery --dir=pkg/repositories --name=IUserRepository --filename=IUserRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
 
-.PHONY: postgres createdb dropdb  migrateup migratedown sqlc test server mock migrateup1 migratedown2
+.PHONY: postgres createdb dropdb  migrateup migratedown sqlc test server mock migrateup1 migratedown2 mockClientRepo

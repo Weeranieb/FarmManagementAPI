@@ -6,6 +6,7 @@ import (
 	"boonmafarm/api/utils/httputil"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,6 +31,7 @@ func (c ClientControllerImp) ApplyRoute(router *gin.Engine) {
 		eg := v1.Group("/client")
 		{
 			eg.POST("", c.AddClient)
+			eg.GET("/:id", c.GetClient)
 		}
 	}
 }
@@ -64,6 +66,41 @@ func (c ClientControllerImp) AddClient(ctx *gin.Context) {
 
 	response.Result = true
 	response.Data = newClient
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c ClientControllerImp) GetClient(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	id := ctx.Param("id")
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Client_GetClient_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	clientId, err := strconv.Atoi(id)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Client_GetClient_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	client, err := c.ClientService.Get(clientId)
+	if err != nil {
+		httputil.NewError(ctx, "Err_Client_GetClient_03", err)
+		return
+	}
+
+	response.Result = true
+	response.Data = client
 
 	ctx.JSON(http.StatusOK, response)
 }

@@ -11,6 +11,7 @@ import (
 type IClientRepository interface {
 	Create(request *models.Client) (*models.Client, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Client, error)
+	TakeById(id int) (*models.Client, error)
 	WithTrx(trxHandle *gorm.DB) IClientRepository
 }
 
@@ -38,6 +39,18 @@ func (rp ClientRepositoryImp) FirstByQuery(query interface{}, args ...interface{
 			return nil, err
 		}
 		fmt.Println("Record not found Clien FirstByQuery", query)
+		return nil, nil
+	}
+	return result, nil
+}
+
+func (rp ClientRepositoryImp) TakeById(id int) (*models.Client, error) {
+	var result *models.Client
+	if err := rp.dbContext.Table("Clients").Where("\"Id\" = ?", id).Take(&result).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		fmt.Println("Record not found Client TakeById", id)
 		return nil, nil
 	}
 	return result, nil

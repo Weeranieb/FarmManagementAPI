@@ -10,6 +10,7 @@ import (
 
 type IUserRepository interface {
 	Create(user *models.User) (*models.User, error)
+	TakeById(id int) (*models.User, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.User, error)
 	WithTrx(trxHandle *gorm.DB) IUserRepository
 }
@@ -29,6 +30,18 @@ func (rp userRepositoryImp) Create(request *models.User) (*models.User, error) {
 		return nil, err
 	}
 	return request, nil
+}
+
+func (rp userRepositoryImp) TakeById(id int) (*models.User, error) {
+	var result *models.User
+	if err := rp.dbContext.Table("Users").Where("\"Id\" = ?", id).Take(&result).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		fmt.Println("Record not found User TakeById", id)
+		return nil, nil
+	}
+	return result, nil
 }
 
 func (rp userRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.User, error) {
