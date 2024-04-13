@@ -109,6 +109,24 @@ func (_m *IClientRepository) TakeById(id int) (*models.Client, error) {
 	return r0, r1
 }
 
+// Update provides a mock function with given fields: request
+func (_m *IClientRepository) Update(request *models.Client) error {
+	ret := _m.Called(request)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*models.Client) error); ok {
+		r0 = rf(request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // WithTrx provides a mock function with given fields: trxHandle
 func (_m *IClientRepository) WithTrx(trxHandle *gorm.DB) repositories.IClientRepository {
 	ret := _m.Called(trxHandle)

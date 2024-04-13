@@ -109,6 +109,24 @@ func (_m *IUserRepository) TakeById(id int) (*models.User, error) {
 	return r0, r1
 }
 
+// Update provides a mock function with given fields: user
+func (_m *IUserRepository) Update(user *models.User) error {
+	ret := _m.Called(user)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*models.User) error); ok {
+		r0 = rf(user)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // WithTrx provides a mock function with given fields: trxHandle
 func (_m *IUserRepository) WithTrx(trxHandle *gorm.DB) repositories.IUserRepository {
 	ret := _m.Called(trxHandle)
