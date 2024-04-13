@@ -10,6 +10,7 @@ import (
 
 type IUserService interface {
 	Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error)
+	GetUser(id int) (*models.User, error)
 }
 
 type userServiceImp struct {
@@ -58,4 +59,8 @@ func (sv userServiceImp) Create(request models.AddUser, userIdentity string, cli
 	}
 
 	return newUser, nil
+}
+
+func (sv userServiceImp) GetUser(id int) (*models.User, error) {
+	return sv.UserRepo.TakeById(id)
 }

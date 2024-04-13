@@ -84,6 +84,7 @@ func (sv authServiceImp) Login(request models.Login) (string, error) {
 
 	// custom claims
 	claims["username"] = checkUser.Username
+	claims["userId"] = checkUser.Id
 	claims["clientId"] = checkUser.ClientId
 	claims["userLevel"] = checkUser.UserLevel
 	claims["exp"] = jwt.TimeFunc().AddDate(0, 0, 1).Unix()
