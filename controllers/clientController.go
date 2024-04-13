@@ -4,9 +4,9 @@ import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/services"
 	"boonmafarm/api/utils/httputil"
+	"boonmafarm/api/utils/jwtutil"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,7 +31,8 @@ func (c ClientControllerImp) ApplyRoute(router *gin.Engine) {
 		eg := v1.Group("/client")
 		{
 			eg.POST("", c.AddClient)
-			eg.GET("/:id", c.GetClient)
+			eg.GET("", c.GetClient)
+			eg.PUT("", c.UpdateClient)
 		}
 	}
 }
@@ -72,7 +73,6 @@ func (c ClientControllerImp) AddClient(ctx *gin.Context) {
 
 func (c ClientControllerImp) GetClient(ctx *gin.Context) {
 	var response httputil.ResponseModel
-	id := ctx.Param("id")
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -84,7 +84,8 @@ func (c ClientControllerImp) GetClient(ctx *gin.Context) {
 		}
 	}()
 
-	clientId, err := strconv.Atoi(id)
+	// get userId
+	clientId, err := jwtutil.GetClientId(ctx)
 	if err != nil {
 		errRes := httputil.ErrorResponseModel{}
 		errRes.Error(ctx, "Err_Client_GetClient_02", err.Error())
@@ -101,6 +102,51 @@ func (c ClientControllerImp) GetClient(ctx *gin.Context) {
 
 	response.Result = true
 	response.Data = client
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c ClientControllerImp) UpdateClient(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	var updateClient models.Client
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Client_UpdateClient_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	if err := ctx.ShouldBindJSON(&updateClient); err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Client_UpdateClient_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	userName, err := jwtutil.GetUsername(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Client_UpdateClient_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	err = c.ClientService.Update(&updateClient, userName)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Client_UpdateClient_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
 
 	ctx.JSON(http.StatusOK, response)
 }

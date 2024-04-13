@@ -11,6 +11,7 @@ import (
 type IUserService interface {
 	Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error)
 	GetUser(id int) (*models.User, error)
+	Update(request *models.User, userIdentity string) error
 }
 
 type userServiceImp struct {
@@ -63,4 +64,13 @@ func (sv userServiceImp) Create(request models.AddUser, userIdentity string, cli
 
 func (sv userServiceImp) GetUser(id int) (*models.User, error) {
 	return sv.UserRepo.TakeById(id)
+}
+
+func (sv userServiceImp) Update(request *models.User, userIdentity string) error {
+	// update user
+	request.UpdatedBy = userIdentity
+	if err := sv.UserRepo.Update(request); err != nil {
+		return err
+	}
+	return nil
 }

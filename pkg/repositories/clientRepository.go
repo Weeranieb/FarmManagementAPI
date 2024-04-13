@@ -11,6 +11,7 @@ import (
 type IClientRepository interface {
 	Create(request *models.Client) (*models.Client, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Client, error)
+	Update(request *models.Client) error
 	TakeById(id int) (*models.Client, error)
 	WithTrx(trxHandle *gorm.DB) IClientRepository
 }
@@ -63,4 +64,11 @@ func (rp ClientRepositoryImp) WithTrx(trxHandle *gorm.DB) IClientRepository {
 	}
 	rp.dbContext = trxHandle
 	return rp
+}
+
+func (rp ClientRepositoryImp) Update(request *models.Client) error {
+	if err := rp.dbContext.Table("Clients").Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+		return err
+	}
+	return nil
 }

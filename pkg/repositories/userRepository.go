@@ -12,6 +12,7 @@ type IUserRepository interface {
 	Create(user *models.User) (*models.User, error)
 	TakeById(id int) (*models.User, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.User, error)
+	Update(user *models.User) error
 	WithTrx(trxHandle *gorm.DB) IUserRepository
 }
 
@@ -63,4 +64,11 @@ func (rp userRepositoryImp) WithTrx(trxHandle *gorm.DB) IUserRepository {
 	}
 	rp.dbContext = trxHandle
 	return rp
+}
+
+func (rp userRepositoryImp) Update(request *models.User) error {
+	if err := rp.dbContext.Table("Users").Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+		return err
+	}
+	return nil
 }

@@ -9,6 +9,7 @@ import (
 type IClientService interface {
 	Create(request models.AddClient, userIdentity string) (*models.Client, error)
 	Get(id int) (*models.Client, error)
+	Update(request *models.Client, userIdentity string) error
 }
 
 type ClientServiceImp struct {
@@ -59,4 +60,14 @@ func (sv ClientServiceImp) Create(request models.AddClient, userIdentity string)
 	}
 
 	return res, nil
+}
+
+func (sv ClientServiceImp) Update(request *models.Client, userIdentity string) error {
+	// update client
+	request.UpdatedBy = userIdentity
+	// request.UpdatedDate = time.Now()
+	if err := sv.ClientRepo.Update(request); err != nil {
+		return err
+	}
+	return nil
 }

@@ -32,6 +32,7 @@ func (c userControllerImp) ApplyRoute(router *gin.Engine) {
 		{
 			eg.POST("", c.AddUser)
 			eg.GET("", c.GetUsers)
+			eg.PUT("", c.UpdateUser)
 		}
 	}
 }
@@ -86,18 +87,67 @@ func (c userControllerImp) GetUsers(ctx *gin.Context) {
 	// get userId
 	id, err := jwtutil.GetUserId(ctx)
 	if err != nil {
-		httputil.NewError(ctx, "Err_User_GetUsers_02", err)
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_User_GetUsers_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
 		return
 	}
 
 	users, err := c.UserService.GetUser(id)
 	if err != nil {
-		httputil.NewError(ctx, "Err_User_GetUsers_03", err)
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_User_GetUsers_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
 		return
 	}
 
 	response.Result = true
 	response.Data = users
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c userControllerImp) UpdateUser(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	var updateUser *models.User
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_User_UpdateUser_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	if err := ctx.ShouldBindJSON(&updateUser); err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_User_UpdateUser_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	// get username
+	username, err := jwtutil.GetUsername(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_User_UpdateUser_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	err = c.UserService.Update(updateUser, username)
+	if err != nil {
+		httputil.NewError(ctx, "Err_User_UpdateUser_04", err)
+		return
+	}
+
+	response.Result = true
 
 	ctx.JSON(http.StatusOK, response)
 }
