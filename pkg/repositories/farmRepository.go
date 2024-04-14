@@ -9,6 +9,7 @@ import (
 type IFarmRepository interface {
 	Create(request *models.Farm) (*models.Farm, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Farm, error)
+	Update(request *models.Farm) error
 	TakeById(id int) (*models.Farm, error)
 }
 
@@ -32,6 +33,9 @@ func (rp FarmRepositoryImp) Create(request *models.Farm) (*models.Farm, error) {
 func (rp FarmRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.Farm, error) {
 	var result *models.Farm
 	if err := rp.dbContext.Table("Farms").Where(query, args...).First(&result).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return result, nil
@@ -40,7 +44,17 @@ func (rp FarmRepositoryImp) FirstByQuery(query interface{}, args ...interface{})
 func (rp FarmRepositoryImp) TakeById(id int) (*models.Farm, error) {
 	var result *models.Farm
 	if err := rp.dbContext.Table("Farms").Where("\"Id\" = ?", id).Take(&result).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return result, nil
+}
+
+func (rp FarmRepositoryImp) Update(request *models.Farm) error {
+	if err := rp.dbContext.Table("Farms").Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+		return err
+	}
+	return nil
 }

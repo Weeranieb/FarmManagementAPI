@@ -15,29 +15,29 @@ type IUserController interface {
 	ApplyRoute(router *gin.Engine)
 }
 
-type userControllerImp struct {
+type UserControllerImp struct {
 	UserService services.IUserService
 }
 
 func NewUserController(userService services.IUserService) IUserController {
-	return &userControllerImp{
+	return &UserControllerImp{
 		UserService: userService,
 	}
 }
 
-func (c userControllerImp) ApplyRoute(router *gin.Engine) {
+func (c UserControllerImp) ApplyRoute(router *gin.Engine) {
 	v1 := router.Group("/api/v1")
 	{
 		eg := v1.Group("/user")
 		{
 			eg.POST("", c.AddUser)
-			eg.GET("", c.GetUsers)
+			eg.GET("", c.GetUser)
 			eg.PUT("", c.UpdateUser)
 		}
 	}
 }
 
-func (c userControllerImp) AddUser(ctx *gin.Context) {
+func (c UserControllerImp) AddUser(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addUser models.AddUser
 
@@ -71,7 +71,7 @@ func (c userControllerImp) AddUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-func (c userControllerImp) GetUsers(ctx *gin.Context) {
+func (c UserControllerImp) GetUser(ctx *gin.Context) {
 	var response httputil.ResponseModel
 
 	defer func() {
@@ -109,7 +109,7 @@ func (c userControllerImp) GetUsers(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-func (c userControllerImp) UpdateUser(ctx *gin.Context) {
+func (c UserControllerImp) UpdateUser(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateUser *models.User
 
