@@ -34,6 +34,7 @@ func (c FarmGroupControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddFarmGroup)
 			eg.GET("/:id", c.GetFarmGroup)
 			eg.PUT("", c.UpdateFarmGroup)
+			eg.GET("/farmList/:id", c.GetFarmList)
 		}
 	}
 }
@@ -179,6 +180,44 @@ func (c FarmGroupControllerImp) UpdateFarmGroup(ctx *gin.Context) {
 	}
 
 	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c FarmGroupControllerImp) GetFarmList(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	// get id from param
+	ids := ctx.Param("id")
+	id, err := strconv.Atoi(ids)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FarmGroup_GetFarmList_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_FarmGroup_GetFarmList_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	farmList, err := c.FarmGroupService.GetFarmList(id)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FarmGroup_GetFarmList_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
+	response.Data = farmList
 
 	ctx.JSON(http.StatusOK, response)
 }

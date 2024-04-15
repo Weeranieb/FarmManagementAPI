@@ -8,7 +8,8 @@ import (
 
 type IFarmGroupService interface {
 	Create(request models.AddFarmGroup, userIdentity string, clientId int) (*models.FarmGroup, error)
-	Get(id, clientId int) (*models.GetFarmGroupResponse, error)
+	Get(id, clientId int) (*models.FarmGroup, error)
+	GetFarmList(id int) (*[]models.Farm, error)
 	Update(request *models.FarmGroup, userIdentity string) error
 }
 
@@ -53,12 +54,15 @@ func (sv FarmGroupServiceImp) Create(request models.AddFarmGroup, userIdentity s
 	return newFarmGroup, nil
 }
 
-func (sv FarmGroupServiceImp) Get(id, clientId int) (*models.GetFarmGroupResponse, error) {
-	farm, err := sv.FarmGroupRepo.GetFarmGroupWithFarms(id, clientId)
+func (sv FarmGroupServiceImp) Get(id, clientId int) (*models.FarmGroup, error) {
+	farm, err := sv.FarmGroupRepo.TakeById(id)
 	if err != nil {
 		return nil, err
 	}
 
+	if farm.ClientId != clientId {
+		return nil, errors.New("farm group not found")
+	}
 	return farm, nil
 }
 
@@ -69,4 +73,12 @@ func (sv FarmGroupServiceImp) Update(request *models.FarmGroup, userIdentity str
 		return err
 	}
 	return nil
+}
+
+func (sv FarmGroupServiceImp) GetFarmList(id int) (*[]models.Farm, error) {
+	farm, err := sv.FarmGroupRepo.GetFarmList(id)
+	if err != nil {
+		return nil, err
+	}
+	return farm, nil
 }
