@@ -62,17 +62,13 @@ func (rp FarmGroupRepository) Update(request *models.FarmGroup) error {
 func (rp FarmGroupRepository) GetFarmList(farmGroupId int) (*[]models.Farm, error) {
 	var result []models.Farm
 
-	// Execute the subquery to fetch distinct farm IDs
-	var farmIDs []int
-	if err := rp.dbContext.Table(dbconst.TFarmOnFarmGroup).Select("DISTINCT(\"FarmId\")").Where("\"FarmGroupId\" = (?)", farmGroupId).Where("\"DelFlag\" = ?", false).Pluck("FarmId", &farmIDs).Error; err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, err
-		}
-		return nil, nil
-	}
-
-	// Fetch farms using the fetched farm IDs
-	if err := rp.dbContext.Table(dbconst.TFarm).Where("\"Id\" IN (?)", farmIDs).Where("\"DelFlag\" = ?", false).Find(&result).Error; err != nil {
+	// Execute a single query with join to fetch farms directly
+	if err := rp.dbContext.Table(dbconst.TFarm).
+		Joins("JOIN "+dbconst.TFarmOnFarmGroup+" ON "+dbconst.TFarmOnFarmGroup+".\"FarmId\" = "+dbconst.TFarm+".\"Id\"").
+		Where(dbconst.TFarmOnFarmGroup+".\"FarmGroupId\" = ?", farmGroupId).
+		Where(dbconst.TFarmOnFarmGroup+".\"DelFlag\" = ?", false).
+		Where(dbconst.TFarm+".\"DelFlag\" = ?", false).
+		Find(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
