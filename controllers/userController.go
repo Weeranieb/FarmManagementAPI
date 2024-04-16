@@ -59,7 +59,27 @@ func (c userControllerImp) AddUser(ctx *gin.Context) {
 		return
 	}
 
-	newUser, err := c.UserService.Create(addUser, "", 1)
+	// username
+	username, err := jwtutil.GetUsername(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_User_AddUser_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	// get clientId
+	clientId, err := jwtutil.GetClientId(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_User_AddUser_04", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	newUser, err := c.UserService.Create(addUser, username, clientId)
 	if err != nil {
 		httputil.NewError(ctx, "Err_User_AddUser_03", err)
 		return
@@ -77,7 +97,7 @@ func (c userControllerImp) GetUser(ctx *gin.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			errRes := httputil.ErrorResponseModel{}
-			errRes.Error(ctx, "Err_User_GetUsers_01", fmt.Sprint(r))
+			errRes.Error(ctx, "Err_User_GetUser_01", fmt.Sprint(r))
 			response.Error = errRes
 			ctx.JSON(http.StatusOK, response)
 			return
@@ -88,23 +108,23 @@ func (c userControllerImp) GetUser(ctx *gin.Context) {
 	id, err := jwtutil.GetUserId(ctx)
 	if err != nil {
 		errRes := httputil.ErrorResponseModel{}
-		errRes.Error(ctx, "Err_User_GetUsers_02", err.Error())
+		errRes.Error(ctx, "Err_User_GetUser_02", err.Error())
 		response.Error = errRes
 		ctx.JSON(http.StatusOK, response)
 		return
 	}
 
-	users, err := c.UserService.GetUser(id)
+	user, err := c.UserService.GetUser(id)
 	if err != nil {
 		errRes := httputil.ErrorResponseModel{}
-		errRes.Error(ctx, "Err_User_GetUsers_03", err.Error())
+		errRes.Error(ctx, "Err_User_GetUser_03", err.Error())
 		response.Error = errRes
 		ctx.JSON(http.StatusOK, response)
 		return
 	}
 
 	response.Result = true
-	response.Data = users
+	response.Data = user
 
 	ctx.JSON(http.StatusOK, response)
 }
