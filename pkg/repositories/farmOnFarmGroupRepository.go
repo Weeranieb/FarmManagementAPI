@@ -33,6 +33,9 @@ func (rp FarmOnFarmGroupRepository) Create(request *models.FarmOnFarmGroup) (*mo
 func (rp FarmOnFarmGroupRepository) FirstByQuery(query interface{}, args ...interface{}) (*models.FarmOnFarmGroup, error) {
 	var result *models.FarmOnFarmGroup
 	if err := rp.dbContext.Table(dbconst.TFarmOnFarmGroup).Where(query, args...).First(&result).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return result, nil

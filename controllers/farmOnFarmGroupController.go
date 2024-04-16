@@ -29,10 +29,10 @@ func NewFarmOnFarmGroupController(farmOnFarmGroupService services.IFarmOnFarmGro
 func (c FarmOnFarmGroupControllerImp) ApplyRoute(router *gin.Engine) {
 	v1 := router.Group("/api/v1")
 	{
-		eg := v1.Group("/farmGroup")
+		eg := v1.Group("/farmOnFarmGroup")
 		{
 			eg.POST("", c.AddFarmOnFarmGroup)
-			eg.DELETE("/:id", c.DeleteFarmOnFarmGroup)
+			eg.DELETE(":id", c.DeleteFarmOnFarmGroup)
 		}
 	}
 }

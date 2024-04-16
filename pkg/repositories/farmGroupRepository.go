@@ -36,6 +36,9 @@ func (rp FarmGroupRepository) Create(request *models.FarmGroup) (*models.FarmGro
 func (rp FarmGroupRepository) FirstByQuery(query interface{}, args ...interface{}) (*models.FarmGroup, error) {
 	var result *models.FarmGroup
 	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where(query, args...).First(&result).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return result, nil
@@ -61,7 +64,7 @@ func (rp FarmGroupRepository) GetFarmList(farmGroupId int) (*[]models.Farm, erro
 
 	// Execute the subquery to fetch distinct farm IDs
 	var farmIDs []int
-	if err := rp.dbContext.Table(dbconst.TFarmOnFarmGroup).Select("DISTINCT(\"FarmId\")").Where("\"FarmGroupId\" = (?)", farmGroupId).Where("DelFlag= ?", false).Pluck("FarmId", &farmIDs).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TFarmOnFarmGroup).Select("DISTINCT(\"FarmId\")").Where("\"FarmGroupId\" = (?)", farmGroupId).Where("\"DelFlag\" = ?", false).Pluck("FarmId", &farmIDs).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}

@@ -32,9 +32,9 @@ func (c FarmGroupControllerImp) ApplyRoute(router *gin.Engine) {
 		eg := v1.Group("/farmGroup")
 		{
 			eg.POST("", c.AddFarmGroup)
-			eg.GET("/:id", c.GetFarmGroup)
+			eg.GET(":id", c.GetFarmGroup)
 			eg.PUT("", c.UpdateFarmGroup)
-			eg.GET("/farmList/:id", c.GetFarmList)
+			eg.GET(":id/farmList", c.GetFarmList)
 		}
 	}
 }

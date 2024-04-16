@@ -50,6 +50,7 @@ func main() {
 	clientRepo := repositories.NewClientRepository(db)
 	farmRepo := repositories.NewFarmRepository(db)
 	farmGroupRepo := repositories.NewFarmGroupRepository(db)
+	farmOnFarmGroupRepo := repositories.NewFarmOnFarmGroupRepository(db)
 
 	// services
 	userService := services.NewUserService(userRepo)
@@ -57,6 +58,7 @@ func main() {
 	clientService := services.NewClientService(clientRepo)
 	farmService := services.NewFarmService(farmRepo)
 	farmGroupService := services.NewFarmGroupService(farmGroupRepo)
+	farmOnFarmGroupService := services.NewFarmOnFarmGroupService(farmOnFarmGroupRepo)
 
 	// controllers
 	userController := controllers.NewUserController(userService)
@@ -64,6 +66,7 @@ func main() {
 	clientController := controllers.NewClientController(clientService)
 	farmController := controllers.NewFarmController(farmService)
 	farmGroupController := controllers.NewFarmGroupController(farmGroupService)
+	farmOnFarmGroupController := controllers.NewFarmOnFarmGroupController(farmOnFarmGroupService)
 
 	// apply route
 	userController.ApplyRoute(router)
@@ -71,6 +74,7 @@ func main() {
 	clientController.ApplyRoute(router)
 	farmController.ApplyRoute(router)
 	farmGroupController.ApplyRoute(router)
+	farmOnFarmGroupController.ApplyRoute(router)
 
 	// run server
 	router.Run(":8080")

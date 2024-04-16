@@ -15,7 +15,7 @@ type FarmOnFarmGroupServiceImp struct {
 	FarmOnFarmGroupRepo repositories.IFarmOnFarmGroupRepository
 }
 
-func NewFarmOnFarmService(farmOnFarmGroupRepo repositories.IFarmOnFarmGroupRepository) IFarmOnFarmGroupService {
+func NewFarmOnFarmGroupService(farmOnFarmGroupRepo repositories.IFarmOnFarmGroupRepository) IFarmOnFarmGroupService {
 	return &FarmOnFarmGroupServiceImp{
 		FarmOnFarmGroupRepo: farmOnFarmGroupRepo,
 	}
@@ -28,7 +28,7 @@ func (sv FarmOnFarmGroupServiceImp) Create(request models.AddFarmOnFarmGroup, us
 	}
 
 	// check if exist
-	check, err := sv.FarmOnFarmGroupRepo.FirstByQuery("\"FarmId\" = ? AND \"FarmGroupId\" = ? AND \"DelFlag\"", request.FarmId, request.FarmGroupId, false)
+	check, err := sv.FarmOnFarmGroupRepo.FirstByQuery("\"FarmId\" = ? AND \"FarmGroupId\" = ? AND \"DelFlag\" = ?", request.FarmId, request.FarmGroupId, false)
 	if err != nil {
 		return nil, err
 	}
