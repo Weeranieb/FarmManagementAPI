@@ -43,7 +43,7 @@ func (rp FarmRepositoryImp) FirstByQuery(query interface{}, args ...interface{})
 
 func (rp FarmRepositoryImp) TakeById(id int) (*models.Farm, error) {
 	var result *models.Farm
-	if err := rp.dbContext.Table("Farms").Where("\"Id\" = ?", id).Take(&result).Error; err != nil {
+	if err := rp.dbContext.Table("Farms").Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}

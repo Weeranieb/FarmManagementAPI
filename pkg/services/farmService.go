@@ -29,7 +29,7 @@ func (sv FarmServiceImp) Create(request models.AddFarm, userIdentity string, cli
 	}
 
 	// check farm if exist
-	checkFarm, err := sv.FarmRepo.FirstByQuery("\"Code\" = ? AND \"ClientId\" = ?", request.Code, clientId)
+	checkFarm, err := sv.FarmRepo.FirstByQuery("\"Code\" = ? AND \"ClientId\" = ? AND \"DelFlag\" = ?", request.Code, clientId, false)
 	if err != nil {
 		return nil, err
 	}

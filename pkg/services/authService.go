@@ -32,7 +32,7 @@ func (sv authServiceImp) Create(request models.AddUser) (*models.User, error) {
 	}
 
 	// check user if exist
-	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ?", request.Username)
+	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ? AND \"DelFlag\" = ?", request.Username, false)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (sv authServiceImp) Create(request models.AddUser) (*models.User, error) {
 
 func (sv authServiceImp) Login(request models.Login) (string, error) {
 	// check user if exist
-	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ?", request.Username)
+	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ? AND \"DelFlag\" = ?", request.Username, false)
 	if err != nil {
 		return "", err
 	}

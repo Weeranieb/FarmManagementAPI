@@ -31,7 +31,7 @@ func (sv UserServiceImp) Create(request models.AddUser, userIdentity string, cli
 	}
 
 	// check user if exist
-	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ?", request.Username)
+	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ? AND \"DelFlag\" = ?", request.Username, false)
 	if err != nil {
 		return nil, err
 	}

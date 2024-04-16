@@ -46,7 +46,7 @@ func (rp FarmGroupRepository) FirstByQuery(query interface{}, args ...interface{
 
 func (rp FarmGroupRepository) TakeById(id int) (*models.FarmGroup, error) {
 	var result *models.FarmGroup
-	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where("\"Id\" = ?", id).Take(&result).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
 		return nil, err
 	}
 	return result, nil

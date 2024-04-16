@@ -38,7 +38,7 @@ func (sv ClientServiceImp) Create(request models.AddClient, userIdentity string)
 	}
 
 	// check name if exist
-	checkUser, err := sv.ClientRepo.FirstByQuery("\"Name\" = ?", request.Name)
+	checkUser, err := sv.ClientRepo.FirstByQuery("\"Name\" = ? AND \"DelFlag\" = ?", request.Name, false)
 	if err != nil {
 		return nil, err
 	}

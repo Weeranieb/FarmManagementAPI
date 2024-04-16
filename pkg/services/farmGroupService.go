@@ -30,7 +30,7 @@ func (sv FarmGroupServiceImp) Create(request models.AddFarmGroup, userIdentity s
 	}
 
 	// check farm if exist
-	checkFarmGroup, err := sv.FarmGroupRepo.FirstByQuery("\"Code\" = ? AND \"ClientId\" = ?", request.Code, clientId)
+	checkFarmGroup, err := sv.FarmGroupRepo.FirstByQuery("\"Code\" = ? AND \"ClientId\" = ? AND \"DelFlag\" = ?", request.Code, clientId, false)
 	if err != nil {
 		return nil, err
 	}

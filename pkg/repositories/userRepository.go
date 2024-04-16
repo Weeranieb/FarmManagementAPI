@@ -35,7 +35,7 @@ func (rp userRepositoryImp) Create(request *models.User) (*models.User, error) {
 
 func (rp userRepositoryImp) TakeById(id int) (*models.User, error) {
 	var result *models.User
-	if err := rp.dbContext.Table("Users").Where("\"Id\" = ?", id).Take(&result).Error; err != nil {
+	if err := rp.dbContext.Table("Users").Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}

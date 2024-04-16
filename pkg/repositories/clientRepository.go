@@ -47,7 +47,7 @@ func (rp ClientRepositoryImp) FirstByQuery(query interface{}, args ...interface{
 
 func (rp ClientRepositoryImp) TakeById(id int) (*models.Client, error) {
 	var result *models.Client
-	if err := rp.dbContext.Table("Clients").Where("\"Id\" = ?", id).Take(&result).Error; err != nil {
+	if err := rp.dbContext.Table("Clients").Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
