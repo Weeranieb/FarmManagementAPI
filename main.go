@@ -51,6 +51,8 @@ func main() {
 	farmRepo := repositories.NewFarmRepository(db)
 	farmGroupRepo := repositories.NewFarmGroupRepository(db)
 	farmOnFarmGroupRepo := repositories.NewFarmOnFarmGroupRepository(db)
+	pondRepo := repositories.NewPondRepository(db)
+	activePondRepo := repositories.NewActivePondRepository(db)
 
 	// services
 	userService := services.NewUserService(userRepo)
@@ -59,6 +61,8 @@ func main() {
 	farmService := services.NewFarmService(farmRepo)
 	farmGroupService := services.NewFarmGroupService(farmGroupRepo)
 	farmOnFarmGroupService := services.NewFarmOnFarmGroupService(farmOnFarmGroupRepo)
+	pondService := services.NewPondService(pondRepo)
+	activePondService := services.NewActivePondService(activePondRepo)
 
 	// controllers
 	userController := controllers.NewUserController(userService)
@@ -67,6 +71,8 @@ func main() {
 	farmController := controllers.NewFarmController(farmService)
 	farmGroupController := controllers.NewFarmGroupController(farmGroupService)
 	farmOnFarmGroupController := controllers.NewFarmOnFarmGroupController(farmOnFarmGroupService)
+	pondController := controllers.NewPondController(pondService)
+	activePondController := controllers.NewActivePondController(activePondService)
 
 	// apply route
 	userController.ApplyRoute(router)
@@ -75,6 +81,8 @@ func main() {
 	farmController.ApplyRoute(router)
 	farmGroupController.ApplyRoute(router)
 	farmOnFarmGroupController.ApplyRoute(router)
+	pondController.ApplyRoute(router)
+	activePondController.ApplyRoute(router)
 
 	// run server
 	router.Run(":8080")
