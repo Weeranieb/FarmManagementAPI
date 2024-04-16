@@ -14,17 +14,17 @@ type IUserService interface {
 	Update(request *models.User, userIdentity string) error
 }
 
-type UserServiceImp struct {
+type userServiceImp struct {
 	UserRepo repositories.IUserRepository
 }
 
 func NewUserService(userRepo repositories.IUserRepository) IUserService {
-	return &UserServiceImp{
+	return &userServiceImp{
 		UserRepo: userRepo,
 	}
 }
 
-func (sv UserServiceImp) Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error) {
+func (sv userServiceImp) Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
@@ -62,11 +62,11 @@ func (sv UserServiceImp) Create(request models.AddUser, userIdentity string, cli
 	return newUser, nil
 }
 
-func (sv UserServiceImp) GetUser(id int) (*models.User, error) {
+func (sv userServiceImp) GetUser(id int) (*models.User, error) {
 	return sv.UserRepo.TakeById(id)
 }
 
-func (sv UserServiceImp) Update(request *models.User, userIdentity string) error {
+func (sv userServiceImp) Update(request *models.User, userIdentity string) error {
 	// update user
 	request.UpdatedBy = userIdentity
 	if err := sv.UserRepo.Update(request); err != nil {

@@ -12,17 +12,17 @@ type IClientService interface {
 	Update(request *models.Client, userIdentity string) error
 }
 
-type ClientServiceImp struct {
+type clientServiceImp struct {
 	ClientRepo repositories.IClientRepository
 }
 
 func NewClientService(clientRepo repositories.IClientRepository) IClientService {
-	return &ClientServiceImp{
+	return &clientServiceImp{
 		ClientRepo: clientRepo,
 	}
 }
 
-func (sv ClientServiceImp) Get(id int) (*models.Client, error) {
+func (sv clientServiceImp) Get(id int) (*models.Client, error) {
 	// get client by id
 	res, err := sv.ClientRepo.TakeById(id)
 	if err != nil {
@@ -31,7 +31,7 @@ func (sv ClientServiceImp) Get(id int) (*models.Client, error) {
 	return res, nil
 }
 
-func (sv ClientServiceImp) Create(request models.AddClient, userIdentity string) (*models.Client, error) {
+func (sv clientServiceImp) Create(request models.AddClient, userIdentity string) (*models.Client, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (sv ClientServiceImp) Create(request models.AddClient, userIdentity string)
 	return res, nil
 }
 
-func (sv ClientServiceImp) Update(request *models.Client, userIdentity string) error {
+func (sv clientServiceImp) Update(request *models.Client, userIdentity string) error {
 	// update client
 	request.UpdatedBy = userIdentity
 	// request.UpdatedDate = time.Now()

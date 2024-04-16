@@ -16,17 +16,17 @@ type IFarmOnFarmGroupController interface {
 	ApplyRoute(router *gin.Engine)
 }
 
-type FarmOnFarmGroupControllerImp struct {
+type farmOnFarmGroupControllerImp struct {
 	FarmOnFarmGroupService services.IFarmOnFarmGroupService
 }
 
 func NewFarmOnFarmGroupController(farmOnFarmGroupService services.IFarmOnFarmGroupService) IFarmOnFarmGroupController {
-	return &FarmOnFarmGroupControllerImp{
+	return &farmOnFarmGroupControllerImp{
 		FarmOnFarmGroupService: farmOnFarmGroupService,
 	}
 }
 
-func (c FarmOnFarmGroupControllerImp) ApplyRoute(router *gin.Engine) {
+func (c farmOnFarmGroupControllerImp) ApplyRoute(router *gin.Engine) {
 	v1 := router.Group("/api/v1")
 	{
 		eg := v1.Group("/farmOnFarmGroup")
@@ -37,7 +37,7 @@ func (c FarmOnFarmGroupControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
-func (c FarmOnFarmGroupControllerImp) AddFarmOnFarmGroup(ctx *gin.Context) {
+func (c farmOnFarmGroupControllerImp) AddFarmOnFarmGroup(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addFarmOnFarmGroup models.AddFarmOnFarmGroup
 
@@ -81,7 +81,7 @@ func (c FarmOnFarmGroupControllerImp) AddFarmOnFarmGroup(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-func (c FarmOnFarmGroupControllerImp) DeleteFarmOnFarmGroup(ctx *gin.Context) {
+func (c farmOnFarmGroupControllerImp) DeleteFarmOnFarmGroup(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {

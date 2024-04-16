@@ -13,24 +13,24 @@ type IFarmRepository interface {
 	TakeById(id int) (*models.Farm, error)
 }
 
-type FarmRepositoryImp struct {
+type farmRepositoryImp struct {
 	dbContext *gorm.DB
 }
 
 func NewFarmRepository(db *gorm.DB) IFarmRepository {
-	return &FarmRepositoryImp{
+	return &farmRepositoryImp{
 		dbContext: db,
 	}
 }
 
-func (rp FarmRepositoryImp) Create(request *models.Farm) (*models.Farm, error) {
+func (rp farmRepositoryImp) Create(request *models.Farm) (*models.Farm, error) {
 	if err := rp.dbContext.Table("Farms").Create(&request).Error; err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func (rp FarmRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.Farm, error) {
+func (rp farmRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.Farm, error) {
 	var result *models.Farm
 	if err := rp.dbContext.Table("Farms").Where(query, args...).First(&result).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -41,7 +41,7 @@ func (rp FarmRepositoryImp) FirstByQuery(query interface{}, args ...interface{})
 	return result, nil
 }
 
-func (rp FarmRepositoryImp) TakeById(id int) (*models.Farm, error) {
+func (rp farmRepositoryImp) TakeById(id int) (*models.Farm, error) {
 	var result *models.Farm
 	if err := rp.dbContext.Table("Farms").Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -52,7 +52,7 @@ func (rp FarmRepositoryImp) TakeById(id int) (*models.Farm, error) {
 	return result, nil
 }
 
-func (rp FarmRepositoryImp) Update(request *models.Farm) error {
+func (rp farmRepositoryImp) Update(request *models.Farm) error {
 	if err := rp.dbContext.Table("Farms").Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
 		return err
 	}

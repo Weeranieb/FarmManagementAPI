@@ -11,17 +11,17 @@ type IFarmOnFarmGroupService interface {
 	Delete(id int) error
 }
 
-type FarmOnFarmGroupServiceImp struct {
+type farmOnFarmGroupServiceImp struct {
 	FarmOnFarmGroupRepo repositories.IFarmOnFarmGroupRepository
 }
 
 func NewFarmOnFarmGroupService(farmOnFarmGroupRepo repositories.IFarmOnFarmGroupRepository) IFarmOnFarmGroupService {
-	return &FarmOnFarmGroupServiceImp{
+	return &farmOnFarmGroupServiceImp{
 		FarmOnFarmGroupRepo: farmOnFarmGroupRepo,
 	}
 }
 
-func (sv FarmOnFarmGroupServiceImp) Create(request models.AddFarmOnFarmGroup, userIdentity string) (*models.FarmOnFarmGroup, error) {
+func (sv farmOnFarmGroupServiceImp) Create(request models.AddFarmOnFarmGroup, userIdentity string) (*models.FarmOnFarmGroup, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (sv FarmOnFarmGroupServiceImp) Create(request models.AddFarmOnFarmGroup, us
 	return newFarmOnFarmGroup, nil
 }
 
-func (sv FarmOnFarmGroupServiceImp) Delete(id int) error {
+func (sv farmOnFarmGroupServiceImp) Delete(id int) error {
 	err := sv.FarmOnFarmGroupRepo.Delete(id)
 	if err != nil {
 		return err

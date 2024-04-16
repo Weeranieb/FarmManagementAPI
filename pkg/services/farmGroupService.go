@@ -13,17 +13,17 @@ type IFarmGroupService interface {
 	Update(request *models.FarmGroup, userIdentity string) error
 }
 
-type FarmGroupServiceImp struct {
+type farmGroupServiceImp struct {
 	FarmGroupRepo repositories.IFarmGroupRepository
 }
 
 func NewFarmGroupService(farmGroupRepo repositories.IFarmGroupRepository) IFarmGroupService {
-	return &FarmGroupServiceImp{
+	return &farmGroupServiceImp{
 		FarmGroupRepo: farmGroupRepo,
 	}
 }
 
-func (sv FarmGroupServiceImp) Create(request models.AddFarmGroup, userIdentity string, clientId int) (*models.FarmGroup, error) {
+func (sv farmGroupServiceImp) Create(request models.AddFarmGroup, userIdentity string, clientId int) (*models.FarmGroup, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (sv FarmGroupServiceImp) Create(request models.AddFarmGroup, userIdentity s
 	return newFarmGroup, nil
 }
 
-func (sv FarmGroupServiceImp) Get(id, clientId int) (*models.FarmGroup, error) {
+func (sv farmGroupServiceImp) Get(id, clientId int) (*models.FarmGroup, error) {
 	farm, err := sv.FarmGroupRepo.TakeById(id)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (sv FarmGroupServiceImp) Get(id, clientId int) (*models.FarmGroup, error) {
 	return farm, nil
 }
 
-func (sv FarmGroupServiceImp) Update(request *models.FarmGroup, userIdentity string) error {
+func (sv farmGroupServiceImp) Update(request *models.FarmGroup, userIdentity string) error {
 	// update farm
 	request.UpdatedBy = userIdentity
 	if err := sv.FarmGroupRepo.Update(request); err != nil {
@@ -75,7 +75,7 @@ func (sv FarmGroupServiceImp) Update(request *models.FarmGroup, userIdentity str
 	return nil
 }
 
-func (sv FarmGroupServiceImp) GetFarmList(id int) (*[]models.Farm, error) {
+func (sv farmGroupServiceImp) GetFarmList(id int) (*[]models.Farm, error) {
 	farm, err := sv.FarmGroupRepo.GetFarmList(id)
 	if err != nil {
 		return nil, err

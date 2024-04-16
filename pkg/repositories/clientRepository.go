@@ -16,24 +16,24 @@ type IClientRepository interface {
 	WithTrx(trxHandle *gorm.DB) IClientRepository
 }
 
-type ClientRepositoryImp struct {
+type clientRepositoryImp struct {
 	dbContext *gorm.DB
 }
 
 func NewClientRepository(db *gorm.DB) IClientRepository {
-	return &ClientRepositoryImp{
+	return &clientRepositoryImp{
 		dbContext: db,
 	}
 }
 
-func (rp ClientRepositoryImp) Create(request *models.Client) (*models.Client, error) {
+func (rp clientRepositoryImp) Create(request *models.Client) (*models.Client, error) {
 	if err := rp.dbContext.Table("Clients").Create(&request).Error; err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func (rp ClientRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.Client, error) {
+func (rp clientRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.Client, error) {
 	var result *models.Client
 	if err := rp.dbContext.Table("Clients").Where(query, args...).First(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -45,7 +45,7 @@ func (rp ClientRepositoryImp) FirstByQuery(query interface{}, args ...interface{
 	return result, nil
 }
 
-func (rp ClientRepositoryImp) TakeById(id int) (*models.Client, error) {
+func (rp clientRepositoryImp) TakeById(id int) (*models.Client, error) {
 	var result *models.Client
 	if err := rp.dbContext.Table("Clients").Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -57,7 +57,7 @@ func (rp ClientRepositoryImp) TakeById(id int) (*models.Client, error) {
 	return result, nil
 }
 
-func (rp ClientRepositoryImp) WithTrx(trxHandle *gorm.DB) IClientRepository {
+func (rp clientRepositoryImp) WithTrx(trxHandle *gorm.DB) IClientRepository {
 	if trxHandle == nil {
 		fmt.Println("Transaction Database not found")
 		return rp
@@ -66,7 +66,7 @@ func (rp ClientRepositoryImp) WithTrx(trxHandle *gorm.DB) IClientRepository {
 	return rp
 }
 
-func (rp ClientRepositoryImp) Update(request *models.Client) error {
+func (rp clientRepositoryImp) Update(request *models.Client) error {
 	if err := rp.dbContext.Table("Clients").Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
 		return err
 	}

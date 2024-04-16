@@ -16,17 +16,17 @@ type IFarmController interface {
 	ApplyRoute(router *gin.Engine)
 }
 
-type FarmControllerImp struct {
+type farmControllerImp struct {
 	FarmService services.IFarmService
 }
 
 func NewFarmController(farmService services.IFarmService) IFarmController {
-	return &FarmControllerImp{
+	return &farmControllerImp{
 		FarmService: farmService,
 	}
 }
 
-func (c FarmControllerImp) ApplyRoute(router *gin.Engine) {
+func (c farmControllerImp) ApplyRoute(router *gin.Engine) {
 	v1 := router.Group("/api/v1")
 	{
 		eg := v1.Group("/farm")
@@ -38,7 +38,7 @@ func (c FarmControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
-func (c FarmControllerImp) AddFarm(ctx *gin.Context) {
+func (c farmControllerImp) AddFarm(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addFarm models.AddFarm
 
@@ -92,7 +92,7 @@ func (c FarmControllerImp) AddFarm(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-func (c FarmControllerImp) GetFarm(ctx *gin.Context) {
+func (c farmControllerImp) GetFarm(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from param
 	ids := ctx.Param("id")
@@ -140,7 +140,7 @@ func (c FarmControllerImp) GetFarm(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-func (c FarmControllerImp) UpdateFarm(ctx *gin.Context) {
+func (c farmControllerImp) UpdateFarm(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var UpdateFarm *models.Farm
 

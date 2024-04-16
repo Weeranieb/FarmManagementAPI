@@ -16,24 +16,24 @@ type IFarmGroupRepository interface {
 	TakeById(id int) (*models.FarmGroup, error)
 }
 
-type FarmGroupRepository struct {
+type farmGroupRepositoryImp struct {
 	dbContext *gorm.DB
 }
 
 func NewFarmGroupRepository(db *gorm.DB) IFarmGroupRepository {
-	return &FarmGroupRepository{
+	return &farmGroupRepositoryImp{
 		dbContext: db,
 	}
 }
 
-func (rp FarmGroupRepository) Create(request *models.FarmGroup) (*models.FarmGroup, error) {
+func (rp farmGroupRepositoryImp) Create(request *models.FarmGroup) (*models.FarmGroup, error) {
 	if err := rp.dbContext.Table(dbconst.TFarmGroup).Create(&request).Error; err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func (rp FarmGroupRepository) FirstByQuery(query interface{}, args ...interface{}) (*models.FarmGroup, error) {
+func (rp farmGroupRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.FarmGroup, error) {
 	var result *models.FarmGroup
 	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where(query, args...).First(&result).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -44,7 +44,7 @@ func (rp FarmGroupRepository) FirstByQuery(query interface{}, args ...interface{
 	return result, nil
 }
 
-func (rp FarmGroupRepository) TakeById(id int) (*models.FarmGroup, error) {
+func (rp farmGroupRepositoryImp) TakeById(id int) (*models.FarmGroup, error) {
 	var result *models.FarmGroup
 	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
 		return nil, err
@@ -52,14 +52,14 @@ func (rp FarmGroupRepository) TakeById(id int) (*models.FarmGroup, error) {
 	return result, nil
 }
 
-func (rp FarmGroupRepository) Update(request *models.FarmGroup) error {
+func (rp farmGroupRepositoryImp) Update(request *models.FarmGroup) error {
 	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (rp FarmGroupRepository) GetFarmList(farmGroupId int) (*[]models.Farm, error) {
+func (rp farmGroupRepositoryImp) GetFarmList(farmGroupId int) (*[]models.Farm, error) {
 	var result []models.Farm
 
 	// Execute a single query with join to fetch farms directly

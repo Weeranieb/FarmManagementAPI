@@ -12,17 +12,17 @@ type IFarmService interface {
 	Update(request *models.Farm, userIdentity string) error
 }
 
-type FarmServiceImp struct {
+type farmServiceImp struct {
 	FarmRepo repositories.IFarmRepository
 }
 
 func NewFarmService(farmRepo repositories.IFarmRepository) IFarmService {
-	return &FarmServiceImp{
+	return &farmServiceImp{
 		FarmRepo: farmRepo,
 	}
 }
 
-func (sv FarmServiceImp) Create(request models.AddFarm, userIdentity string, clientId int) (*models.Farm, error) {
+func (sv farmServiceImp) Create(request models.AddFarm, userIdentity string, clientId int) (*models.Farm, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (sv FarmServiceImp) Create(request models.AddFarm, userIdentity string, cli
 	return newFarm, nil
 }
 
-func (sv FarmServiceImp) Get(id, clientId int) (*models.Farm, error) {
+func (sv farmServiceImp) Get(id, clientId int) (*models.Farm, error) {
 	farm, err := sv.FarmRepo.TakeById(id)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (sv FarmServiceImp) Get(id, clientId int) (*models.Farm, error) {
 	return farm, nil
 }
 
-func (sv FarmServiceImp) Update(request *models.Farm, userIdentity string) error {
+func (sv farmServiceImp) Update(request *models.Farm, userIdentity string) error {
 	// update farm
 	request.UpdatedBy = userIdentity
 	if err := sv.FarmRepo.Update(request); err != nil {

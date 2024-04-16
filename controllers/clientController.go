@@ -15,17 +15,17 @@ type IClientController interface {
 	ApplyRoute(router *gin.Engine)
 }
 
-type ClientControllerImp struct {
+type clientControllerImp struct {
 	ClientService services.IClientService
 }
 
 func NewClientController(clientService services.IClientService) IClientController {
-	return &ClientControllerImp{
+	return &clientControllerImp{
 		ClientService: clientService,
 	}
 }
 
-func (c ClientControllerImp) ApplyRoute(router *gin.Engine) {
+func (c clientControllerImp) ApplyRoute(router *gin.Engine) {
 	v1 := router.Group("/api/v1")
 	{
 		eg := v1.Group("/client")
@@ -37,7 +37,7 @@ func (c ClientControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
-func (c ClientControllerImp) AddClient(ctx *gin.Context) {
+func (c clientControllerImp) AddClient(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addClient models.AddClient
 
@@ -71,7 +71,7 @@ func (c ClientControllerImp) AddClient(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-func (c ClientControllerImp) GetClient(ctx *gin.Context) {
+func (c clientControllerImp) GetClient(ctx *gin.Context) {
 	var response httputil.ResponseModel
 
 	defer func() {
@@ -106,7 +106,7 @@ func (c ClientControllerImp) GetClient(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-func (c ClientControllerImp) UpdateClient(ctx *gin.Context) {
+func (c clientControllerImp) UpdateClient(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateClient models.Client
 

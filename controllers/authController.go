@@ -14,17 +14,17 @@ type IAuthController interface {
 	ApplyRoute(router *gin.Engine)
 }
 
-type AuthControllerImp struct {
+type authControllerImp struct {
 	AuthService services.IAuthService
 }
 
 func NewAuthController(authService services.IAuthService) IAuthController {
-	return &AuthControllerImp{
+	return &authControllerImp{
 		AuthService: authService,
 	}
 }
 
-func (c AuthControllerImp) ApplyRoute(router *gin.Engine) {
+func (c authControllerImp) ApplyRoute(router *gin.Engine) {
 	v1 := router.Group("/api/v1")
 	{
 		eg := v1.Group("/auth")
@@ -35,7 +35,7 @@ func (c AuthControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
-func (c AuthControllerImp) Register(ctx *gin.Context) {
+func (c authControllerImp) Register(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addUser models.AddUser
 
@@ -70,7 +70,7 @@ func (c AuthControllerImp) Register(ctx *gin.Context) {
 }
 
 // Login Controller
-func (c AuthControllerImp) Login(ctx *gin.Context) {
+func (c authControllerImp) Login(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var login models.Login
 

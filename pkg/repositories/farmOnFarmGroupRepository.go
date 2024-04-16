@@ -13,24 +13,24 @@ type IFarmOnFarmGroupRepository interface {
 	Delete(id int) error
 }
 
-type FarmOnFarmGroupRepository struct {
+type farmOnFarmGroupRepositoryImp struct {
 	dbContext *gorm.DB
 }
 
 func NewFarmOnFarmGroupRepository(db *gorm.DB) IFarmOnFarmGroupRepository {
-	return &FarmOnFarmGroupRepository{
+	return &farmOnFarmGroupRepositoryImp{
 		dbContext: db,
 	}
 }
 
-func (rp FarmOnFarmGroupRepository) Create(request *models.FarmOnFarmGroup) (*models.FarmOnFarmGroup, error) {
+func (rp farmOnFarmGroupRepositoryImp) Create(request *models.FarmOnFarmGroup) (*models.FarmOnFarmGroup, error) {
 	if err := rp.dbContext.Table(dbconst.TFarmOnFarmGroup).Create(&request).Error; err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func (rp FarmOnFarmGroupRepository) FirstByQuery(query interface{}, args ...interface{}) (*models.FarmOnFarmGroup, error) {
+func (rp farmOnFarmGroupRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.FarmOnFarmGroup, error) {
 	var result *models.FarmOnFarmGroup
 	if err := rp.dbContext.Table(dbconst.TFarmOnFarmGroup).Where(query, args...).First(&result).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -41,7 +41,7 @@ func (rp FarmOnFarmGroupRepository) FirstByQuery(query interface{}, args ...inte
 	return result, nil
 }
 
-func (rp FarmOnFarmGroupRepository) Delete(id int) error {
+func (rp farmOnFarmGroupRepositoryImp) Delete(id int) error {
 	if err := rp.dbContext.Table(dbconst.TFarmOnFarmGroup).Where("\"Id\" = ?", id).Update("\"DelFlag\"", true).Error; err != nil {
 		return err
 	}
