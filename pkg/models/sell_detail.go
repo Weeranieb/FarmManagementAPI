@@ -1,6 +1,9 @@
 package models
 
-import "errors"
+import (
+	"boonmafarm/api/pkg/models/constants"
+	"errors"
+)
 
 // SellDetail represents a sell detail in the system.
 type SellDetail struct {
@@ -34,7 +37,7 @@ func (a AddSellDetail) Validation() error {
 	if a.Amount == 0 {
 		return errors.New(ErrAmountEmpty)
 	}
-	if a.FishUnit == "" {
+	if a.FishUnit == "" && (a.FishType == constants.Kilogram || a.FishType == constants.Keed) {
 		return errors.New(ErrFishUnitEmpty)
 	}
 	if a.PricePerUnit == 0 {

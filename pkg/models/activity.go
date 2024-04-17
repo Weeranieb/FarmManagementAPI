@@ -8,32 +8,32 @@ import (
 
 // Activity represents an activity.
 type Activity struct {
-	Id             int      `json:"id" gorm:"column:Id;primaryKey;autoIncrement"`
-	ActivePondId   int      `json:"activePondId" gorm:"column:ActivePondId"`
-	ToActivePondId *int     `json:"toActivePondId" gorm:"column:ToActivePondId"`
-	Mode           string   `json:"mode" gorm:"column:Mode"`
-	MerchantId     *int     `json:"merchantId" gorm:"column:MerchantId"`
-	Amount         *int     `json:"amount" gorm:"column:Amount"`
-	FishType       *string  `json:"fishType" gorm:"column:FishType"`
-	FishWeight     *float64 `json:"fishWeight" gorm:"column:FishWeight"`
-	// WeightUnit     *string   `json:"weightUnit" gorm:"column:WeightUnit"`
-	PricePerUnit *float64  `json:"pricePerUnit" gorm:"column:PricePerUnit"`
-	ActivityDate time.Time `json:"activityDate" gorm:"column:ActivityDate"`
+	Id             int       `json:"id" gorm:"column:Id;primaryKey;autoIncrement"`
+	ActivePondId   int       `json:"activePondId" gorm:"column:ActivePondId"`
+	ToActivePondId *int      `json:"toActivePondId" gorm:"column:ToActivePondId"`
+	Mode           string    `json:"mode" gorm:"column:Mode"`
+	MerchantId     *int      `json:"merchantId" gorm:"column:MerchantId"`
+	Amount         *int      `json:"amount" gorm:"column:Amount"`
+	FishType       *string   `json:"fishType" gorm:"column:FishType"`
+	FishWeight     *float64  `json:"fishWeight" gorm:"column:FishWeight"`
+	FishUnit       *string   `json:"fishUnit" gorm:"column:FishUnit"`
+	PricePerUnit   *float64  `json:"pricePerUnit" gorm:"column:PricePerUnit"`
+	ActivityDate   time.Time `json:"activityDate" gorm:"column:ActivityDate"`
 	Base
 }
 
 type CreateActivityRequest struct {
-	ActivePondId   int      `json:"activePondId" gorm:"column:ActivePondId"`
-	ToActivePondId *int     `json:"toActivePondId,omitempty" gorm:"column:ToActivePondId"`
-	Mode           string   `json:"mode" gorm:"column:Mode"`
-	MerchantId     *int     `json:"merchantId,omitempty" gorm:"column:MerchantId"`
-	Amount         *int     `json:"amount,omitempty" gorm:"column:Amount"`
-	FishType       *string  `json:"fishType,omitempty" gorm:"column:FishType"`
-	FishWeight     *float64 `json:"fishWeight,omitempty" gorm:"column:FishWeight"`
-	PricePerUnit   *float64 `json:"pricePerUnit,omitempty" gorm:"column:PricePerUnit"`
-	// WeightUnit     *string   `json:"weightUnit" gorm:"column:WeightUnit"`
-	ActivityDate time.Time       `json:"activityDate" gorm:"column:ActivityDate"`
-	SellDetail   []AddSellDetail `json:"sellDetails,omitempty"`
+	ActivePondId   int             `json:"activePondId" gorm:"column:ActivePondId"`
+	ToActivePondId *int            `json:"toActivePondId,omitempty" gorm:"column:ToActivePondId"`
+	Mode           string          `json:"mode" gorm:"column:Mode"`
+	MerchantId     *int            `json:"merchantId,omitempty" gorm:"column:MerchantId"`
+	Amount         *int            `json:"amount,omitempty" gorm:"column:Amount"`
+	FishType       *string         `json:"fishType,omitempty" gorm:"column:FishType"`
+	FishWeight     *float64        `json:"fishWeight,omitempty" gorm:"column:FishWeight"`
+	PricePerUnit   *float64        `json:"pricePerUnit,omitempty" gorm:"column:PricePerUnit"`
+	FishUnit       *string         `json:"fishUnit" gorm:"column:FishUnit"`
+	ActivityDate   time.Time       `json:"activityDate" gorm:"column:ActivityDate"`
+	SellDetail     []AddSellDetail `json:"sellDetails,omitempty"`
 }
 
 type CreateActivityResponse struct {
@@ -64,6 +64,9 @@ func (a CreateActivityRequest) Validation() error {
 		if a.FishWeight == nil {
 			return errors.New(ErrFishWeightEmpty)
 		}
+		if a.FishUnit == nil && (*a.FishType == constants.Kilogram || *a.FishType == constants.Keed) {
+			return errors.New(ErrFishUnitEmpty)
+		}
 		if a.PricePerUnit == nil {
 			return errors.New(ErrPricePerUnitEmpty)
 		}
@@ -73,6 +76,9 @@ func (a CreateActivityRequest) Validation() error {
 		}
 		if a.Amount == nil {
 			return errors.New(ErrAmountEmpty)
+		}
+		if a.FishUnit == nil && (*a.FishType == constants.Kilogram || *a.FishType == constants.Keed) {
+			return errors.New(ErrFishUnitEmpty)
 		}
 		if a.FishType == nil {
 			return errors.New(ErrFishTypeEmpty)
