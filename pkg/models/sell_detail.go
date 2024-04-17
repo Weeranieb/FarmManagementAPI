@@ -25,9 +25,6 @@ type AddSellDetail struct {
 
 // Validation Add
 func (a AddSellDetail) Validation() error {
-	if a.SellId == 0 {
-		return errors.New(ErrSellIdEmpty)
-	}
 	if a.Size == "" {
 		return errors.New(ErrSizeEmpty)
 	}
@@ -47,7 +44,6 @@ func (a AddSellDetail) Validation() error {
 }
 
 const (
-	ErrSellIdEmpty       = "sell id is empty"
 	ErrSizeEmpty         = "size is empty"
 	ErrFishTypeEmpty     = "fish type is empty"
 	ErrAmountEmpty       = "amount is empty"

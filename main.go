@@ -3,6 +3,7 @@ package main
 import (
 	"boonmafarm/api/controllers"
 	"boonmafarm/api/middlewares"
+	dbContext "boonmafarm/api/pkg/dbcontext"
 	"boonmafarm/api/pkg/repositories"
 	"boonmafarm/api/pkg/services"
 	"fmt"
@@ -45,6 +46,7 @@ func main() {
 	// jwt authentication
 	router.Use(middlewares.JWTAuthMiddleware())
 
+	dbContext.Context.Postgresql = db
 	// repositories
 	userRepo := repositories.NewUserRepository(db)
 	clientRepo := repositories.NewClientRepository(db)

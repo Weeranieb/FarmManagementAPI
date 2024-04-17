@@ -1,6 +1,7 @@
 package services
 
 import (
+	dbContext "boonmafarm/api/pkg/dbcontext"
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/models/constants"
 	"boonmafarm/api/pkg/repositories"
@@ -25,7 +26,6 @@ func NewActivityService(activePondRepo repositories.IActivityRepository, sellDet
 	}
 }
 
-// FIXME use transaction
 func (sv activityServiceImp) Create(request models.CreateActivityRequest, userIdentity string) (*models.CreateActivityResponse, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
@@ -51,9 +51,12 @@ func (sv activityServiceImp) Create(request models.CreateActivityRequest, userId
 	newActivity.UpdatedBy = userIdentity
 	newActivity.CreatedBy = userIdentity
 
+	db := dbContext.Context.Postgresql
+	tx := db.Begin()
 	// create user
-	newActivity, err = sv.ActivityRepo.Create(newActivity)
+	newActivity, err = sv.ActivityRepo.WithTrx(tx).Create(newActivity)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -69,13 +72,16 @@ func (sv activityServiceImp) Create(request models.CreateActivityRequest, userId
 		}
 
 		// create sell detail
-		newSellDetail, err = sv.SellDetailRepo.BulkCreate(newSellDetail)
+		newSellDetail, err = sv.SellDetailRepo.WithTrx(tx).BulkCreate(newSellDetail)
 		if err != nil {
+			tx.Rollback()
 			return nil, err
 		}
 
 		ret.SellDetail = newSellDetail
 	}
+
+	tx.Commit()
 
 	return &ret, nil
 }
