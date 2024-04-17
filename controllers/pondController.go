@@ -105,7 +105,7 @@ func (c pondControllerImp) GetPond(ctx *gin.Context) {
 		}
 	}()
 
-	users, err := c.PondService.Get(id)
+	pond, err := c.PondService.Get(id)
 	if err != nil {
 		errRes := httputil.ErrorResponseModel{}
 		errRes.Error(ctx, "Err_Pond_GetPond_03", err.Error())
@@ -115,7 +115,7 @@ func (c pondControllerImp) GetPond(ctx *gin.Context) {
 	}
 
 	response.Result = true
-	response.Data = users
+	response.Data = pond
 
 	ctx.JSON(http.StatusOK, response)
 }

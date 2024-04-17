@@ -105,7 +105,7 @@ func (c activePondControllerImp) GetActivePond(ctx *gin.Context) {
 		}
 	}()
 
-	users, err := c.ActivePondService.Get(id)
+	activePond, err := c.ActivePondService.Get(id)
 	if err != nil {
 		errRes := httputil.ErrorResponseModel{}
 		errRes.Error(ctx, "Err_ActivePond_GetActivePond_03", err.Error())
@@ -115,7 +115,7 @@ func (c activePondControllerImp) GetActivePond(ctx *gin.Context) {
 	}
 
 	response.Result = true
-	response.Data = users
+	response.Data = activePond
 
 	ctx.JSON(http.StatusOK, response)
 }
