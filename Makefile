@@ -20,5 +20,19 @@ mockClientRepo:
 	mockery --dir=pkg/repositories --name=IClientRepository --filename=IClientRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
 mockUserRepo:
 	mockery --dir=pkg/repositories --name=IUserRepository --filename=IUserRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockActivePondRepo:
+	mockery --dir=pkg/repositories --name=IActivePondRepository --filename=IActivePondRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockActivityRepo:
+	mockery --dir=pkg/repositories --name=IActivityRepository --filename=IActivityRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockFarmGroupRepo:
+	mockery --dir=pkg/repositories --name=IFarmGroupRepository --filename=IFarmGroupRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockFarmRepo:
+	mockery --dir=pkg/repositories --name=IFarmRepository --filename=IFarmRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockFarmOnFarmGroupRepositoryRepo:
+	mockery --dir=pkg/repositories --name=IFarmOnFarmGroupRepository --filename=IFarmOnFarmGroupRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockPondRepo:
+	mockery --dir=pkg/repositories --name=IPondRepository --filename=IPondRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockSellDetailRepo:
+	mockery --dir=pkg/repositories --name=ISellDetailRepository --filename=ISellDetailRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
 
-.PHONY: postgres createdb dropdb  migrateup migratedown sqlc test server mock migrateup1 migratedown2 mockClientRepo
+.PHONY: postgres createdb dropdb  migrateup migratedown sqlc test server mock migrateup1 migratedown2 mockClientRepo mockActivePondRepo mockUserRepo mockActivityRepo mockFarmGroupRepo mockFarmRepo mockFarmOnFarmGroupRepositoryRepo mockPondRepo mockSellDetailRepo
