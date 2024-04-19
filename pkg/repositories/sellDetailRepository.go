@@ -14,6 +14,7 @@ type ISellDetailRepository interface {
 	BulkCreate(request []models.SellDetail) ([]models.SellDetail, error)
 	TakeById(id int) (*models.SellDetail, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.SellDetail, error)
+	ListByQuery(query interface{}, args ...interface{}) ([]models.SellDetail, error)
 	Update(request *models.SellDetail) error
 	WithTrx(trxHandle *gorm.DB) ISellDetailRepository
 }
@@ -80,4 +81,16 @@ func (rp sellDetailRepositoryImp) Update(request *models.SellDetail) error {
 		return err
 	}
 	return nil
+}
+
+func (rp sellDetailRepositoryImp) ListByQuery(query interface{}, args ...interface{}) ([]models.SellDetail, error) {
+	var result []models.SellDetail
+	if err := rp.dbContext.Table(dbconst.TSellDetail).Where(query, args...).Find(&result).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		fmt.Println("Record not found Activity ListByQuery", query)
+		return nil, nil
+	}
+	return result, nil
 }

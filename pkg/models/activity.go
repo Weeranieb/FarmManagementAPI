@@ -36,7 +36,7 @@ type CreateActivityRequest struct {
 	SellDetail     []AddSellDetail `json:"sellDetails,omitempty"`
 }
 
-type CreateActivityResponse struct {
+type ActivityWithSellDetail struct {
 	Activity
 	SellDetail []SellDetail `json:"sellDetails,omitempty"`
 }

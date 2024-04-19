@@ -109,6 +109,39 @@ func (_m *ISellDetailRepository) FirstByQuery(query interface{}, args ...interfa
 	return r0, r1
 }
 
+// ListByQuery provides a mock function with given fields: query, args
+func (_m *ISellDetailRepository) ListByQuery(query interface{}, args ...interface{}) ([]models.SellDetail, error) {
+	var _ca []interface{}
+	_ca = append(_ca, query)
+	_ca = append(_ca, args...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByQuery")
+	}
+
+	var r0 []models.SellDetail
+	var r1 error
+	if rf, ok := ret.Get(0).(func(interface{}, ...interface{}) ([]models.SellDetail, error)); ok {
+		return rf(query, args...)
+	}
+	if rf, ok := ret.Get(0).(func(interface{}, ...interface{}) []models.SellDetail); ok {
+		r0 = rf(query, args...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.SellDetail)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(interface{}, ...interface{}) error); ok {
+		r1 = rf(query, args...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // TakeById provides a mock function with given fields: id
 func (_m *ISellDetailRepository) TakeById(id int) (*models.SellDetail, error) {
 	ret := _m.Called(id)

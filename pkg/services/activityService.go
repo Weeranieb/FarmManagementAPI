@@ -9,9 +9,9 @@ import (
 )
 
 type IActivityService interface {
-	Create(request models.CreateActivityRequest, userIdentity string) (*models.CreateActivityResponse, error)
-	Get(id int) (*models.Activity, error)
-	Update(request *models.Activity, userIdentity string) error
+	Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error)
+	Get(id int) (*models.ActivityWithSellDetail, error)
+	Update(request *models.ActivityWithSellDetail, userIdentity string) error
 }
 
 type activityServiceImp struct {
@@ -26,7 +26,7 @@ func NewActivityService(activePondRepo repositories.IActivityRepository, sellDet
 	}
 }
 
-func (sv activityServiceImp) Create(request models.CreateActivityRequest, userIdentity string) (*models.CreateActivityResponse, error) {
+func (sv activityServiceImp) Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (sv activityServiceImp) Create(request models.CreateActivityRequest, userId
 	// declare variable
 	newActivity := &models.Activity{}
 	newSellDetail := []models.SellDetail{}
-	var ret models.CreateActivityResponse
+	var ret models.ActivityWithSellDetail
 
 	request.Transfer(newActivity, &newSellDetail)
 	newActivity.UpdatedBy = userIdentity
@@ -88,16 +88,34 @@ func (sv activityServiceImp) Create(request models.CreateActivityRequest, userId
 }
 
 // get with sell detail check case
-func (sv activityServiceImp) Get(id int) (*models.Activity, error) {
-	return sv.ActivityRepo.TakeById(id)
+func (sv activityServiceImp) Get(id int) (*models.ActivityWithSellDetail, error) {
+	// get activity
+	var payload models.ActivityWithSellDetail
+	activity, err := sv.ActivityRepo.TakeById(id)
+	if err != nil {
+		return nil, err
+	}
+
+	payload.Activity = *activity
+
+	if activity.Mode == string(constants.SellType) {
+		// get sell details
+		sellDetails, err := sv.SellDetailRepo.ListByQuery("\"SellId\" = ? AND \"DelFlag\" = ?", id, false)
+		if err != nil {
+			return nil, err
+		}
+		payload.SellDetail = sellDetails
+	}
+
+	return &payload, nil
 }
 
 // update with sell detail check case
-func (sv activityServiceImp) Update(request *models.Activity, userIdentity string) error {
+func (sv activityServiceImp) Update(request *models.ActivityWithSellDetail, userIdentity string) error {
 	// update activePond
-	request.UpdatedBy = userIdentity
-	if err := sv.ActivityRepo.Update(request); err != nil {
-		return err
-	}
+	// request.UpdatedBy = userIdentity
+	// if err := sv.ActivityRepo.Update(request); err != nil {
+	// 	return err
+	// }
 	return nil
 }

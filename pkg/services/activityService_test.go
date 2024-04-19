@@ -57,7 +57,7 @@ func TestCreateActivity(t *testing.T) {
 		name           string
 		request        models.CreateActivityRequest
 		mockService    func()
-		expectedReturn *models.CreateActivityResponse
+		expectedReturn *models.ActivityWithSellDetail
 		expectedError  error
 	}{
 		{
@@ -98,7 +98,7 @@ func TestCreateActivity(t *testing.T) {
 					Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
 				}, nil)
 			},
-			expectedReturn: &models.CreateActivityResponse{
+			expectedReturn: &models.ActivityWithSellDetail{
 				Activity: models.Activity{
 					Id:           1,
 					ActivePondId: 1,
@@ -155,7 +155,7 @@ func TestCreateActivity(t *testing.T) {
 					Base:           models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
 				}, nil)
 			},
-			expectedReturn: &models.CreateActivityResponse{
+			expectedReturn: &models.ActivityWithSellDetail{
 				Activity: models.Activity{
 					Id:             1,
 					ActivePondId:   1,
@@ -256,7 +256,7 @@ func TestCreateActivity(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedReturn: &models.CreateActivityResponse{
+			expectedReturn: &models.ActivityWithSellDetail{
 				Activity: models.Activity{
 					Id:           1,
 					ActivePondId: 1,

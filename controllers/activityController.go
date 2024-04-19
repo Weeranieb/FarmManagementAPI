@@ -7,6 +7,7 @@ import (
 	"boonmafarm/api/utils/jwtutil"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,7 +32,7 @@ func (c activityControllerImp) ApplyRoute(router *gin.Engine) {
 		eg := v1.Group("/activity")
 		{
 			eg.POST("", c.AddActivity)
-			// eg.GET(":id", c.GetActivity)
+			eg.GET(":id", c.GetActivity)
 			// eg.PUT("", c.UpdateActivity)
 		}
 	}
@@ -82,43 +83,43 @@ func (c activityControllerImp) AddActivity(ctx *gin.Context) {
 }
 
 // FIXME should be like the model that combine activity and sell detail
-// func (c activityControllerImp) GetActivity(ctx *gin.Context) {
-// 	var response httputil.ResponseModel
-// 	// get id from params
-// 	ids := ctx.Param("id")
-// 	id, err := strconv.Atoi(ids)
-// 	if err != nil {
-// 		errRes := httputil.ErrorResponseModel{}
-// 		errRes.Error(ctx, "Err_Activity_GetActivity_01", err.Error())
-// 		response.Error = errRes
-// 		ctx.JSON(http.StatusOK, response)
-// 		return
-// 	}
+func (c activityControllerImp) GetActivity(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	// get id from params
+	ids := ctx.Param("id")
+	id, err := strconv.Atoi(ids)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Activity_GetActivity_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
 
-// 	defer func() {
-// 		if r := recover(); r != nil {
-// 			errRes := httputil.ErrorResponseModel{}
-// 			errRes.Error(ctx, "Err_Activity_GetActivity_02", fmt.Sprint(r))
-// 			response.Error = errRes
-// 			ctx.JSON(http.StatusOK, response)
-// 			return
-// 		}
-// 	}()
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Activity_GetActivity_02", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
 
-// 	Activity, err := c.ActivityService.Get(id)
-// 	if err != nil {
-// 		errRes := httputil.ErrorResponseModel{}
-// 		errRes.Error(ctx, "Err_Activity_GetActivity_03", err.Error())
-// 		response.Error = errRes
-// 		ctx.JSON(http.StatusOK, response)
-// 		return
-// 	}
+	activity, err := c.ActivityService.Get(id)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Activity_GetActivity_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
 
-// 	response.Result = true
-// 	response.Data = Activity
+	response.Result = true
+	response.Data = activity
 
-// 	ctx.JSON(http.StatusOK, response)
-// }
+	ctx.JSON(http.StatusOK, response)
+}
 
 // FIXME should be like the model that combine activity and sell detail
 // func (c activityControllerImp) UpdateActivity(ctx *gin.Context) {
