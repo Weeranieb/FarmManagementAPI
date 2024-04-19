@@ -116,6 +116,7 @@ func (a CreateActivityRequest) Transfer(activity *Activity, sellDetail *[]SellDe
 	activity.MerchantId = a.MerchantId
 	activity.Amount = a.Amount
 	activity.FishType = a.FishType
+	activity.FishUnit = a.FishUnit
 	activity.FishWeight = a.FishWeight
 	activity.PricePerUnit = a.PricePerUnit
 	activity.ActivityDate = a.ActivityDate

@@ -46,7 +46,7 @@ func TestRegister(t *testing.T) {
 
 		// Mock the necessary repository methods
 		mockUserRepo.On("Create", mock.Anything).Return(mockUserReturn, nil)
-		mockUserRepo.On("FirstByQuery", "\"Username\" = ?", "testUser").Return(nil, nil)
+		mockUserRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(nil, nil)
 
 		// Call the Create method
 		user, err := authService.Create(request)
@@ -90,7 +90,7 @@ func TestRegister(t *testing.T) {
 
 		// Mock the necessary repository methods
 		mockUserRepo.On("Create", mock.Anything).Return(mockUserReturn, nil)
-		mockUserRepo.On("FirstByQuery", "\"Username\" = ?", "testUser").Return(&models.User{}, nil)
+		mockUserRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(&models.User{}, nil)
 
 		// Call the Create method
 		user, err := authService.Create(request)
@@ -131,7 +131,7 @@ func TestRegister(t *testing.T) {
 
 		// Mock the necessary repository methods
 		mockUserRepo.On("Create", mock.Anything).Return(mockUserReturn, nil)
-		mockUserRepo.On("FirstByQuery", "\"Username\" = ?", "testUser").Return(&models.User{}, nil)
+		mockUserRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(&models.User{}, nil)
 
 		// Call the Create method
 		user, err := authService.Create(request)
@@ -158,7 +158,7 @@ func TestRegister(t *testing.T) {
 
 		// Mock the necessary repository methods
 		mockUserRepo.On("Create", mock.Anything).Return(nil, errors.New("error on create"))
-		mockUserRepo.On("FirstByQuery", "\"Username\" = ?", "testUser").Return(nil, nil)
+		mockUserRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(nil, nil)
 
 		// Call the Create method
 		user, err := authService.Create(request)
@@ -187,7 +187,7 @@ func TestRegister(t *testing.T) {
 
 		// Mock the necessary repository methods
 		mockUserRepo.On("Create", mock.Anything).Return(nil, nil)
-		mockUserRepo.On("FirstByQuery", "\"Username\" = ?", "testUser").Return(nil, errors.New("error on firstByQuery"))
+		mockUserRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(nil, errors.New("error on firstByQuery"))
 
 		// Call the Create method
 		user, err := authService.Create(request)
@@ -214,7 +214,7 @@ func TestLogin(t *testing.T) {
 		}
 
 		// Expectation for FirstByQuery
-		mockRepo.On("FirstByQuery", "\"Username\" = ?", "testUser").Return(mockUser, nil)
+		mockRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(mockUser, nil)
 
 		// Perform the login
 		token, err := authService.Login(models.Login{
@@ -245,7 +245,7 @@ func TestLogin(t *testing.T) {
 		}
 
 		// Expectation for FirstByQuery
-		mockRepo.On("FirstByQuery", "\"Username\" = ?", "testUser").Return(mockUser, nil)
+		mockRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(mockUser, nil)
 
 		// Perform the login
 		token, err := authService.Login(models.Login{

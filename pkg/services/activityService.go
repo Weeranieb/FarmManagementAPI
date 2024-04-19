@@ -81,15 +81,18 @@ func (sv activityServiceImp) Create(request models.CreateActivityRequest, userId
 		ret.SellDetail = newSellDetail
 	}
 
+	// commit transaction
 	tx.Commit()
 
 	return &ret, nil
 }
 
+// get with sell detail check case
 func (sv activityServiceImp) Get(id int) (*models.Activity, error) {
 	return sv.ActivityRepo.TakeById(id)
 }
 
+// update with sell detail check case
 func (sv activityServiceImp) Update(request *models.Activity, userIdentity string) error {
 	// update activePond
 	request.UpdatedBy = userIdentity
