@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"boonmafarm/api/pkg/models"
+	"boonmafarm/api/pkg/repositories/dbconst"
 	"errors"
 	"fmt"
 
@@ -27,7 +28,7 @@ func NewUserRepository(db *gorm.DB) IUserRepository {
 }
 
 func (rp userRepositoryImp) Create(request *models.User) (*models.User, error) {
-	if err := rp.dbContext.Table("Users").Create(&request).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TUser).Create(&request).Error; err != nil {
 		return nil, err
 	}
 	return request, nil
@@ -35,7 +36,7 @@ func (rp userRepositoryImp) Create(request *models.User) (*models.User, error) {
 
 func (rp userRepositoryImp) TakeById(id int) (*models.User, error) {
 	var result *models.User
-	if err := rp.dbContext.Table("Users").Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TUser).Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
@@ -47,7 +48,7 @@ func (rp userRepositoryImp) TakeById(id int) (*models.User, error) {
 
 func (rp userRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.User, error) {
 	var result *models.User
-	if err := rp.dbContext.Table("Users").Where(query, args...).First(&result).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TUser).Where(query, args...).First(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
@@ -67,7 +68,7 @@ func (rp userRepositoryImp) WithTrx(trxHandle *gorm.DB) IUserRepository {
 }
 
 func (rp userRepositoryImp) Update(request *models.User) error {
-	if err := rp.dbContext.Table("Users").Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TUser).Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
 		return err
 	}
 	return nil

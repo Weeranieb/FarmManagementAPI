@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"boonmafarm/api/pkg/models"
+	"boonmafarm/api/pkg/repositories/dbconst"
 	"errors"
 	"fmt"
 
@@ -27,7 +28,7 @@ func NewClientRepository(db *gorm.DB) IClientRepository {
 }
 
 func (rp clientRepositoryImp) Create(request *models.Client) (*models.Client, error) {
-	if err := rp.dbContext.Table("Clients").Create(&request).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TClient).Create(&request).Error; err != nil {
 		return nil, err
 	}
 	return request, nil
@@ -35,7 +36,7 @@ func (rp clientRepositoryImp) Create(request *models.Client) (*models.Client, er
 
 func (rp clientRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.Client, error) {
 	var result *models.Client
-	if err := rp.dbContext.Table("Clients").Where(query, args...).First(&result).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TClient).Where(query, args...).First(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
@@ -47,7 +48,7 @@ func (rp clientRepositoryImp) FirstByQuery(query interface{}, args ...interface{
 
 func (rp clientRepositoryImp) TakeById(id int) (*models.Client, error) {
 	var result *models.Client
-	if err := rp.dbContext.Table("Clients").Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TClient).Where("\"Id\" = ? AND \"DelFlag\" = ?", id, false).Take(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
@@ -67,7 +68,7 @@ func (rp clientRepositoryImp) WithTrx(trxHandle *gorm.DB) IClientRepository {
 }
 
 func (rp clientRepositoryImp) Update(request *models.Client) error {
-	if err := rp.dbContext.Table("Clients").Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+	if err := rp.dbContext.Table(dbconst.TClient).Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
 		return err
 	}
 	return nil

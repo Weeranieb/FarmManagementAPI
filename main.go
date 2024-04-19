@@ -57,6 +57,8 @@ func main() {
 	activePondRepo := repositories.NewActivePondRepository(db)
 	activityRepo := repositories.NewActivityRepository(db)
 	sellDetailRepo := repositories.NewSellDetailRepository(db)
+	billRepo := repositories.NewBillRepository(db)
+	workerRepo := repositories.NewWorkerRepository(db)
 
 	// services
 	userService := services.NewUserService(userRepo)
@@ -68,6 +70,8 @@ func main() {
 	pondService := services.NewPondService(pondRepo)
 	activePondService := services.NewActivePondService(activePondRepo)
 	activityService := services.NewActivityService(activityRepo, sellDetailRepo)
+	billService := services.NewBillService(billRepo)
+	workerService := services.NewWorkerService(workerRepo)
 
 	// controllers
 	userController := controllers.NewUserController(userService)
@@ -79,6 +83,8 @@ func main() {
 	pondController := controllers.NewPondController(pondService)
 	activePondController := controllers.NewActivePondController(activePondService)
 	activityController := controllers.NewActivityController(activityService)
+	billController := controllers.NewBillController(billService)
+	workerController := controllers.NewWorkerController(workerService)
 
 	// apply route
 	userController.ApplyRoute(router)
@@ -90,6 +96,8 @@ func main() {
 	pondController.ApplyRoute(router)
 	activePondController.ApplyRoute(router)
 	activityController.ApplyRoute(router)
+	billController.ApplyRoute(router)
+	workerController.ApplyRoute(router)
 
 	// run server
 	router.Run(":8080")
