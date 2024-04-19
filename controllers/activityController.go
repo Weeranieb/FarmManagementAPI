@@ -33,7 +33,7 @@ func (c activityControllerImp) ApplyRoute(router *gin.Engine) {
 		{
 			eg.POST("", c.AddActivity)
 			eg.GET(":id", c.GetActivity)
-			// eg.PUT("", c.UpdateActivity)
+			eg.PUT("", c.UpdateActivity)
 		}
 	}
 }
@@ -82,7 +82,8 @@ func (c activityControllerImp) AddActivity(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-// FIXME should be like the model that combine activity and sell detail
+// GetActivity retrieves an activity based on the provided ID.
+// It handles the HTTP GET request and returns the activity as a JSON response.
 func (c activityControllerImp) GetActivity(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from params
@@ -121,46 +122,57 @@ func (c activityControllerImp) GetActivity(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-// FIXME should be like the model that combine activity and sell detail
-// func (c activityControllerImp) UpdateActivity(ctx *gin.Context) {
-// 	var response httputil.ResponseModel
-// 	var updateActivity *models.Activity
+// UpdateActivity updates an activity with sell details.
+// It receives a gin context `ctx` and expects the request body to contain a JSON payload
+// representing the updated activity with sell details.
+// It returns a JSON response indicating the success or failure of the update operation,
+// along with any relevant data.
+func (c activityControllerImp) UpdateActivity(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	var updateActivity *models.ActivityWithSellDetail
 
-// 	defer func() {
-// 		if r := recover(); r != nil {
-// 			errRes := httputil.ErrorResponseModel{}
-// 			errRes.Error(ctx, "Err_Activity_UpdateActivity_01", fmt.Sprint(r))
-// 			response.Error = errRes
-// 			ctx.JSON(http.StatusOK, response)
-// 			return
-// 		}
-// 	}()
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Activity_UpdateActivity_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
 
-// 	if err := ctx.ShouldBindJSON(&updateActivity); err != nil {
-// 		errRes := httputil.ErrorResponseModel{}
-// 		errRes.Error(ctx, "Err_Activity_UpdateActivity_02", err.Error())
-// 		response.Error = errRes
-// 		ctx.JSON(http.StatusOK, response)
-// 		return
-// 	}
+	if err := ctx.ShouldBindJSON(&updateActivity); err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Activity_UpdateActivity_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
 
-// 	// get username
-// 	username, err := jwtutil.GetUsername(ctx)
-// 	if err != nil {
-// 		errRes := httputil.ErrorResponseModel{}
-// 		errRes.Error(ctx, "Err_Activity_UpdateActivity_03", err.Error())
-// 		response.Error = errRes
-// 		ctx.JSON(http.StatusOK, response)
-// 		return
-// 	}
+	// get username
+	username, err := jwtutil.GetUsername(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Activity_UpdateActivity_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
 
-// 	err = c.ActivityService.Update(updateActivity, username)
-// 	if err != nil {
-// 		httputil.NewError(ctx, "Err_Activity_UpdateActivity_04", err)
-// 		return
-// 	}
+	var result []*models.SellDetail
+	result, err = c.ActivityService.Update(updateActivity, username)
+	if err != nil {
+		httputil.NewError(ctx, "Err_Activity_UpdateActivity_04", err)
+		return
+	}
 
-// 	response.Result = true
+	var ret = struct {
+		SellDetail []*models.SellDetail `json:"sellDetails"`
+	}{
+		SellDetail: result,
+	}
+	response.Result = true
+	response.Data = ret
 
-// 	ctx.JSON(http.StatusOK, response)
-// }
+	ctx.JSON(http.StatusOK, response)
+}

@@ -11,7 +11,7 @@ import (
 type IActivityService interface {
 	Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error)
 	Get(id int) (*models.ActivityWithSellDetail, error)
-	Update(request *models.ActivityWithSellDetail, userIdentity string) error
+	Update(request *models.ActivityWithSellDetail, userIdentity string) ([]*models.SellDetail, error)
 }
 
 type activityServiceImp struct {
@@ -111,11 +111,41 @@ func (sv activityServiceImp) Get(id int) (*models.ActivityWithSellDetail, error)
 }
 
 // update with sell detail check case
-func (sv activityServiceImp) Update(request *models.ActivityWithSellDetail, userIdentity string) error {
+func (sv activityServiceImp) Update(request *models.ActivityWithSellDetail, userIdentity string) ([]*models.SellDetail, error) {
 	// update activePond
-	// request.UpdatedBy = userIdentity
-	// if err := sv.ActivityRepo.Update(request); err != nil {
-	// 	return err
-	// }
-	return nil
+	db := dbContext.Context.Postgresql
+	tx := db.Begin()
+
+	// update activity
+	if err := sv.ActivityRepo.WithTrx(tx).Update(&request.Activity); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	var newSellDetails []*models.SellDetail
+	if request.Activity.Mode == string(constants.SellType) {
+		for _, sellDetail := range request.SellDetail {
+			if sellDetail.Id == 0 {
+				sellDetail.SellId = request.Activity.Id
+				sellDetail.CreatedBy = userIdentity
+				sellDetail.UpdatedBy = userIdentity
+				newSellDetail, err := sv.SellDetailRepo.WithTrx(tx).Create(&sellDetail)
+				if err != nil {
+					tx.Rollback()
+					return nil, err
+				}
+				newSellDetails = append(newSellDetails, newSellDetail)
+			} else {
+				sellDetail.UpdatedBy = userIdentity
+				if err := sv.SellDetailRepo.WithTrx(tx).Update(&sellDetail); err != nil {
+					tx.Rollback()
+					return nil, err
+				}
+			}
+		}
+	}
+
+	tx.Commit()
+
+	return newSellDetails, nil
 }
