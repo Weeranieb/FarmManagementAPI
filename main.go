@@ -59,6 +59,7 @@ func main() {
 	sellDetailRepo := repositories.NewSellDetailRepository(db)
 	billRepo := repositories.NewBillRepository(db)
 	workerRepo := repositories.NewWorkerRepository(db)
+	merchantRepo := repositories.NewMerchantRepository(db)
 
 	// services
 	userService := services.NewUserService(userRepo)
@@ -72,6 +73,7 @@ func main() {
 	activityService := services.NewActivityService(activityRepo, sellDetailRepo)
 	billService := services.NewBillService(billRepo)
 	workerService := services.NewWorkerService(workerRepo)
+	merchantService := services.NewMerchantService(merchantRepo)
 
 	// controllers
 	userController := controllers.NewUserController(userService)
@@ -85,6 +87,7 @@ func main() {
 	activityController := controllers.NewActivityController(activityService)
 	billController := controllers.NewBillController(billService)
 	workerController := controllers.NewWorkerController(workerService)
+	merchantController := controllers.NewMerchantController(merchantService)
 
 	// apply route
 	userController.ApplyRoute(router)
@@ -98,6 +101,7 @@ func main() {
 	activityController.ApplyRoute(router)
 	billController.ApplyRoute(router)
 	workerController.ApplyRoute(router)
+	merchantController.ApplyRoute(router)
 
 	// run server
 	router.Run(":8080")
