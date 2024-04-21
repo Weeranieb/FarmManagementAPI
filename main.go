@@ -60,6 +60,9 @@ func main() {
 	billRepo := repositories.NewBillRepository(db)
 	workerRepo := repositories.NewWorkerRepository(db)
 	merchantRepo := repositories.NewMerchantRepository(db)
+	feedPriceHistoryRepo := repositories.NewFeedPriceHistoryRepository(db)
+	feedCollectionRepo := repositories.NewFeedCollectionRepository(db)
+	dailyFeedRepo := repositories.NewDailyFeedRepository(db)
 
 	// services
 	userService := services.NewUserService(userRepo)
@@ -74,6 +77,9 @@ func main() {
 	billService := services.NewBillService(billRepo)
 	workerService := services.NewWorkerService(workerRepo)
 	merchantService := services.NewMerchantService(merchantRepo)
+	feedPriceHistoryService := services.NewFeedPriceHistoryService(feedPriceHistoryRepo)
+	feedCollectionService := services.NewFeedCollectionService(feedCollectionRepo)
+	dailyFeedService := services.NewDailyFeedService(dailyFeedRepo)
 
 	// controllers
 	userController := controllers.NewUserController(userService)
@@ -88,6 +94,9 @@ func main() {
 	billController := controllers.NewBillController(billService)
 	workerController := controllers.NewWorkerController(workerService)
 	merchantController := controllers.NewMerchantController(merchantService)
+	feedPriceHistoryController := controllers.NewFeedPriceHistoryController(feedPriceHistoryService)
+	feedCollectionController := controllers.NewFeedCollectionController(feedCollectionService)
+	dailyFeedController := controllers.NewDailyFeedController(dailyFeedService)
 
 	// apply route
 	userController.ApplyRoute(router)
@@ -102,6 +111,9 @@ func main() {
 	billController.ApplyRoute(router)
 	workerController.ApplyRoute(router)
 	merchantController.ApplyRoute(router)
+	feedPriceHistoryController.ApplyRoute(router)
+	feedCollectionController.ApplyRoute(router)
+	dailyFeedController.ApplyRoute(router)
 
 	// run server
 	router.Run(":8080")
