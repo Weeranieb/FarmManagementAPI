@@ -1,5 +1,7 @@
 package models
 
+import "errors"
+
 // FeedCollection represents a feed collection in the system.
 type FeedCollection struct {
 	Id       int    `json:"id" gorm:"column:Id;primaryKey;autoIncrement"`
@@ -9,3 +11,39 @@ type FeedCollection struct {
 	Unit     string `json:"unit" gorm:"column:Unit"`
 	Base
 }
+
+type AddFeedCollection struct {
+	ClientId int    `json:"clientId" gorm:"column:ClientId"`
+	Code     string `json:"code" gorm:"column:Code"`
+	Name     string `json:"name" gorm:"column:Name"`
+	Unit     string `json:"unit" gorm:"column:Unit"`
+}
+
+// Validation Add
+func (a AddFeedCollection) Validation() error {
+	if a.ClientId == 0 {
+		return errors.New(ErrClientIdEmpty)
+	}
+	if a.Code == "" {
+		return errors.New(ErrCodeEmpty)
+	}
+	if a.Name == "" {
+		return errors.New(ErrNameEmpty)
+	}
+	if a.Unit == "" {
+		return errors.New(ErrUnitEmpty)
+	}
+	return nil
+}
+
+// Transfer Add
+func (a AddFeedCollection) Transfer(feedCollection *FeedCollection) {
+	feedCollection.ClientId = a.ClientId
+	feedCollection.Code = a.Code
+	feedCollection.Name = a.Name
+	feedCollection.Unit = a.Unit
+}
+
+const (
+	ErrUnitEmpty = "unit is empty"
+)
