@@ -14,6 +14,7 @@ type IPondRepository interface {
 	TakeById(id int) (*models.Pond, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Pond, error)
 	Update(pond *models.Pond) error
+	TakeAll(clientId int) ([]*models.Pond, error)
 }
 
 type pondRepositoryImp struct {
@@ -62,4 +63,12 @@ func (rp pondRepositoryImp) Update(request *models.Pond) error {
 		return err
 	}
 	return nil
+}
+
+func (rp pondRepositoryImp) TakeAll(clientId int) ([]*models.Pond, error) {
+	var result []*models.Pond
+	if err := rp.dbContext.Table(dbconst.TPond).Where("\"ClientId\" = ? AND \"DelFlag\" = ?", clientId, false).Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }

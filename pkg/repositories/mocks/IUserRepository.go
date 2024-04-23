@@ -79,6 +79,36 @@ func (_m *IUserRepository) FirstByQuery(query interface{}, args ...interface{}) 
 	return r0, r1
 }
 
+// TakeAll provides a mock function with given fields: clientId
+func (_m *IUserRepository) TakeAll(clientId int) ([]*models.User, error) {
+	ret := _m.Called(clientId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TakeAll")
+	}
+
+	var r0 []*models.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) ([]*models.User, error)); ok {
+		return rf(clientId)
+	}
+	if rf, ok := ret.Get(0).(func(int) []*models.User); ok {
+		r0 = rf(clientId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(clientId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // TakeById provides a mock function with given fields: id
 func (_m *IUserRepository) TakeById(id int) (*models.User, error) {
 	ret := _m.Called(id)

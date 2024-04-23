@@ -33,6 +33,7 @@ func (c userControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddUser)
 			eg.GET("", c.GetUser)
 			eg.PUT("", c.UpdateUser)
+			eg.GET("list", c.GetUserList)
 		}
 	}
 }
@@ -168,6 +169,44 @@ func (c userControllerImp) UpdateUser(ctx *gin.Context) {
 	}
 
 	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c userControllerImp) GetUserList(ctx *gin.Context) {
+	var response httputil.ResponseModel
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_User_GetUserList_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	// get clientId
+	clientId, err := jwtutil.GetClientId(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_User_GetUserList_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	users, err := c.UserService.GetUserList(clientId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_User_GetUserList_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
+	response.Data = users
 
 	ctx.JSON(http.StatusOK, response)
 }

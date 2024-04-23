@@ -34,6 +34,7 @@ func (c pondControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddPond)
 			eg.GET(":id", c.GetPond)
 			eg.PUT("", c.UpdatePond)
+			eg.GET("list", c.GetPondList)
 		}
 	}
 }
@@ -159,6 +160,43 @@ func (c pondControllerImp) UpdatePond(ctx *gin.Context) {
 	}
 
 	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c pondControllerImp) GetPondList(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	var clientId int
+	clientId, err := jwtutil.GetClientId(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Pond_GetPondList_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Pond_GetPondList_02", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	ponds, err := c.PondService.GetList(clientId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Pond_GetPondList_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
+	response.Data = ponds
 
 	ctx.JSON(http.StatusOK, response)
 }

@@ -15,6 +15,7 @@ type IUserRepository interface {
 	FirstByQuery(query interface{}, args ...interface{}) (*models.User, error)
 	Update(user *models.User) error
 	WithTrx(trxHandle *gorm.DB) IUserRepository
+	TakeAll(clientId int) ([]*models.User, error)
 }
 
 type userRepositoryImp struct {
@@ -72,4 +73,12 @@ func (rp userRepositoryImp) Update(request *models.User) error {
 		return err
 	}
 	return nil
+}
+
+func (rp userRepositoryImp) TakeAll(clientId int) ([]*models.User, error) {
+	var result []*models.User
+	if err := rp.dbContext.Table(dbconst.TUser).Where("\"ClientId\" = ? AND \"DelFlag\" = ?", clientId, false).Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }

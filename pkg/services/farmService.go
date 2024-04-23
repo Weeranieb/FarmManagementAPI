@@ -10,6 +10,7 @@ type IFarmService interface {
 	Create(request models.AddFarm, userIdentity string, clientId int) (*models.Farm, error)
 	Get(id, clientId int) (*models.Farm, error)
 	Update(request *models.Farm, userIdentity string) error
+	GetList(clientId int) ([]*models.Farm, error)
 }
 
 type farmServiceImp struct {
@@ -73,4 +74,8 @@ func (sv farmServiceImp) Update(request *models.Farm, userIdentity string) error
 		return err
 	}
 	return nil
+}
+
+func (sv farmServiceImp) GetList(clientId int) ([]*models.Farm, error) {
+	return sv.FarmRepo.TakeAll(clientId)
 }

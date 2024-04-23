@@ -10,6 +10,7 @@ type IPondService interface {
 	Create(request models.AddPond, userIdentity string) (*models.Pond, error)
 	Get(id int) (*models.Pond, error)
 	Update(request *models.Pond, userIdentity string) error
+	GetList(clientId int) ([]*models.Pond, error)
 }
 
 type pondServiceImp struct {
@@ -63,4 +64,8 @@ func (sv pondServiceImp) Update(request *models.Pond, userIdentity string) error
 		return err
 	}
 	return nil
+}
+
+func (sv pondServiceImp) GetList(clientId int) ([]*models.Pond, error) {
+	return sv.PondRepo.TakeAll(clientId)
 }

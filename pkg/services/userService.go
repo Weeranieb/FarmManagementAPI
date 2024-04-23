@@ -12,6 +12,7 @@ type IUserService interface {
 	Create(request models.AddUser, userIdentity string, clientId int) (*models.User, error)
 	GetUser(id int) (*models.User, error)
 	Update(request *models.User, userIdentity string) error
+	GetUserList(clientId int) ([]*models.User, error)
 }
 
 type userServiceImp struct {
@@ -73,4 +74,8 @@ func (sv userServiceImp) Update(request *models.User, userIdentity string) error
 		return err
 	}
 	return nil
+}
+
+func (sv userServiceImp) GetUserList(clientId int) ([]*models.User, error) {
+	return sv.UserRepo.TakeAll(clientId)
 }
