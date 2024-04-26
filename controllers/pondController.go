@@ -34,7 +34,7 @@ func (c pondControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddPond)
 			eg.GET(":id", c.GetPond)
 			eg.PUT("", c.UpdatePond)
-			eg.GET("list", c.GetPondList)
+			eg.GET("", c.GetPondList)
 		}
 	}
 }
@@ -166,8 +166,11 @@ func (c pondControllerImp) UpdatePond(ctx *gin.Context) {
 
 func (c pondControllerImp) GetPondList(ctx *gin.Context) {
 	var response httputil.ResponseModel
-	var clientId int
-	clientId, err := jwtutil.GetClientId(ctx)
+	var farmId int
+	// get param from query
+	farmIds := ctx.Query("farmId")
+	// convert string to int
+	farmId, err := strconv.Atoi(farmIds)
 	if err != nil {
 		errRes := httputil.ErrorResponseModel{}
 		errRes.Error(ctx, "Err_Pond_GetPondList_01", err.Error())
@@ -186,7 +189,7 @@ func (c pondControllerImp) GetPondList(ctx *gin.Context) {
 		}
 	}()
 
-	ponds, err := c.PondService.GetList(clientId)
+	ponds, err := c.PondService.GetList(farmId)
 	if err != nil {
 		errRes := httputil.ErrorResponseModel{}
 		errRes.Error(ctx, "Err_Pond_GetPondList_03", err.Error())
