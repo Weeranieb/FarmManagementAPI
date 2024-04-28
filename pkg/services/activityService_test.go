@@ -444,7 +444,7 @@ func TestCreateActivity(t *testing.T) {
 				}, nil)
 			},
 			expectedReturn: nil,
-			expectedError:  assert.AnError,
+			expectedError:  errors.New("the activity already exist on the given date"),
 		},
 		{
 			name: "Create activity fail at validation",
