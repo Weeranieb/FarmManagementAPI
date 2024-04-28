@@ -488,3 +488,425 @@ func TestCreateActivity(t *testing.T) {
 		})
 	}
 }
+
+func TestGetActivity(t *testing.T) {
+	var (
+		mockActivityRepo   *mocks.IActivityRepository
+		mockSellDetailRepo *mocks.ISellDetailRepository
+		activityService    services.IActivityService
+	)
+
+	beforeEach := func() {
+		mockActivityRepo = new(mocks.IActivityRepository)
+		mockSellDetailRepo = new(mocks.ISellDetailRepository)
+		activityService = services.NewActivityService(mockActivityRepo, mockSellDetailRepo)
+	}
+
+	t.Run("Get activity success", func(t *testing.T) {
+		beforeEach()
+
+		mockActivityRepo.On("TakeById", 1).Return(&models.Activity{
+			Id:           1,
+			ActivePondId: 1,
+			Mode:         "SELL",
+			ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			MerchantId:   indirect.Int(1),
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}, nil)
+
+		mockSellDetailRepo.On("ListByQuery", "\"SellId\" = ? AND \"DelFlag\" = ?", 1, false).Return([]models.SellDetail{
+			{
+				Id:           1,
+				SellId:       1,
+				FishType:     "Kraphong",
+				Size:         "M",
+				Amount:       100,
+				FishUnit:     "Kilogram",
+				PricePerUnit: 100,
+				Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+			},
+			{
+				Id:           2,
+				SellId:       1,
+				FishType:     "Nil",
+				Size:         "M",
+				Amount:       100,
+				FishUnit:     "Kilogram",
+				PricePerUnit: 100,
+				Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+			},
+		}, nil)
+		result, err := activityService.Get(1)
+
+		assert.Nil(t, err)
+		assert.Equal(t, &models.ActivityWithSellDetail{
+			Activity: models.Activity{
+				Id:           1,
+				ActivePondId: 1,
+				Mode:         "SELL",
+				ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				MerchantId:   indirect.Int(1),
+				Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+			},
+			SellDetail: []models.SellDetail{
+				{
+					Id:           1,
+					SellId:       1,
+					FishType:     "Kraphong",
+					Size:         "M",
+					Amount:       100,
+					FishUnit:     "Kilogram",
+					PricePerUnit: 100,
+					Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+				},
+				{
+					Id:           2,
+					SellId:       1,
+					FishType:     "Nil",
+					Size:         "M",
+					Amount:       100,
+					FishUnit:     "Kilogram",
+					PricePerUnit: 100,
+					Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+				},
+			},
+		}, result)
+	})
+
+	t.Run("Should return error when ListByQuery error", func(t *testing.T) {
+		beforeEach()
+
+		mockActivityRepo.On("TakeById", 1).Return(&models.Activity{
+			Id:           1,
+			ActivePondId: 1,
+			Mode:         "SELL",
+			ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			MerchantId:   indirect.Int(1),
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}, nil)
+
+		mockSellDetailRepo.On("ListByQuery", "\"SellId\" = ? AND \"DelFlag\" = ?", 1, false).Return([]models.SellDetail{}, nil)
+		result, err := activityService.Get(1)
+
+		assert.Error(t, err)
+		assert.Equal(t, "sell detail not found", err.Error())
+		assert.Nil(t, result)
+	})
+
+	t.Run("Should return error when ListByQuery eror", func(t *testing.T) {
+		beforeEach()
+
+		mockActivityRepo.On("TakeById", 1).Return(&models.Activity{
+			Id:           1,
+			ActivePondId: 1,
+			Mode:         "SELL",
+			ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			MerchantId:   indirect.Int(1),
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}, nil)
+
+		mockSellDetailRepo.On("ListByQuery", "\"SellId\" = ? AND \"DelFlag\" = ?", 1, false).Return(nil, assert.AnError)
+		result, err := activityService.Get(1)
+
+		assert.Nil(t, result)
+		assert.Error(t, err)
+		assert.Equal(t, assert.AnError, err)
+	})
+
+	t.Run("Should return error when TakeById error", func(t *testing.T) {
+		beforeEach()
+
+		mockActivityRepo.On("TakeById", 1).Return(nil, assert.AnError)
+		result, err := activityService.Get(1)
+
+		assert.Nil(t, result)
+		assert.Error(t, err)
+		assert.Equal(t, assert.AnError, err)
+	})
+}
+
+func TestUpdateActivity(t *testing.T) {
+	var (
+		mockActivityRepo   *mocks.IActivityRepository
+		mockSellDetailRepo *mocks.ISellDetailRepository
+		activityService    services.IActivityService
+		db                 *gorm.DB
+	)
+
+	beforeEach := func() {
+		mockActivityRepo = new(mocks.IActivityRepository)
+		mockSellDetailRepo = new(mocks.ISellDetailRepository)
+		activityService = services.NewActivityService(mockActivityRepo, mockSellDetailRepo)
+
+		mockDB, _, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		defer mockDB.Close()
+
+		// Create a gorm.DB instance from the mockDB using the postgres driver
+		dialector := postgres.New(postgres.Config{
+			Conn:       mockDB,
+			DriverName: "postgres",
+		})
+
+		db, err = gorm.Open(dialector, &gorm.Config{})
+		if err != nil {
+			t.Fatalf("An error occurred while creating gorm.DB: %s", err)
+		}
+
+		// Inject the db instance into the dbcontext
+		dbContext.Context.Postgresql = db
+	}
+
+	t.Run("Update activity success", func(t *testing.T) {
+		beforeEach()
+
+		mockActivityRepo.On("Update", &models.Activity{
+			Id:           1,
+			ActivePondId: 1,
+			Mode:         "SELL",
+			ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			MerchantId:   indirect.Int(1),
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}).Return(nil)
+		mockActivityRepo.On("WithTrx", mock.Anything).Return(mockActivityRepo)
+		mockSellDetailRepo.On("WithTrx", mock.Anything).Return(mockSellDetailRepo)
+
+		mockSellDetailRepo.On("Update", &models.SellDetail{
+			Id:           1,
+			SellId:       1,
+			FishType:     "Kraphong",
+			Size:         "M",
+			Amount:       100,
+			FishUnit:     "Kilogram",
+			PricePerUnit: 100,
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}).Return(nil)
+
+		mockSellDetailRepo.On("Create", &models.SellDetail{
+			Id:           0,
+			SellId:       1,
+			FishType:     "Nil",
+			Size:         "M",
+			Amount:       100,
+			FishUnit:     "Kilogram",
+			PricePerUnit: 100,
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}).Return(&models.SellDetail{
+			Id:           2,
+			SellId:       1,
+			FishType:     "Nil",
+			Size:         "M",
+			Amount:       100,
+			FishUnit:     "Kilogram",
+			PricePerUnit: 100,
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}, nil)
+
+		result, err := activityService.Update(&models.ActivityWithSellDetail{
+			Activity: models.Activity{
+				Id:           1,
+				ActivePondId: 1,
+				Mode:         "SELL",
+				ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				MerchantId:   indirect.Int(1),
+				Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+			},
+			SellDetail: []models.SellDetail{
+				{
+					Id:           1,
+					SellId:       1,
+					FishType:     "Kraphong",
+					Size:         "M",
+					Amount:       100,
+					FishUnit:     "Kilogram",
+					PricePerUnit: 100,
+					Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+				},
+				{
+					Id:           0,
+					SellId:       1,
+					FishType:     "Nil",
+					Size:         "M",
+					Amount:       100,
+					FishUnit:     "Kilogram",
+					PricePerUnit: 100,
+					Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+				},
+			},
+		}, "testUser")
+
+		assert.Nil(t, err)
+		assert.Equal(t, []*models.SellDetail{
+			{
+				Id:           2,
+				SellId:       1,
+				FishType:     "Nil",
+				Size:         "M",
+				Amount:       100,
+				FishUnit:     "Kilogram",
+				PricePerUnit: 100,
+				Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+			},
+		}, result)
+	})
+
+	t.Run("Should return error with create", func(t *testing.T) {
+		beforeEach()
+
+		mockActivityRepo.On("Update", &models.Activity{
+			Id:           1,
+			ActivePondId: 1,
+			Mode:         "SELL",
+			ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			MerchantId:   indirect.Int(1),
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}).Return(nil)
+		mockActivityRepo.On("WithTrx", mock.Anything).Return(mockActivityRepo)
+		mockSellDetailRepo.On("WithTrx", mock.Anything).Return(mockSellDetailRepo)
+
+		mockSellDetailRepo.On("Create", &models.SellDetail{
+			Id:           0,
+			SellId:       1,
+			FishType:     "Nil",
+			Size:         "M",
+			Amount:       100,
+			FishUnit:     "Kilogram",
+			PricePerUnit: 100,
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}).Return(nil, assert.AnError)
+
+		result, err := activityService.Update(&models.ActivityWithSellDetail{
+			Activity: models.Activity{
+				Id:           1,
+				ActivePondId: 1,
+				Mode:         "SELL",
+				ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				MerchantId:   indirect.Int(1),
+				Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+			},
+			SellDetail: []models.SellDetail{
+				{
+					Id:           0,
+					SellId:       1,
+					FishType:     "Nil",
+					Size:         "M",
+					Amount:       100,
+					FishUnit:     "Kilogram",
+					PricePerUnit: 100,
+					Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+				},
+			},
+		}, "testUser")
+
+		assert.Error(t, err)
+		assert.Equal(t, assert.AnError, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("Should return error with update", func(t *testing.T) {
+		beforeEach()
+
+		mockActivityRepo.On("Update", &models.Activity{
+			Id:           1,
+			ActivePondId: 1,
+			Mode:         "SELL",
+			ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			MerchantId:   indirect.Int(1),
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}).Return(nil)
+		mockActivityRepo.On("WithTrx", mock.Anything).Return(mockActivityRepo)
+		mockSellDetailRepo.On("WithTrx", mock.Anything).Return(mockSellDetailRepo)
+
+		mockSellDetailRepo.On("Update", &models.SellDetail{
+			Id:           1,
+			SellId:       1,
+			FishType:     "Kraphong",
+			Size:         "M",
+			Amount:       100,
+			FishUnit:     "Kilogram",
+			PricePerUnit: 100,
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}).Return(assert.AnError)
+
+		result, err := activityService.Update(&models.ActivityWithSellDetail{
+			Activity: models.Activity{
+				Id:           1,
+				ActivePondId: 1,
+				Mode:         "SELL",
+				ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				MerchantId:   indirect.Int(1),
+				Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+			},
+			SellDetail: []models.SellDetail{
+				{
+					Id:           1,
+					SellId:       1,
+					FishType:     "Kraphong",
+					Size:         "M",
+					Amount:       100,
+					FishUnit:     "Kilogram",
+					PricePerUnit: 100,
+					Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+				},
+				{
+					Id:           0,
+					SellId:       1,
+					FishType:     "Nil",
+					Size:         "M",
+					Amount:       100,
+					FishUnit:     "Kilogram",
+					PricePerUnit: 100,
+					Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+				},
+			},
+		}, "testUser")
+
+		assert.Error(t, err)
+		assert.Equal(t, assert.AnError, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("Should return error with update activity", func(t *testing.T) {
+		beforeEach()
+
+		mockActivityRepo.On("Update", &models.Activity{
+			Id:           1,
+			ActivePondId: 1,
+			Mode:         "SELL",
+			ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			MerchantId:   indirect.Int(1),
+			Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+		}).Return(assert.AnError)
+		mockActivityRepo.On("WithTrx", mock.Anything).Return(mockActivityRepo)
+
+		result, err := activityService.Update(&models.ActivityWithSellDetail{
+			Activity: models.Activity{
+				Id:           1,
+				ActivePondId: 1,
+				Mode:         "SELL",
+				ActivityDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				MerchantId:   indirect.Int(1),
+				Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+			},
+			SellDetail: []models.SellDetail{
+				{
+					Id:           0,
+					SellId:       1,
+					FishType:     "Nil",
+					Size:         "M",
+					Amount:       100,
+					FishUnit:     "Kilogram",
+					PricePerUnit: 100,
+					Base:         models.Base{CreatedBy: "testUser", UpdatedBy: "testUser"},
+				},
+			},
+		}, "testUser")
+
+		assert.Error(t, err)
+		assert.Equal(t, assert.AnError, err)
+		assert.Nil(t, result)
+	})
+}

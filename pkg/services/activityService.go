@@ -104,6 +104,11 @@ func (sv activityServiceImp) Get(id int) (*models.ActivityWithSellDetail, error)
 		if err != nil {
 			return nil, err
 		}
+
+		if len(sellDetails) == 0 {
+			return nil, errors.New("sell detail not found")
+		}
+
 		payload.SellDetail = sellDetails
 	}
 
