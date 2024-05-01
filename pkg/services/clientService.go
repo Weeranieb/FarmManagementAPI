@@ -24,11 +24,7 @@ func NewClientService(clientRepo repositories.IClientRepository) IClientService 
 
 func (sv clientServiceImp) Get(id int) (*models.Client, error) {
 	// get client by id
-	res, err := sv.ClientRepo.TakeById(id)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+	return sv.ClientRepo.TakeById(id)
 }
 
 func (sv clientServiceImp) Create(request models.AddClient, userIdentity string) (*models.Client, error) {
@@ -65,7 +61,6 @@ func (sv clientServiceImp) Create(request models.AddClient, userIdentity string)
 func (sv clientServiceImp) Update(request *models.Client, userIdentity string) error {
 	// update client
 	request.UpdatedBy = userIdentity
-	// request.UpdatedDate = time.Now()
 	if err := sv.ClientRepo.Update(request); err != nil {
 		return err
 	}
