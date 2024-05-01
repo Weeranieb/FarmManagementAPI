@@ -15,10 +15,10 @@ type IDailyFeedService interface {
 }
 
 type dailyFeedServiceImp struct {
-	DailyFeedRepo repositories.IFDailyFeedRepository
+	DailyFeedRepo repositories.IDailyFeedRepository
 }
 
-func NewDailyFeedService(dailyFeedRepo repositories.IFDailyFeedRepository) IDailyFeedService {
+func NewDailyFeedService(dailyFeedRepo repositories.IDailyFeedRepository) IDailyFeedService {
 	return &dailyFeedServiceImp{
 		DailyFeedRepo: dailyFeedRepo,
 	}

@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type IFDailyFeedRepository interface {
+type IDailyFeedRepository interface {
 	Create(dailyFeed *models.DailyFeed) (*models.DailyFeed, error)
 	BulkCreate(dailyFeeds []*models.DailyFeed) ([]*models.DailyFeed, error)
 	TakeById(id int) (*models.DailyFeed, error)
@@ -21,7 +21,7 @@ type dailyFeedRepositoryImp struct {
 	dbContext *gorm.DB
 }
 
-func NewDailyFeedRepository(db *gorm.DB) IFDailyFeedRepository {
+func NewDailyFeedRepository(db *gorm.DB) IDailyFeedRepository {
 	return &dailyFeedRepositoryImp{
 		dbContext: db,
 	}
