@@ -108,7 +108,7 @@ func TestCreateDailyFeed(t *testing.T) {
 
 		// Assert the result
 		assert.Error(t, err)
-		assert.Equal(t, "feed date is empty", err.Error())
+		assert.Equal(t, "feedDate is empty", err.Error())
 		assert.Nil(t, dailyFeed)
 	})
 
@@ -189,25 +189,6 @@ func TestCreateDailyFeed(t *testing.T) {
 
 		// Assert the result
 		assert.Error(t, err)
-		assert.Nil(t, dailyFeed)
-	})
-
-	t.Run("Create daily feed with invalid data", func(t *testing.T) {
-		beforeEach()
-
-		// Define test data
-		request := models.AddDailyFeed{
-			ActivePondId:     1,
-			FeedCollectionId: 1,
-			Amount:           1000,
-		}
-
-		// Call the Create method
-		dailyFeed, err := dailyFeedService.Create(request, "testUser")
-
-		// Assert the result
-		assert.Error(t, err)
-		assert.Equal(t, "feed date is empty", err.Error())
 		assert.Nil(t, dailyFeed)
 	})
 
