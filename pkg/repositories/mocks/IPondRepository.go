@@ -76,6 +76,36 @@ func (_m *IPondRepository) FirstByQuery(query interface{}, args ...interface{}) 
 	return r0, r1
 }
 
+// TakeAll provides a mock function with given fields: farmId
+func (_m *IPondRepository) TakeAll(farmId int) ([]*models.Pond, error) {
+	ret := _m.Called(farmId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TakeAll")
+	}
+
+	var r0 []*models.Pond
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) ([]*models.Pond, error)); ok {
+		return rf(farmId)
+	}
+	if rf, ok := ret.Get(0).(func(int) []*models.Pond); ok {
+		r0 = rf(farmId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.Pond)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(farmId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // TakeById provides a mock function with given fields: id
 func (_m *IPondRepository) TakeById(id int) (*models.Pond, error) {
 	ret := _m.Called(id)

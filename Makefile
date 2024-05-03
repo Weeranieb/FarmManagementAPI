@@ -40,5 +40,11 @@ mockDailyFeedRepo:
 	mockery --dir=pkg/repositories --name=IDailyFeedRepository --filename=IDailyFeedRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
 mockFeedCollectionRepo:
 	mockery --dir=pkg/repositories --name=IFeedCollectionRepository --filename=IFeedCollectionRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockFeedPriceHistoryRepo:
+	mockery --dir=pkg/repositories --name=IFeedPriceHistoryRepository --filename=IFeedPriceHistoryRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockMerchantRepo:
+	mockery --dir=pkg/repositories --name=IMerchantRepository --filename=IMerchantRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
+mockWorkerRepo:
+	mockery --dir=pkg/repositories --name=IWorkerRepository --filename=IWorkerRepository.go --output=pkg/repositories/mocks  --outpkg=mocks
 
 .PHONY: postgres createdb dropdb  migrateup migratedown sqlc test server mock migrateup1 migratedown2 mockClientRepo mockActivePondRepo mockUserRepo mockActivityRepo mockFarmGroupRepo mockFarmRepo mockFarmOnFarmGroupRepositoryRepo mockPondRepo mockSellDetailRepo mockBillRepo
