@@ -34,6 +34,7 @@ func (c activePondControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddActivePond)
 			eg.GET(":id", c.GetActivePond)
 			eg.PUT("", c.UpdateActivePond)
+			eg.GET("", c.GetActivePondList)
 		}
 	}
 }
@@ -198,6 +199,46 @@ func (c activePondControllerImp) UpdateActivePond(ctx *gin.Context) {
 	}
 
 	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c activePondControllerImp) GetActivePondList(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	var farmId int
+	// get param from query
+	farmIds := ctx.Query("farmId")
+	// convert string to int
+	farmId, err := strconv.Atoi(farmIds)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_ActivePond_GetActivePondList_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_ActivePond_GetActivePondList_02", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	ponds, err := c.ActivePondService.GetList(farmId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_ActivePond_GetActivePondList_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
+	response.Data = ponds
 
 	ctx.JSON(http.StatusOK, response)
 }

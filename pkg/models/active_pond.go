@@ -41,3 +41,11 @@ const (
 	ErrPondIdEmpty    = "pond id is empty"
 	ErrStartDateEmpty = "start date is empty"
 )
+
+type PondWithActive struct {
+	Id           int    `json:"id" gorm:"column:Id"`
+	Code         string `json:"code" gorm:"column:Code"`
+	Name         string `json:"name" gorm:"column:Name"`
+	ActivePondId *int   `json:"activePondId" gorm:"column:ActivePondId"`
+	HasHistory   bool   `json:"hasHistory" gorm:"column:HasHistory"`
+}

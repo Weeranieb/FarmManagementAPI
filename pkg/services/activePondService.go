@@ -9,6 +9,7 @@ import (
 type IActivePondService interface {
 	Create(request models.AddActivePond, userIdentity string) (*models.ActivePond, error)
 	Get(id int) (*models.ActivePond, error)
+	GetList(farmId int) ([]*models.PondWithActive, error)
 	Update(request *models.ActivePond, userIdentity string) error
 }
 
@@ -55,6 +56,10 @@ func (sv activePondServiceImp) Create(request models.AddActivePond, userIdentity
 
 func (sv activePondServiceImp) Get(id int) (*models.ActivePond, error) {
 	return sv.ActivePondRepo.TakeById(id)
+}
+
+func (sv activePondServiceImp) GetList(farmId int) ([]*models.PondWithActive, error) {
+	return sv.ActivePondRepo.GetListWithActive(farmId)
 }
 
 func (sv activePondServiceImp) Update(request *models.ActivePond, userIdentity string) error {
