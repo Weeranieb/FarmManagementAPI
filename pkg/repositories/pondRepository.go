@@ -11,6 +11,7 @@ import (
 
 type IPondRepository interface {
 	Create(pond *models.Pond) (*models.Pond, error)
+	CreateBatch(ponds []*models.Pond) ([]*models.Pond, error)
 	TakeById(id int) (*models.Pond, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Pond, error)
 	Update(pond *models.Pond) error
@@ -28,6 +29,13 @@ func NewPondRepository(db *gorm.DB) IPondRepository {
 }
 
 func (rp pondRepositoryImp) Create(request *models.Pond) (*models.Pond, error) {
+	if err := rp.dbContext.Table(dbconst.TPond).Create(&request).Error; err != nil {
+		return nil, err
+	}
+	return request, nil
+}
+
+func (rp pondRepositoryImp) CreateBatch(request []*models.Pond) ([]*models.Pond, error) {
 	if err := rp.dbContext.Table(dbconst.TPond).Create(&request).Error; err != nil {
 		return nil, err
 	}

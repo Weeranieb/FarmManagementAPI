@@ -882,6 +882,13 @@ const docTemplate = `{
                 "summary": "Update farm entry",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "Farm data",
                         "name": "body",
                         "in": "body",
@@ -925,6 +932,13 @@ const docTemplate = `{
                 ],
                 "summary": "Add a new farm entry",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "Farm data",
                         "name": "body",
@@ -971,6 +985,13 @@ const docTemplate = `{
                 ],
                 "summary": "Get farm by ID",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "description": "Farm ID",

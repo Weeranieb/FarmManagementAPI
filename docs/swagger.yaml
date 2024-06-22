@@ -1065,6 +1065,11 @@ paths:
       - application/json
       description: Add a new farm entry with the provided details
       parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
       - description: Farm data
         in: body
         name: body
@@ -1094,6 +1099,11 @@ paths:
       - application/json
       description: Update details of a farm entry
       parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
       - description: Farm data
         in: body
         name: body
@@ -1124,6 +1134,11 @@ paths:
       - application/json
       description: Retrieve details of a specific farm by its ID
       parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
       - description: Farm ID
         in: path
         name: id

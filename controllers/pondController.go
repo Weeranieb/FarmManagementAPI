@@ -32,6 +32,7 @@ func (c pondControllerImp) ApplyRoute(router *gin.Engine) {
 		eg := v1.Group("/pond")
 		{
 			eg.POST("", c.AddPond)
+			eg.POST("/batch", c.AddPonds)
 			eg.GET(":id", c.GetPond)
 			eg.PUT("", c.UpdatePond)
 			eg.GET("", c.GetPondList)
@@ -46,6 +47,7 @@ func (c pondControllerImp) ApplyRoute(router *gin.Engine) {
 // @Tags         pond
 // @Accept       json
 // @Produce      json
+// @Param        Authorization header string true "Bearer token"
 // @Param        body body models.AddPond true "Pond data"
 // @Success      200  {object}  httputil.ResponseModel
 // @Failure      400  {object}  httputil.ErrorResponseModel
@@ -91,6 +93,62 @@ func (c pondControllerImp) AddPond(ctx *gin.Context) {
 
 	response.Result = true
 	response.Data = newPond
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+// AddPonds godoc
+// @Summary Add multiple ponds
+// @Description Add multiple ponds to the system
+// @Tags Ponds
+// @Accept json
+// @Produce json
+// @Param        Authorization header string true "Bearer token"
+// @Param ponds body []AddPond true "Array of pond objects to be added"
+// @Security ApiKeyAuth
+// @Success 200 {object} ResponseModel
+// @Failure 200 {object} ErrorResponseModel
+// @Router /api/v1/ponds [post]
+func (c pondControllerImp) AddPonds(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	var addPonds []models.AddPond
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Pond_AddPonds_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	if err := ctx.ShouldBindJSON(&addPonds); err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Pond_AddPonds_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	// get username
+	username, err := jwtutil.GetUsername(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Pond_AddPonds_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	newPonds, err := c.PondService.CreateBatch(addPonds, username)
+	if err != nil {
+		httputil.NewError(ctx, "Err_Pond_AddPonds_04", err)
+		return
+	}
+
+	response.Result = true
+	response.Data = newPonds
 
 	ctx.JSON(http.StatusOK, response)
 }

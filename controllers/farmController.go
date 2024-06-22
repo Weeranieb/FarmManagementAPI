@@ -46,6 +46,7 @@ func (c farmControllerImp) ApplyRoute(router *gin.Engine) {
 // @Tags         farm
 // @Accept       json
 // @Produce      json
+// @Param        Authorization header string true "Bearer token"
 // @Param        body body models.AddFarm true "Farm data"
 // @Success      200  {object}  httputil.ResponseModel
 // @Failure      400  {object}  httputil.ErrorResponseModel
@@ -112,6 +113,7 @@ func (c farmControllerImp) AddFarm(ctx *gin.Context) {
 // @Tags         farm
 // @Accept       json
 // @Produce      json
+// @Param        Authorization header string true "Bearer token"
 // @Success      200  {object}  httputil.ResponseModel
 // @Failure      400  {object}  httputil.ErrorResponseModel
 // @Failure      500  {object}  httputil.ErrorResponseModel
@@ -172,6 +174,7 @@ func (c farmControllerImp) GetFarm(ctx *gin.Context) {
 // @Tags         farm
 // @Accept       json
 // @Produce      json
+// @Param        Authorization header string true "Bearer token"
 // @Param        id path int true "Farm ID"
 // @Success      200  {object}  httputil.ResponseModel
 // @Failure      400  {object}  httputil.ErrorResponseModel
@@ -227,6 +230,7 @@ func (c farmControllerImp) UpdateFarm(ctx *gin.Context) {
 // @Tags         farm
 // @Accept       json
 // @Produce      json
+// @Param        Authorization header string true "Bearer token"
 // @Param        body body models.Farm true "Farm data"
 // @Success      200  {object}  httputil.ResponseModel
 // @Failure      400  {object}  httputil.ErrorResponseModel
