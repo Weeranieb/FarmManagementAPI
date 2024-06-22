@@ -38,6 +38,18 @@ func (c userControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/user
+// Add a new user.
+// @Summary      Add a new user
+// @Description  Create a new user with the provided details
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddUser true "User data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/user [post]
 func (c userControllerImp) AddUser(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addUser models.AddUser
@@ -92,6 +104,18 @@ func (c userControllerImp) AddUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/user
+// Get the current user.
+// @Summary      Get the current user
+// @Description  Retrieve the user details of the currently authenticated user
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      404  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/user [get]
 func (c userControllerImp) GetUser(ctx *gin.Context) {
 	var response httputil.ResponseModel
 
@@ -130,6 +154,18 @@ func (c userControllerImp) GetUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/user
+// Update the current user.
+// @Summary      Update the current user
+// @Description  Update the details of the currently authenticated user
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        body body models.User true "Updated user data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/user [put]
 func (c userControllerImp) UpdateUser(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateUser *models.User
@@ -173,6 +209,17 @@ func (c userControllerImp) UpdateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/user/list
+// Get a list of users.
+// @Summary      Get a list of users
+// @Description  Retrieve a list of users associated with the current client ID
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/user/list [get]
 func (c userControllerImp) GetUserList(ctx *gin.Context) {
 	var response httputil.ResponseModel
 

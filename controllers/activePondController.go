@@ -38,6 +38,19 @@ func (c activePondControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// AddActivePond godoc
+// @Summary      Add a new active pond
+// @Description  Add a new active pond
+// @Tags         activepond
+// @Accept       json
+// @Produce      json
+// @Param        Authorization header string true "Bearer token"
+// @Param        body body models.AddActivePond true "New Active Pond data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      401  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/activepond [post]
 func (c activePondControllerImp) AddActivePond(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addActivePond models.AddActivePond
@@ -82,6 +95,19 @@ func (c activePondControllerImp) AddActivePond(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GetActivePond godoc
+// @Summary      Get an active pond by ID
+// @Description  Get an active pond by ID
+// @Tags         activepond
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Active Pond ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      401  {object}  httputil.ErrorResponseModel
+// @Failure      404  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/activepond/{id} [get]
 func (c activePondControllerImp) GetActivePond(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from params
@@ -120,6 +146,19 @@ func (c activePondControllerImp) GetActivePond(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// UpdateActivePond godoc
+// @Summary      Update an active pond
+// @Description  Update an active pond
+// @Tags         activepond
+// @Accept       json
+// @Produce      json
+// @Param        Authorization header string true "Bearer token"
+// @Param        body body models.ActivePond true "Updated Active Pond data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      401  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/activepond [put]
 func (c activePondControllerImp) UpdateActivePond(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateActivePond *models.ActivePond

@@ -38,6 +38,21 @@ func (c activityControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// AddActivity creates a new activity.
+// It handles the HTTP POST request and expects the request body to contain JSON data representing the new activity.
+// It returns a JSON response indicating success or failure of the creation, along with any relevant data.
+// @Summary      Add a new activity
+// @Description  Add a new activity
+// @Tags         activity
+// @Accept       json
+// @Produce      json
+// @Param        Authorization header string true "Bearer token"
+// @Param        body body models.CreateActivityRequest true "New Activity data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      401  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/activity [post]
 func (c activityControllerImp) AddActivity(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addActivity models.CreateActivityRequest
@@ -84,6 +99,18 @@ func (c activityControllerImp) AddActivity(ctx *gin.Context) {
 
 // GetActivity retrieves an activity based on the provided ID.
 // It handles the HTTP GET request and returns the activity as a JSON response.
+// @Summary      Get an activity by ID
+// @Description  Get an activity by ID
+// @Tags         activity
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Activity ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      401  {object}  httputil.ErrorResponseModel
+// @Failure      404  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/activity/{id} [get]
 func (c activityControllerImp) GetActivity(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from params
@@ -122,11 +149,21 @@ func (c activityControllerImp) GetActivity(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-// UpdateActivity updates an activity with sell details.
-// It receives a gin context `ctx` and expects the request body to contain a JSON payload
-// representing the updated activity with sell details.
-// It returns a JSON response indicating the success or failure of the update operation,
-// along with any relevant data.
+// UpdateActivity updates an activity.
+// It handles the HTTP PUT request and expects the request body to contain JSON data representing the updated activity.
+// It returns a JSON response indicating success or failure of the update operation, along with any relevant data.
+// @Summary      Update an activity
+// @Description  Update an activity
+// @Tags         activity
+// @Accept       json
+// @Produce      json
+// @Param        Authorization header string true "Bearer token"
+// @Param        body body models.ActivityWithSellDetail true "Updated Activity data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      401  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/activity [put]
 func (c activityControllerImp) UpdateActivity(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateActivity *models.ActivityWithSellDetail

@@ -15,6 +15,9 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		paths := []string{
 			"auth/register",
 			"auth/login",
+			"/swagger",              // Path to serve Swagger UI
+			"/swagger/index.html",   // Swagger UI entry point
+			"/swagger/swagger.json", // Swagger JSON file
 		}
 
 		for _, path := range paths {

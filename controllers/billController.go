@@ -38,6 +38,18 @@ func (c billControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/bill
+// Add a new bill.
+// @Summary      Add a new bill
+// @Description  Add a new bill with the provided details
+// @Tags         bill
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddBill true "Bill data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/bill [post]
 func (c billControllerImp) AddBill(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addBill models.AddBill
@@ -82,6 +94,19 @@ func (c billControllerImp) AddBill(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/bill/{id}
+// Get bill by ID.
+// @Summary      Get bill by ID
+// @Description  Get a bill by its ID
+// @Tags         bill
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Bill ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      404  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/bill/{id} [get]
 func (c billControllerImp) GetBill(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from params
@@ -120,6 +145,18 @@ func (c billControllerImp) GetBill(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/bill
+// Update an existing bill.
+// @Summary      Update an existing bill
+// @Description  Update an existing bill with the provided details
+// @Tags         bill
+// @Accept       json
+// @Produce      json
+// @Param        body body models.Bill true "Bill data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/bill [put]
 func (c billControllerImp) UpdateBill(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateBill *models.Bill

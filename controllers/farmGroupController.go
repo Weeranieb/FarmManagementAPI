@@ -39,6 +39,18 @@ func (c farmGroupControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/farmGroup
+// Add a new farm group entry.
+// @Summary      Add a new farm group entry
+// @Description  Add a new farm group entry with the provided details
+// @Tags         farmGroup
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddFarmGroup true "Farm group data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farmGroup [post]
 func (c farmGroupControllerImp) AddFarmGroup(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addFarmGroupp models.AddFarmGroup
@@ -93,6 +105,18 @@ func (c farmGroupControllerImp) AddFarmGroup(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/farmGroup/{id}
+// Get farm group by ID.
+// @Summary      Get farm group by ID
+// @Description  Retrieve details of a specific farm group by its ID
+// @Tags         farmGroup
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Farm group ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farmGroup/{id} [get]
 func (c farmGroupControllerImp) GetFarmGroup(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from param
@@ -141,6 +165,18 @@ func (c farmGroupControllerImp) GetFarmGroup(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/farmGroup
+// Update farm group entry.
+// @Summary      Update farm group entry
+// @Description  Update details of a farm group entry
+// @Tags         farmGroup
+// @Accept       json
+// @Produce      json
+// @Param        body body models.FarmGroup true "Farm group data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farmGroup [put]
 func (c farmGroupControllerImp) UpdateFarmGroup(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var UpdateFarm *models.FarmGroup
@@ -184,6 +220,18 @@ func (c farmGroupControllerImp) UpdateFarmGroup(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/farmGroup/{id}/farmList
+// Get list of farms associated with a specific farm group.
+// @Summary      Get list of farms associated with a specific farm group
+// @Description  Retrieve a list of farms associated with a specific farm group by its ID
+// @Tags         farmGroup
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Farm group ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farmGroup/{id}/farmList [get]
 func (c farmGroupControllerImp) GetFarmList(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from param

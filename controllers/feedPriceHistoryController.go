@@ -38,6 +38,18 @@ func (c feedPriceHistoryControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/feedpricehistory
+// Add a feed price history entry.
+// @Summary      Add a feed price history entry
+// @Description  Add a new entry to the feed price history with the provided details
+// @Tags         feedpricehistory
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddFeedPriceHistory true "Feed price history data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/feedpricehistory [post]
 func (c feedPriceHistoryControllerImp) AddFeedPriceHistory(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addPond models.AddFeedPriceHistory
@@ -82,6 +94,19 @@ func (c feedPriceHistoryControllerImp) AddFeedPriceHistory(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/feedpricehistory/{id}
+// Get a feed price history entry by ID.
+// @Summary      Get a feed price history entry by ID
+// @Description  Retrieve a feed price history entry by its ID
+// @Tags         feedpricehistory
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Feed price history entry ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      404  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/feedpricehistory/{id} [get]
 func (c feedPriceHistoryControllerImp) GetFeedPriceHistory(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from params
@@ -120,6 +145,18 @@ func (c feedPriceHistoryControllerImp) GetFeedPriceHistory(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/feedpricehistory
+// Update a feed price history entry.
+// @Summary      Update a feed price history entry
+// @Description  Update an existing entry in the feed price history with new details
+// @Tags         feedpricehistory
+// @Accept       json
+// @Produce      json
+// @Param        body body models.FeedPriceHistory true "Updated feed price history data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/feedpricehistory [put]
 func (c feedPriceHistoryControllerImp) UpdateFeedPriceHistory(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateFeedPriceHistory *models.FeedPriceHistory

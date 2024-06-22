@@ -37,6 +37,18 @@ func (c clientControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/client
+// Add a new client.
+// @Summary      Add a new client
+// @Description  Add a new client with the provided details
+// @Tags         client
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddClient true "Client data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/client [post]
 func (c clientControllerImp) AddClient(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addClient models.AddClient
@@ -71,6 +83,18 @@ func (c clientControllerImp) AddClient(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/client
+// Get client details.
+// @Summary      Get client details
+// @Description  Retrieve details of the currently logged-in client
+// @Tags         client
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      401  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/client [get]
 func (c clientControllerImp) GetClient(ctx *gin.Context) {
 	var response httputil.ResponseModel
 
@@ -106,6 +130,19 @@ func (c clientControllerImp) GetClient(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/client
+// Update client details.
+// @Summary      Update client details
+// @Description  Update details of the currently logged-in client
+// @Tags         client
+// @Accept       json
+// @Produce      json
+// @Param        body body models.Client true "Client data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      401  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/client [put]
 func (c clientControllerImp) UpdateClient(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateClient models.Client

@@ -35,6 +35,18 @@ func (c authControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/auth/register
+// Register a new user.
+// @Summary      Register a new user
+// @Description  Register a new user with the provided details
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddUser true "User data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/auth/register [post]
 func (c authControllerImp) Register(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addUser models.AddUser
@@ -69,7 +81,19 @@ func (c authControllerImp) Register(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-// Login Controller
+// POST /api/v1/auth/login
+// Login user and return JWT token.
+// @Summary      Login user
+// @Description  Login user with provided credentials and return JWT token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body models.Login true "Login data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      401  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/auth/login [post]
 func (c authControllerImp) Login(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var login models.Login

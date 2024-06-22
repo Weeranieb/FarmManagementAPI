@@ -8,6 +8,11 @@ import (
 	"boonmafarm/api/pkg/services"
 	"fmt"
 
+	_ "boonmafarm/api/docs"
+
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
@@ -114,6 +119,9 @@ func main() {
 	feedPriceHistoryController.ApplyRoute(router)
 	feedCollectionController.ApplyRoute(router)
 	dailyFeedController.ApplyRoute(router)
+
+	// Serve Swagger UI
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	// run server
 	router.Run(":8080")

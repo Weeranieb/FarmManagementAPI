@@ -38,6 +38,18 @@ func (c dailyFeedControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/dailyfeed
+// Add a new daily feed entry.
+// @Summary      Add a new daily feed entry
+// @Description  Add a new daily feed entry with the provided details
+// @Tags         dailyfeed
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddDailyFeed true "Daily Feed data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/dailyfeed [post]
 func (c dailyFeedControllerImp) AddDailyFeed(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addDailyFeed models.AddDailyFeed
@@ -82,6 +94,18 @@ func (c dailyFeedControllerImp) AddDailyFeed(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/dailyfeed/{id}
+// Get daily feed entry by ID.
+// @Summary      Get daily feed entry by ID
+// @Description  Retrieve details of a specific daily feed entry by its ID
+// @Tags         dailyfeed
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Daily Feed ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/dailyfeed/{id} [get]
 func (c dailyFeedControllerImp) GetDailyFeed(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from params
@@ -120,6 +144,18 @@ func (c dailyFeedControllerImp) GetDailyFeed(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/dailyfeed
+// Update daily feed entry.
+// @Summary      Update daily feed entry
+// @Description  Update details of a daily feed entry
+// @Tags         dailyfeed
+// @Accept       json
+// @Produce      json
+// @Param        body body models.DailyFeed true "Daily Feed data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/dailyfeed [put]
 func (c dailyFeedControllerImp) UpdateDailyFeed(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateDailyFeed *models.DailyFeed

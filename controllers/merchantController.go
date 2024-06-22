@@ -38,6 +38,18 @@ func (c merchantControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/merchant
+// Add a new merchant.
+// @Summary      Add a new merchant
+// @Description  Create a new merchant with the provided details
+// @Tags         merchant
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddMerchant true "Merchant data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/merchant [post]
 func (c merchantControllerImp) AddMerchant(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addMerchant models.AddMerchant
@@ -82,6 +94,19 @@ func (c merchantControllerImp) AddMerchant(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/merchant/{id}
+// Get a merchant by ID.
+// @Summary      Get a merchant by ID
+// @Description  Retrieve a merchant by its ID
+// @Tags         merchant
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Merchant ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      404  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/merchant/{id} [get]
 func (c merchantControllerImp) GetMerchant(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from params
@@ -120,6 +145,18 @@ func (c merchantControllerImp) GetMerchant(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/merchant
+// Update a merchant.
+// @Summary      Update a merchant
+// @Description  Update an existing merchant with new details
+// @Tags         merchant
+// @Accept       json
+// @Produce      json
+// @Param        body body models.Merchant true "Updated merchant data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/merchant [put]
 func (c merchantControllerImp) UpdateMerchant(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateMerchant *models.Merchant

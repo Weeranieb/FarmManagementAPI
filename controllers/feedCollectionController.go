@@ -38,6 +38,18 @@ func (c feedCollectionControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/feedcollection
+// Add a feed collection.
+// @Summary      Add a feed collection
+// @Description  Add a new feed collection with the provided details
+// @Tags         feedcollection
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddFeedCollection true "Feed collection data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/feedcollection [post]
 func (c feedCollectionControllerImp) AddFeedCollection(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addFeedCollection models.AddFeedCollection
@@ -82,6 +94,19 @@ func (c feedCollectionControllerImp) AddFeedCollection(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/feedcollection/{id}
+// Get a feed collection by ID.
+// @Summary      Get a feed collection by ID
+// @Description  Retrieve a feed collection by its ID
+// @Tags         feedcollection
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Feed collection ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      404  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/feedcollection/{id} [get]
 func (c feedCollectionControllerImp) GetFeedCollection(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from params
@@ -120,6 +145,18 @@ func (c feedCollectionControllerImp) GetFeedCollection(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/feedcollection
+// Update a feed collection.
+// @Summary      Update a feed collection
+// @Description  Update an existing feed collection with new details
+// @Tags         feedcollection
+// @Accept       json
+// @Produce      json
+// @Param        body body models.FeedCollection true "Updated feed collection data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/feedcollection [put]
 func (c feedCollectionControllerImp) UpdateFeedCollection(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updateFeedCollection *models.FeedCollection

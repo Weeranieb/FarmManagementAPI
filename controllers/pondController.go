@@ -39,6 +39,18 @@ func (c pondControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/pond
+// Add a new pond.
+// @Summary      Add a new pond
+// @Description  Create a new pond with the provided details
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddPond true "Pond data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/pond [post]
 func (c pondControllerImp) AddPond(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addPond models.AddPond
@@ -83,6 +95,19 @@ func (c pondControllerImp) AddPond(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/pond/{id}
+// Get a pond by ID.
+// @Summary      Get a pond by ID
+// @Description  Retrieve a pond by its ID
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Pond ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      404  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/pond/{id} [get]
 func (c pondControllerImp) GetPond(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from params
@@ -121,6 +146,18 @@ func (c pondControllerImp) GetPond(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/pond
+// Update a pond.
+// @Summary      Update a pond
+// @Description  Update an existing pond with new details
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Param        body body models.Pond true "Updated pond data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/pond [put]
 func (c pondControllerImp) UpdatePond(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var updatePond *models.Pond
@@ -164,6 +201,18 @@ func (c pondControllerImp) UpdatePond(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/pond
+// Get a list of ponds by farm ID.
+// @Summary      Get a list of ponds by farm ID
+// @Description  Retrieve a list of ponds belonging to a specific farm
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Param        farmId query int true "Farm ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/pond [get]
 func (c pondControllerImp) GetPondList(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var farmId int

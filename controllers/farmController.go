@@ -39,6 +39,18 @@ func (c farmControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/farm
+// Add a new farm entry.
+// @Summary      Add a new farm entry
+// @Description  Add a new farm entry with the provided details
+// @Tags         farm
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddFarm true "Farm data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farm [post]
 func (c farmControllerImp) AddFarm(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addFarm models.AddFarm
@@ -93,6 +105,18 @@ func (c farmControllerImp) AddFarm(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/farm
+// Get list of farms associated with the current client.
+// @Summary      Get list of farms
+// @Description  Retrieve a list of farms associated with the current client
+// @Tags         farm
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farm [get]
+
 func (c farmControllerImp) GetFarm(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	// get id from param
@@ -141,6 +165,18 @@ func (c farmControllerImp) GetFarm(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GET /api/v1/farm/{id}
+// Get farm by ID.
+// @Summary      Get farm by ID
+// @Description  Retrieve details of a specific farm by its ID
+// @Tags         farm
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Farm ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farm/{id} [get]
 func (c farmControllerImp) UpdateFarm(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var UpdateFarm *models.Farm
@@ -184,6 +220,18 @@ func (c farmControllerImp) UpdateFarm(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// PUT /api/v1/farm
+// Update farm entry.
+// @Summary      Update farm entry
+// @Description  Update details of a farm entry
+// @Tags         farm
+// @Accept       json
+// @Produce      json
+// @Param        body body models.Farm true "Farm data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farm [put]
 func (c farmControllerImp) GetFarmList(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var farmList []*models.Farm

@@ -37,6 +37,18 @@ func (c farmOnFarmGroupControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
+// POST /api/v1/farmOnFarmGroup
+// Add a farm to a farm group.
+// @Summary      Add a farm to a farm group
+// @Description  Add a farm to a farm group with the provided details
+// @Tags         farmOnFarmGroup
+// @Accept       json
+// @Produce      json
+// @Param        body body models.AddFarmOnFarmGroup true "Farm on farm group data"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farmOnFarmGroup [post]
 func (c farmOnFarmGroupControllerImp) AddFarmOnFarmGroup(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addFarmOnFarmGroup models.AddFarmOnFarmGroup
@@ -81,6 +93,18 @@ func (c farmOnFarmGroupControllerImp) AddFarmOnFarmGroup(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// DELETE /api/v1/farmOnFarmGroup/{id}
+// Remove a farm from a farm group.
+// @Summary      Remove a farm from a farm group
+// @Description  Remove a farm from a farm group by its ID
+// @Tags         farmOnFarmGroup
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Farm on farm group ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/farmOnFarmGroup/{id} [delete]
 func (c farmOnFarmGroupControllerImp) DeleteFarmOnFarmGroup(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	id, err := strconv.Atoi(ctx.Param("id"))
