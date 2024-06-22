@@ -43,6 +43,36 @@ func (_m *IPondRepository) Create(pond *models.Pond) (*models.Pond, error) {
 	return r0, r1
 }
 
+// CreateBatch provides a mock function with given fields: ponds
+func (_m *IPondRepository) CreateBatch(ponds []*models.Pond) ([]*models.Pond, error) {
+	ret := _m.Called(ponds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateBatch")
+	}
+
+	var r0 []*models.Pond
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]*models.Pond) ([]*models.Pond, error)); ok {
+		return rf(ponds)
+	}
+	if rf, ok := ret.Get(0).(func([]*models.Pond) []*models.Pond); ok {
+		r0 = rf(ponds)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.Pond)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func([]*models.Pond) error); ok {
+		r1 = rf(ponds)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // FirstByQuery provides a mock function with given fields: query, args
 func (_m *IPondRepository) FirstByQuery(query interface{}, args ...interface{}) (*models.Pond, error) {
 	var _ca []interface{}
