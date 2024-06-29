@@ -4,6 +4,7 @@ import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories"
 	"errors"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/spf13/viper"
@@ -12,7 +13,7 @@ import (
 
 type IAuthService interface {
 	Create(request models.AddUser) (*models.User, error)
-	Login(request models.Login) (string, *models.User, error)
+	Login(request models.Login) (string, *models.User, *time.Time, error)
 }
 
 type authServiceImp struct {
@@ -60,21 +61,21 @@ func (sv authServiceImp) Create(request models.AddUser) (*models.User, error) {
 	return res, nil
 }
 
-func (sv authServiceImp) Login(request models.Login) (string, *models.User, error) {
+func (sv authServiceImp) Login(request models.Login) (string, *models.User, *time.Time, error) {
 	// check user if exist
 	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ? AND \"DelFlag\" = ?", request.Username, false)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
 	if checkUser == nil {
-		return "", nil, errors.New("user or password is incorrect")
+		return "", nil, nil, errors.New("user or password is incorrect")
 	}
 
 	// compare password
 	err = bcrypt.CompareHashAndPassword([]byte(checkUser.Password), []byte(request.Password))
 	if err != nil {
-		return "", nil, errors.New("user or password is incorrect")
+		return "", nil, nil, errors.New("user or password is incorrect")
 	}
 
 	// create jwt token
@@ -87,13 +88,16 @@ func (sv authServiceImp) Login(request models.Login) (string, *models.User, erro
 	claims["userId"] = checkUser.Id
 	claims["clientId"] = checkUser.ClientId
 	claims["userLevel"] = checkUser.UserLevel
-	claims["exp"] = jwt.TimeFunc().AddDate(0, 0, 1).Unix()
+
+	// set expiration time
+	expiredDate := jwt.TimeFunc().AddDate(0, 0, 1)
+	claims["exp"] = expiredDate.Unix()
 
 	// Sign and get the complete encoded token as a string
 	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
-	return tokenString, checkUser, nil
+	return tokenString, checkUser, &expiredDate, nil
 }

@@ -246,7 +246,7 @@ func TestLogin(t *testing.T) {
 		mockRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(mockUser, nil)
 
 		// Perform the login
-		token, err := authService.Login(models.Login{
+		token, user, expiredDate, err := authService.Login(models.Login{
 			Username: "testUser",
 			Password: "testPassword", // Password to be compared with the hash
 		})
@@ -259,6 +259,16 @@ func TestLogin(t *testing.T) {
 		if token == "" {
 			t.Error("Token is empty")
 		}
+
+		// Check if user is not nil
+		if user == nil {
+			t.Error("User is nil")
+		}
+
+		// Check if expiredDate is not nil
+		if expiredDate == nil {
+			t.Error("ExpiredDate is nil")
+		}
 	})
 
 	t.Run("TestLogin user error", func(t *testing.T) {
@@ -270,13 +280,15 @@ func TestLogin(t *testing.T) {
 		mockRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(nil, assert.AnError)
 
 		// Perform the login
-		token, err := authService.Login(models.Login{
+		token, user, expiredDate, err := authService.Login(models.Login{
 			Username: "testUser",
 			Password: "testPassword", // Password to be compared with the hash
 		})
 
 		assert.Error(t, err)
 		assert.Empty(t, token)
+		assert.Nil(t, user)
+		assert.Nil(t, expiredDate)
 	})
 
 	t.Run("TestLogin user not found", func(t *testing.T) {
@@ -287,13 +299,15 @@ func TestLogin(t *testing.T) {
 		mockRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(nil, nil)
 
 		// Perform the login
-		token, err := authService.Login(models.Login{
+		token, user, expiredDate, err := authService.Login(models.Login{
 			Username: "testUser",
 			Password: "testPassword", // Password to be compared with the hash
 		})
 
 		assert.Error(t, err)
 		assert.Empty(t, token)
+		assert.Nil(t, user)
+		assert.Nil(t, expiredDate)
 	})
 
 	t.Run("TestLogin password error", func(t *testing.T) {
@@ -311,12 +325,14 @@ func TestLogin(t *testing.T) {
 		mockRepo.On("FirstByQuery", "\"Username\" = ? AND \"DelFlag\" = ?", "testUser", false).Return(mockUser, nil)
 
 		// Perform the login
-		token, err := authService.Login(models.Login{
+		token, user, expiredDate, err := authService.Login(models.Login{
 			Username: "testUser",
 			Password: "testPassord", // Password to be compared with the hash
 		})
 
 		assert.Error(t, err)
 		assert.Empty(t, token)
+		assert.Nil(t, user)
+		assert.Nil(t, expiredDate)
 	})
 }

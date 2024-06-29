@@ -6,6 +6,7 @@ import (
 	"boonmafarm/api/utils/httputil"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -116,7 +117,7 @@ func (c authControllerImp) Login(ctx *gin.Context) {
 		return
 	}
 
-	token, user, err := c.AuthService.Login(login)
+	token, user, expDate, err := c.AuthService.Login(login)
 	if err != nil {
 		httputil.NewError(ctx, "Err_Auth_Login_03", err)
 		return
@@ -124,12 +125,14 @@ func (c authControllerImp) Login(ctx *gin.Context) {
 
 	type dataPayload struct {
 		AccessToken string       `json:"accessToken"`
+		ExpiredAt   *time.Time   `json:"expiredAt"`
 		User        *models.User `json:"user"`
 	}
 
 	response.Result = true
 	response.Data = dataPayload{
 		AccessToken: token,
+		ExpiredAt:   expDate,
 		User:        user,
 	}
 
