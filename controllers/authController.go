@@ -116,14 +116,22 @@ func (c authControllerImp) Login(ctx *gin.Context) {
 		return
 	}
 
-	token, err := c.AuthService.Login(login)
+	token, user, err := c.AuthService.Login(login)
 	if err != nil {
 		httputil.NewError(ctx, "Err_Auth_Login_03", err)
 		return
 	}
 
+	type dataPayload struct {
+		AccessToken string       `json:"accessToken"`
+		User        *models.User `json:"user"`
+	}
+
 	response.Result = true
-	response.Data = token
+	response.Data = dataPayload{
+		AccessToken: token,
+		User:        user,
+	}
 
 	ctx.JSON(http.StatusOK, response)
 }

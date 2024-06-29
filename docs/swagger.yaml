@@ -499,6 +499,34 @@ info:
   contact: {}
 paths:
   /api/v1/activepond:
+    get:
+      consumes:
+      - application/json
+      description: Get list of active pond
+      parameters:
+      - description: Farm ID
+        in: query
+        name: farmId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httputil.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponseModel'
+      summary: Get list of active pond
+      tags:
+      - activepond
     post:
       consumes:
       - application/json
@@ -1649,6 +1677,11 @@ paths:
       - application/json
       description: Create a new pond with the provided details
       parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
       - description: Pond data
         in: body
         name: body

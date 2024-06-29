@@ -42,17 +42,17 @@ func (c pondControllerImp) ApplyRoute(router *gin.Engine) {
 
 // POST /api/v1/pond
 // Add a new pond.
-// @Summary      Add a new pond
-// @Description  Create a new pond with the provided details
-// @Tags         pond
-// @Accept       json
-// @Produce      json
-// @Param        Authorization header string true "Bearer token"
-// @Param        body body models.AddPond true "Pond data"
-// @Success      200  {object}  httputil.ResponseModel
-// @Failure      400  {object}  httputil.ErrorResponseModel
-// @Failure      500  {object}  httputil.ErrorResponseModel
-// @Router       /api/v1/pond [post]
+// @Summary Add a new pond
+// @Description Create a new pond with the provided details
+// @Tags pond
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param body body models.AddPond true "Pond data"
+// @Success 200 {object} httputil.ResponseModel
+// @Failure 400 {object} httputil.ErrorResponseModel
+// @Failure 500 {object} httputil.ErrorResponseModel
+// @Router /api/v1/pond [post]
 func (c pondControllerImp) AddPond(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addPond models.AddPond
@@ -97,18 +97,6 @@ func (c pondControllerImp) AddPond(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-// AddPonds godoc
-// @Summary Add multiple ponds
-// @Description Add multiple ponds to the system
-// @Tags Ponds
-// @Accept json
-// @Produce json
-// @Param        Authorization header string true "Bearer token"
-// @Param ponds body []AddPond true "Array of pond objects to be added"
-// @Security ApiKeyAuth
-// @Success 200 {object} ResponseModel
-// @Failure 200 {object} ErrorResponseModel
-// @Router /api/v1/ponds [post]
 func (c pondControllerImp) AddPonds(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var addPonds []models.AddPond

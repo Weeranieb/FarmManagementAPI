@@ -12,7 +12,7 @@ import (
 
 type IAuthService interface {
 	Create(request models.AddUser) (*models.User, error)
-	Login(request models.Login) (string, error)
+	Login(request models.Login) (string, *models.User, error)
 }
 
 type authServiceImp struct {
@@ -60,21 +60,21 @@ func (sv authServiceImp) Create(request models.AddUser) (*models.User, error) {
 	return res, nil
 }
 
-func (sv authServiceImp) Login(request models.Login) (string, error) {
+func (sv authServiceImp) Login(request models.Login) (string, *models.User, error) {
 	// check user if exist
 	checkUser, err := sv.UserRepo.FirstByQuery("\"Username\" = ? AND \"DelFlag\" = ?", request.Username, false)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	if checkUser == nil {
-		return "", errors.New("user or password is incorrect")
+		return "", nil, errors.New("user or password is incorrect")
 	}
 
 	// compare password
 	err = bcrypt.CompareHashAndPassword([]byte(checkUser.Password), []byte(request.Password))
 	if err != nil {
-		return "", errors.New("user or password is incorrect")
+		return "", nil, errors.New("user or password is incorrect")
 	}
 
 	// create jwt token
@@ -92,7 +92,8 @@ func (sv authServiceImp) Login(request models.Login) (string, error) {
 	// Sign and get the complete encoded token as a string
 	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return tokenString, nil
+
+	return tokenString, checkUser, nil
 }

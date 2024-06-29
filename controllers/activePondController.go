@@ -203,6 +203,17 @@ func (c activePondControllerImp) UpdateActivePond(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// GetActivePondList godoc
+// @Summary      Get list of active pond
+// @Description  Get list of active pond
+// @Tags         activepond
+// @Accept       json
+// @Produce      json
+// @Param        farmId query int true "Farm ID"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/activepond [get]
 func (c activePondControllerImp) GetActivePondList(ctx *gin.Context) {
 	var response httputil.ResponseModel
 	var farmId int
