@@ -32,3 +32,9 @@ type ResponseModel struct {
 	Result bool `json:"result"`
 	Error  any  `json:"error,omitempty"`
 }
+
+// PageModel
+type PageModel struct {
+	Items interface{} `json:"items"`
+	Total int64       `json:"total"`
+}

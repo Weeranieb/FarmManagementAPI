@@ -109,6 +109,43 @@ func (_m *IActivityRepository) TakeById(id int) (*models.Activity, error) {
 	return r0, r1
 }
 
+// TakePage provides a mock function with given fields: clientId, page, pageSize, orderBy, keyword, mode, farmId
+func (_m *IActivityRepository) TakePage(clientId int, page int, pageSize int, orderBy string, keyword string, mode *string, farmId *int) (*[]models.Activity, int64, error) {
+	ret := _m.Called(clientId, page, pageSize, orderBy, keyword, mode, farmId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TakePage")
+	}
+
+	var r0 *[]models.Activity
+	var r1 int64
+	var r2 error
+	if rf, ok := ret.Get(0).(func(int, int, int, string, string, *string, *int) (*[]models.Activity, int64, error)); ok {
+		return rf(clientId, page, pageSize, orderBy, keyword, mode, farmId)
+	}
+	if rf, ok := ret.Get(0).(func(int, int, int, string, string, *string, *int) *[]models.Activity); ok {
+		r0 = rf(clientId, page, pageSize, orderBy, keyword, mode, farmId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*[]models.Activity)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int, int, int, string, string, *string, *int) int64); ok {
+		r1 = rf(clientId, page, pageSize, orderBy, keyword, mode, farmId)
+	} else {
+		r1 = ret.Get(1).(int64)
+	}
+
+	if rf, ok := ret.Get(2).(func(int, int, int, string, string, *string, *int) error); ok {
+		r2 = rf(clientId, page, pageSize, orderBy, keyword, mode, farmId)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
 // Update provides a mock function with given fields: request
 func (_m *IActivityRepository) Update(request *models.Activity) error {
 	ret := _m.Called(request)

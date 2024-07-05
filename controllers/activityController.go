@@ -34,6 +34,7 @@ func (c activityControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddActivity)
 			eg.GET(":id", c.GetActivity)
 			eg.PUT("", c.UpdateActivity)
+			eg.GET("", c.ListActivity)
 		}
 	}
 }
@@ -210,6 +211,69 @@ func (c activityControllerImp) UpdateActivity(ctx *gin.Context) {
 	}
 	response.Result = true
 	response.Data = ret
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c activityControllerImp) ListActivity(ctx *gin.Context) {
+	var response httputil.ResponseModel
+
+	sPage := ctx.Query("page")
+	sPageSize := ctx.Query("pageSize")
+	orderBy := ctx.Query("orderBy")
+	keyword := ctx.Query("keyword")
+	mode := ctx.Query("mode")
+	sfarmId := ctx.Query("farmId")
+
+	page, err := strconv.Atoi(sPage)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Activity_ListActivity_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	pageSize, err := strconv.Atoi(sPageSize)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Activity_ListActivity_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	farmId, _ := strconv.Atoi(sfarmId)
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Activity_ListActivity_04", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	clientId, err := jwtutil.GetClientId(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Activity_ListActivity_05", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Data, err = c.ActivityService.TakePage(clientId, page, pageSize, orderBy, keyword, mode, farmId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Activity_ListActivity_06", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
 
 	ctx.JSON(http.StatusOK, response)
 }

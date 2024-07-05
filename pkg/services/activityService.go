@@ -5,6 +5,7 @@ import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/models/constants"
 	"boonmafarm/api/pkg/repositories"
+	"boonmafarm/api/utils/httputil"
 	"errors"
 )
 
@@ -12,6 +13,7 @@ type IActivityService interface {
 	Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error)
 	Get(id int) (*models.ActivityWithSellDetail, error)
 	Update(request *models.ActivityWithSellDetail, userIdentity string) ([]*models.SellDetail, error)
+	TakePage(clientId, page, pageSize int, orderBy, keyword string, mode string, farmId int) (*httputil.PageModel, error)
 }
 
 type activityServiceImp struct {
@@ -153,4 +155,28 @@ func (sv activityServiceImp) Update(request *models.ActivityWithSellDetail, user
 	tx.Commit()
 
 	return newSellDetails, nil
+}
+
+func (sv activityServiceImp) TakePage(clientId, page, pageSize int, orderBy, keyword string, mode string, farmId int) (*httputil.PageModel, error) {
+	result := &httputil.PageModel{}
+	var modePointer *string
+	var farmIdPointer *int
+
+	if mode != "" {
+		modePointer = &mode
+	}
+
+	if farmId != 0 {
+		farmIdPointer = &farmId
+	}
+
+	items, total, err := sv.ActivityRepo.TakePage(clientId, page, pageSize, orderBy, keyword, modePointer, farmIdPointer)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Items = items
+	result.Total = total
+
+	return result, nil
 }

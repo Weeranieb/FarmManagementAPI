@@ -12,6 +12,7 @@ import (
 type IActivityRepository interface {
 	Create(request *models.Activity) (*models.Activity, error)
 	TakeById(id int) (*models.Activity, error)
+	TakePage(clientId, page, pageSize int, orderBy, keyword string, mode *string, farmId *int) (*[]models.Activity, int64, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Activity, error)
 	Update(request *models.Activity) error
 	WithTrx(trxHandle *gorm.DB) IActivityRepository
@@ -44,6 +45,40 @@ func (rp activityRepositoryImp) TakeById(id int) (*models.Activity, error) {
 		return nil, nil
 	}
 	return result, nil
+}
+
+func (rp activityRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, keyword string, mode *string, farmId *int) (*[]models.Activity, int64, error) {
+	var result *[]models.Activity
+	var total int64
+
+	joinActivePond := fmt.Sprintf("LEFT JOIN %s ON %s.\"ActivePondId\" = %s.\"Id\"", dbconst.TActivePond, dbconst.TActivitiy, dbconst.TActivePond)
+	joinPond := fmt.Sprintf("LEFT JOIN %s ON %s.\"PondId\" = %s.\"Id\"", dbconst.TPond, dbconst.TActivePond, dbconst.TPond)
+	joinFarm := fmt.Sprintf("LEFT JOIN %s ON %s.\"FarmId\" = %s.\"Id\"", dbconst.TFarm, dbconst.TPond, dbconst.TFarm)
+
+	firstWhereClause := fmt.Sprintf("%s.\"DelFlag\" = ? AND %s.\"DelFlag\" = ? AND %s.\"DelFlag\" = ? AND %s.\"DelFlag\" = ?", dbconst.TActivitiy, dbconst.TActivePond, dbconst.TPond, dbconst.TFarm)
+	whereClient := fmt.Sprintf("%s.\"ClientId\" = ?", dbconst.TFarm)
+
+	query := rp.dbContext.Table(dbconst.TActivitiy).Select(dbconst.TActivitiy+".*").Joins(joinActivePond).Joins(joinPond).Joins(joinFarm).Order(orderBy).Where(firstWhereClause, false, false, false, false).Where(whereClient, clientId)
+
+	if keyword != "" {
+		whereKeyword := fmt.Sprintf("(%s.\"Code\" LIKE ? OR %s.\"Name\" LIKE ?)", dbconst.TPond, dbconst.TPond)
+		query = query.Where(whereKeyword, "%"+keyword+"%", "%"+keyword+"%")
+	}
+
+	if mode != nil {
+		whereMode := fmt.Sprintf("%s.\"Mode\" = ?", dbconst.TActivitiy)
+		query = query.Where(whereMode, *mode)
+	}
+
+	if farmId != nil {
+		whereFarm := fmt.Sprintf("%s.\"Id\" = ?", dbconst.TFarm)
+		query = query.Where(whereFarm, *farmId)
+	}
+
+	if err := query.Limit(1).Count(&total).Limit(pageSize).Offset(page * pageSize).Find(&result).Error; err != nil {
+		return nil, 0, err
+	}
+	return result, total, nil
 }
 
 func (rp activityRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.Activity, error) {
