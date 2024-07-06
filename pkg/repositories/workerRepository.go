@@ -12,6 +12,7 @@ import (
 type IWorkerRepository interface {
 	Create(worker *models.Worker) (*models.Worker, error)
 	TakeById(id int) (*models.Worker, error)
+	TakePage(clientId, page, pageSize int, orderBy, keyword string) (*[]models.Worker, int64, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Worker, error)
 	Update(worker *models.Worker) error
 }
@@ -43,6 +44,23 @@ func (rp workerRepositoryImp) TakeById(id int) (*models.Worker, error) {
 		return nil, nil
 	}
 	return result, nil
+}
+
+func (rp workerRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, keyword string) (*[]models.Worker, int64, error) {
+	var result *[]models.Worker
+	var total int64
+
+	query := rp.dbContext.Table(dbconst.TWorker).Order(orderBy).Where("\"ClientId\" = ? AND \"DelFlag\" = ?", clientId, false)
+
+	if keyword != "" {
+		whereKeyword := "(\"FirstName\" LIKE ? OR \"LastName\" LIKE ? OR \"Nationality\" LIKE ?)"
+		query = query.Where(whereKeyword, "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
+	}
+
+	if err := query.Limit(1).Count(&total).Limit(pageSize).Offset(page * pageSize).Find(&result).Error; err != nil {
+		return nil, 0, err
+	}
+	return result, total, nil
 }
 
 func (rp workerRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.Worker, error) {

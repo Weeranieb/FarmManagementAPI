@@ -30,15 +30,16 @@ func TestCreate_Worker(t *testing.T) {
 			ClientId:    1,
 			FarmGroupId: 1,
 			FirstName:   "name",
+			Nationality: "ไทย",
 			Salary:      10000,
 		}, nil)
 
 		result, err := mockWorker.Create(models.AddWorker{
-			ClientId:    1,
 			FarmGroupId: 1,
 			FirstName:   "name",
 			Salary:      10000,
-		}, "test")
+			Nationality: "ไทย",
+		}, "test", 1)
 
 		mockWorkerRepo.AssertExpectations(t)
 		assert.Nil(t, err)
@@ -49,11 +50,11 @@ func TestCreate_Worker(t *testing.T) {
 		beforeEach()
 
 		result, err := mockWorker.Create(models.AddWorker{
-			ClientId:    1,
+			Nationality: "ไทย",
 			FarmGroupId: 1,
 			FirstName:   "",
 			Salary:      10000,
-		}, "test")
+		}, "test", 1)
 
 		assert.NotNil(t, err)
 		assert.Nil(t, result)
@@ -71,11 +72,11 @@ func TestCreate_Worker(t *testing.T) {
 		}, nil)
 
 		result, err := mockWorker.Create(models.AddWorker{
-			ClientId:    1,
+			Nationality: "ไทย",
 			FarmGroupId: 1,
 			FirstName:   "name",
 			Salary:      10000,
-		}, "test")
+		}, "test", 1)
 
 		mockWorkerRepo.AssertExpectations(t)
 		assert.NotNil(t, err)
@@ -88,11 +89,11 @@ func TestCreate_Worker(t *testing.T) {
 		mockWorkerRepo.On("FirstByQuery", "\"FarmGroupId\" = ? AND \"DelFlag\" = ?", 1, false).Return(nil, assert.AnError)
 
 		result, err := mockWorker.Create(models.AddWorker{
-			ClientId:    1,
+			Nationality: "ไทย",
 			FarmGroupId: 1,
 			FirstName:   "name",
 			Salary:      10000,
-		}, "test")
+		}, "test", 1)
 
 		mockWorkerRepo.AssertExpectations(t)
 		assert.NotNil(t, err)
@@ -106,11 +107,11 @@ func TestCreate_Worker(t *testing.T) {
 		mockWorkerRepo.On("Create", mock.Anything).Return(nil, assert.AnError)
 
 		result, err := mockWorker.Create(models.AddWorker{
-			ClientId:    1,
+			Nationality: "ไทย",
 			FarmGroupId: 1,
 			FirstName:   "name",
 			Salary:      10000,
-		}, "test")
+		}, "test", 1)
 
 		mockWorkerRepo.AssertExpectations(t)
 		assert.NotNil(t, err)
@@ -137,6 +138,7 @@ func TestGet_Worker(t *testing.T) {
 			ClientId:    1,
 			FarmGroupId: 1,
 			FirstName:   "name",
+			Nationality: "ไทย",
 			Salary:      10000,
 		}, nil)
 
@@ -181,6 +183,7 @@ func TestUpdate_Worker(t *testing.T) {
 			FarmGroupId: 1,
 			FirstName:   "name",
 			Salary:      10000,
+			Nationality: "ไทย",
 		}, "test")
 
 		mockWorkerRepo.AssertExpectations(t)

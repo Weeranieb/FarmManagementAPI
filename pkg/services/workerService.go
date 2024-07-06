@@ -3,13 +3,15 @@ package services
 import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories"
+	"boonmafarm/api/utils/httputil"
 	"errors"
 )
 
 type IWorkerService interface {
-	Create(request models.AddWorker, userIdentity string) (*models.Worker, error)
+	Create(request models.AddWorker, userIdentity string, clientId int) (*models.Worker, error)
 	Get(id int) (*models.Worker, error)
 	Update(request *models.Worker, userIdentity string) error
+	TakePage(clientId, page, pageSize int, orderBy, keyword string) (*httputil.PageModel, error)
 }
 
 type workerServiceImp struct {
@@ -22,7 +24,7 @@ func NewWorkerService(worker repositories.IWorkerRepository) IWorkerService {
 	}
 }
 
-func (sv workerServiceImp) Create(request models.AddWorker, userIdentity string) (*models.Worker, error) {
+func (sv workerServiceImp) Create(request models.AddWorker, userIdentity string, clientId int) (*models.Worker, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
@@ -42,6 +44,7 @@ func (sv workerServiceImp) Create(request models.AddWorker, userIdentity string)
 	request.Transfer(newWorker)
 	// set is active
 	newWorker.IsActive = true
+	newWorker.ClientId = clientId
 	newWorker.UpdatedBy = userIdentity
 	newWorker.CreatedBy = userIdentity
 
@@ -65,4 +68,17 @@ func (sv workerServiceImp) Update(request *models.Worker, userIdentity string) e
 		return err
 	}
 	return nil
+}
+
+func (sv workerServiceImp) TakePage(clientId, page, pageSize int, orderBy, keyword string) (*httputil.PageModel, error) {
+	result := &httputil.PageModel{}
+	items, total, err := sv.WorkerRepo.TakePage(clientId, page, pageSize, orderBy, keyword)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Items = items
+	result.Total = total
+
+	return result, nil
 }

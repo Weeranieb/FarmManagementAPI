@@ -1,0 +1,1 @@
+ALTER TABLE "Workers" ADD COLUMN "Nationality" VARCHAR NOT NULL DEFAULT '';

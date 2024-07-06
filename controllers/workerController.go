@@ -34,6 +34,7 @@ func (c workerControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddWorker)
 			eg.GET(":id", c.GetWorker)
 			eg.PUT("", c.UpdateWorker)
+			eg.GET("", c.ListWorker)
 		}
 	}
 }
@@ -70,9 +71,19 @@ func (c workerControllerImp) AddWorker(ctx *gin.Context) {
 		return
 	}
 
-	newPond, err := c.WorkerService.Create(addWorker, username)
+	// get client id
+	clientId, err := jwtutil.GetClientId(ctx)
 	if err != nil {
-		httputil.NewError(ctx, "Err_Worker_AddPond_04", err)
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Worker_AddPond_04", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	newPond, err := c.WorkerService.Create(addWorker, username, clientId)
+	if err != nil {
+		httputil.NewError(ctx, "Err_Worker_AddPond_05", err)
 		return
 	}
 
@@ -155,6 +166,65 @@ func (c workerControllerImp) UpdateWorker(ctx *gin.Context) {
 	err = c.WorkerService.Update(updatePond, username)
 	if err != nil {
 		httputil.NewError(ctx, "Err_Worker_UpdatePond_04", err)
+		return
+	}
+
+	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c workerControllerImp) ListWorker(ctx *gin.Context) {
+	var response httputil.ResponseModel
+
+	sPage := ctx.Query("page")
+	sPageSize := ctx.Query("pageSize")
+	orderBy := ctx.Query("orderBy")
+	keyword := ctx.Query("keyword")
+
+	page, err := strconv.Atoi(sPage)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FeedCollection_ListWorker_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	pageSize, err := strconv.Atoi(sPageSize)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FeedCollection_ListWorker_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_FeedCollection_ListWorker_03", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	clientId, err := jwtutil.GetClientId(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FeedCollection_ListWorker_04", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Data, err = c.WorkerService.TakePage(clientId, page, pageSize, orderBy, keyword)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FeedCollection_ListWorker_05", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
 		return
 	}
 
