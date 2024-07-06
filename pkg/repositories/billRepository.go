@@ -12,6 +12,7 @@ import (
 type IBillRepository interface {
 	Create(pond *models.Bill) (*models.Bill, error)
 	TakeById(id int) (*models.Bill, error)
+	TakePage(clientId, page, pageSize int, orderBy, keyword string, billType *string, farmGroupId *int) (*[]models.BillWithFarmGroupName, int64, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Bill, error)
 	Update(pond *models.Bill) error
 }
@@ -43,6 +44,38 @@ func (rp billRepositoryImp) TakeById(id int) (*models.Bill, error) {
 		return nil, nil
 	}
 	return result, nil
+}
+
+func (rp billRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, keyword string, billType *string, farmGroupId *int) (*[]models.BillWithFarmGroupName, int64, error) {
+	var result *[]models.BillWithFarmGroupName
+	var total int64
+
+	joinFarmGroup := fmt.Sprintf("LEFT JOIN %s ON %s.\"FarmGroupId\" = %s.\"Id\"", dbconst.TFarmGroup, dbconst.TBill, dbconst.TFarmGroup)
+
+	firstWhereClause := fmt.Sprintf("%s.\"DelFlag\" = ? AND %s.\"DelFlag\" = ?", dbconst.TFarmGroup, dbconst.TBill)
+	whereClient := fmt.Sprintf("%s.\"ClientId\" = ?", dbconst.TFarmGroup)
+
+	query := rp.dbContext.Table(dbconst.TBill).Select(dbconst.TBill+".*").Select(dbconst.TFarmGroup+".\"Name\"").Joins(joinFarmGroup).Order(orderBy).Where(firstWhereClause, false, false).Where(whereClient, clientId)
+	// .Select(dbconst.TFarmGroup+".\"Name\"")
+	if keyword != "" {
+		whereKeyword := fmt.Sprintf("(%s.\"Other\" LIKE ? OR %s.\"Type\" LIKE ? OR %s.\"Name\" LIKE ? OR %s.\"Code\" LIKE ?)", dbconst.TBill, dbconst.TBill, dbconst.TFarmGroup, dbconst.TFarmGroup)
+		query = query.Where(whereKeyword, "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
+	}
+
+	if billType != nil {
+		whereMode := fmt.Sprintf("%s.\"Type\" = ?", dbconst.TBill)
+		query = query.Where(whereMode, *billType)
+	}
+
+	if farmGroupId != nil {
+		whereFarm := fmt.Sprintf("%s.\"Id\" = ?", dbconst.TFarmGroup)
+		query = query.Where(whereFarm, *farmGroupId)
+	}
+
+	if err := query.Limit(1).Count(&total).Limit(pageSize).Offset(page * pageSize).Find(&result).Error; err != nil {
+		return nil, 0, err
+	}
+	return result, total, nil
 }
 
 func (rp billRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.Bill, error) {

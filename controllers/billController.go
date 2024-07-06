@@ -34,6 +34,7 @@ func (c billControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddBill)
 			eg.GET(":id", c.GetBill)
 			eg.PUT("", c.UpdateBill)
+			eg.GET("", c.ListBill)
 		}
 	}
 }
@@ -192,6 +193,69 @@ func (c billControllerImp) UpdateBill(ctx *gin.Context) {
 	err = c.BillService.Update(updateBill, username)
 	if err != nil {
 		httputil.NewError(ctx, "Err_Bill_UpdateBill_04", err)
+		return
+	}
+
+	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c billControllerImp) ListBill(ctx *gin.Context) {
+	var response httputil.ResponseModel
+
+	sPage := ctx.Query("page")
+	sPageSize := ctx.Query("pageSize")
+	orderBy := ctx.Query("orderBy")
+	keyword := ctx.Query("keyword")
+	billType := ctx.Query("type")
+	sfarmGroupId := ctx.Query("farmGroupId")
+
+	page, err := strconv.Atoi(sPage)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Bill_ListBill_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	pageSize, err := strconv.Atoi(sPageSize)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Bill_ListBill_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	farmGroupId, _ := strconv.Atoi(sfarmGroupId)
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Bill_ListBill_03", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	clientId, err := jwtutil.GetClientId(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Bill_ListBill_04", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Data, err = c.BillService.TakePage(clientId, page, pageSize, orderBy, keyword, billType, farmGroupId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Bill_ListBill_05", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
 		return
 	}
 

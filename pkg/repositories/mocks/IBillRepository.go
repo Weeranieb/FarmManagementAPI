@@ -106,6 +106,43 @@ func (_m *IBillRepository) TakeById(id int) (*models.Bill, error) {
 	return r0, r1
 }
 
+// TakePage provides a mock function with given fields: clientId, page, pageSize, orderBy, keyword, billType, farmGroupId
+func (_m *IBillRepository) TakePage(clientId int, page int, pageSize int, orderBy string, keyword string, billType *string, farmGroupId *int) (*[]models.BillWithFarmGroupName, int64, error) {
+	ret := _m.Called(clientId, page, pageSize, orderBy, keyword, billType, farmGroupId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TakePage")
+	}
+
+	var r0 *[]models.BillWithFarmGroupName
+	var r1 int64
+	var r2 error
+	if rf, ok := ret.Get(0).(func(int, int, int, string, string, *string, *int) (*[]models.BillWithFarmGroupName, int64, error)); ok {
+		return rf(clientId, page, pageSize, orderBy, keyword, billType, farmGroupId)
+	}
+	if rf, ok := ret.Get(0).(func(int, int, int, string, string, *string, *int) *[]models.BillWithFarmGroupName); ok {
+		r0 = rf(clientId, page, pageSize, orderBy, keyword, billType, farmGroupId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*[]models.BillWithFarmGroupName)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int, int, int, string, string, *string, *int) int64); ok {
+		r1 = rf(clientId, page, pageSize, orderBy, keyword, billType, farmGroupId)
+	} else {
+		r1 = ret.Get(1).(int64)
+	}
+
+	if rf, ok := ret.Get(2).(func(int, int, int, string, string, *string, *int) error); ok {
+		r2 = rf(clientId, page, pageSize, orderBy, keyword, billType, farmGroupId)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
 // Update provides a mock function with given fields: pond
 func (_m *IBillRepository) Update(pond *models.Bill) error {
 	ret := _m.Called(pond)

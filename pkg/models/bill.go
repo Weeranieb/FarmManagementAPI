@@ -25,6 +25,11 @@ type AddBill struct {
 	PaymentDate time.Time `json:"paymentDate" gorm:"column:PaymentDate"`
 }
 
+type BillWithFarmGroupName struct {
+	Bill
+	Name string `json:"name" gorm:"column:Name"`
+}
+
 // Validation Add
 func (a AddBill) Validation() error {
 	if a.Type == "" {
