@@ -34,6 +34,7 @@ func (c feedPriceHistoryControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddFeedPriceHistory)
 			eg.GET(":id", c.GetFeedPriceHistory)
 			eg.PUT("", c.UpdateFeedPriceHistory)
+			eg.GET("", c.GetAllFeedPriceHistory)
 		}
 	}
 }
@@ -196,6 +197,44 @@ func (c feedPriceHistoryControllerImp) UpdateFeedPriceHistory(ctx *gin.Context) 
 	}
 
 	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c feedPriceHistoryControllerImp) GetAllFeedPriceHistory(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	// get id from params
+	ids := ctx.Query("feedCollectionId")
+	id, err := strconv.Atoi(ids)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FeedPriceHistory_GetAllFeedPriceHistory_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_FeedPriceHistory_GetAllFeedPriceHistory_02", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	histories, err := c.FeedPriceHistoryService.GetAll(id)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FeedPriceHistory_GetAllFeedPriceHistory_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
+	response.Data = histories
 
 	ctx.JSON(http.StatusOK, response)
 }

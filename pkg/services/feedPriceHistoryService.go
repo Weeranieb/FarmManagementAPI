@@ -10,6 +10,7 @@ type IFeedPriceHistoryService interface {
 	Create(request models.AddFeedPriceHistory, userIdentity string) (*models.FeedPriceHistory, error)
 	Get(id int) (*models.FeedPriceHistory, error)
 	Update(request *models.FeedPriceHistory, userIdentity string) error
+	GetAll(feedCollectionId int) (*[]models.FeedPriceHistory, error)
 }
 
 type feedPriceHistoryServiceImp struct {
@@ -63,4 +64,8 @@ func (sv feedPriceHistoryServiceImp) Update(request *models.FeedPriceHistory, us
 		return err
 	}
 	return nil
+}
+
+func (sv feedPriceHistoryServiceImp) GetAll(feedCollectionId int) (*[]models.FeedPriceHistory, error) {
+	return sv.FeedPriceHistory.TakeAll(feedCollectionId)
 }
