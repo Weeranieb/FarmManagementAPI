@@ -106,6 +106,43 @@ func (_m *IFeedCollectionRepository) TakeById(id int) (*models.FeedCollection, e
 	return r0, r1
 }
 
+// TakePage provides a mock function with given fields: clientId, page, pageSize, orderBy, keyword
+func (_m *IFeedCollectionRepository) TakePage(clientId int, page int, pageSize int, orderBy string, keyword string) (*[]models.FeedCollection, int64, error) {
+	ret := _m.Called(clientId, page, pageSize, orderBy, keyword)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TakePage")
+	}
+
+	var r0 *[]models.FeedCollection
+	var r1 int64
+	var r2 error
+	if rf, ok := ret.Get(0).(func(int, int, int, string, string) (*[]models.FeedCollection, int64, error)); ok {
+		return rf(clientId, page, pageSize, orderBy, keyword)
+	}
+	if rf, ok := ret.Get(0).(func(int, int, int, string, string) *[]models.FeedCollection); ok {
+		r0 = rf(clientId, page, pageSize, orderBy, keyword)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*[]models.FeedCollection)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int, int, int, string, string) int64); ok {
+		r1 = rf(clientId, page, pageSize, orderBy, keyword)
+	} else {
+		r1 = ret.Get(1).(int64)
+	}
+
+	if rf, ok := ret.Get(2).(func(int, int, int, string, string) error); ok {
+		r2 = rf(clientId, page, pageSize, orderBy, keyword)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
 // Update provides a mock function with given fields: feedCollection
 func (_m *IFeedCollectionRepository) Update(feedCollection *models.FeedCollection) error {
 	ret := _m.Called(feedCollection)

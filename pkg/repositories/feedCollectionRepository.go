@@ -12,6 +12,7 @@ import (
 type IFeedCollectionRepository interface {
 	Create(feedCollection *models.FeedCollection) (*models.FeedCollection, error)
 	TakeById(id int) (*models.FeedCollection, error)
+	TakePage(clientId, page, pageSize int, orderBy, keyword string) (*[]models.FeedCollection, int64, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.FeedCollection, error)
 	Update(feedCollection *models.FeedCollection) error
 }
@@ -43,6 +44,23 @@ func (rp feedCollectionRepositoryImp) TakeById(id int) (*models.FeedCollection, 
 		return nil, nil
 	}
 	return result, nil
+}
+
+func (rp feedCollectionRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, keyword string) (*[]models.FeedCollection, int64, error) {
+	var result *[]models.FeedCollection
+	var total int64
+
+	query := rp.dbContext.Table(dbconst.TFeedCollection).Order(orderBy).Where("\"ClientId\" = ? AND \"DelFlag\" = ?", clientId, false)
+
+	if keyword != "" {
+		whereKeyword := "(\"Code\" LIKE ? OR \"Name\" LIKE ? OR \"Unit\" LIKE ?)"
+		query = query.Where(whereKeyword, "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
+	}
+
+	if err := query.Limit(1).Count(&total).Limit(pageSize).Offset(page * pageSize).Find(&result).Error; err != nil {
+		return nil, 0, err
+	}
+	return result, total, nil
 }
 
 func (rp feedCollectionRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.FeedCollection, error) {

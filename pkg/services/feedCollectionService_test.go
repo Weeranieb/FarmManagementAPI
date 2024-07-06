@@ -32,11 +32,10 @@ func TestCreate_FeedCollection(t *testing.T) {
 		}, nil)
 
 		result, err := feedCollectionService.Create(models.AddFeedCollection{
-			ClientId: 1,
-			Code:     "code",
-			Name:     "name",
-			Unit:     "Kilogram",
-		}, "test")
+			Code: "code",
+			Name: "name",
+			Unit: "Kilogram",
+		}, "test", 1)
 
 		mockFeedCollectionRepo.AssertExpectations(t)
 		assert.Nil(t, err)
@@ -47,11 +46,10 @@ func TestCreate_FeedCollection(t *testing.T) {
 		beforeEach()
 
 		result, err := feedCollectionService.Create(models.AddFeedCollection{
-			ClientId: 1,
-			Code:     "code",
-			Name:     "",
-			Unit:     "Kilogram",
-		}, "test")
+			Code: "code",
+			Name: "",
+			Unit: "Kilogram",
+		}, "test", 1)
 
 		assert.NotNil(t, err)
 		assert.Nil(t, result)
@@ -66,11 +64,10 @@ func TestCreate_FeedCollection(t *testing.T) {
 		}, nil)
 
 		result, err := feedCollectionService.Create(models.AddFeedCollection{
-			ClientId: 1,
-			Code:     "code",
-			Name:     "name",
-			Unit:     "Kilogram",
-		}, "test")
+			Code: "code",
+			Name: "name",
+			Unit: "Kilogram",
+		}, "test", 1)
 
 		mockFeedCollectionRepo.AssertExpectations(t)
 		assert.NotNil(t, err)
@@ -83,11 +80,10 @@ func TestCreate_FeedCollection(t *testing.T) {
 		mockFeedCollectionRepo.On("FirstByQuery", "\"ClientId\" = ? AND \"Code\" = ? AND \"DelFlag\" = ?", 1, "code", false).Return(nil, assert.AnError)
 
 		result, err := feedCollectionService.Create(models.AddFeedCollection{
-			ClientId: 1,
-			Code:     "code",
-			Name:     "name",
-			Unit:     "Kilogram",
-		}, "test")
+			Code: "code",
+			Name: "name",
+			Unit: "Kilogram",
+		}, "test", 1)
 
 		mockFeedCollectionRepo.AssertExpectations(t)
 		assert.NotNil(t, err)
@@ -101,11 +97,10 @@ func TestCreate_FeedCollection(t *testing.T) {
 		mockFeedCollectionRepo.On("Create", mock.Anything).Return(nil, assert.AnError)
 
 		result, err := feedCollectionService.Create(models.AddFeedCollection{
-			ClientId: 1,
-			Code:     "code",
-			Name:     "name",
-			Unit:     "Kilogram",
-		}, "test")
+			Code: "code",
+			Name: "name",
+			Unit: "Kilogram",
+		}, "test", 1)
 
 		mockFeedCollectionRepo.AssertExpectations(t)
 		assert.NotNil(t, err)
@@ -160,7 +155,7 @@ func TestGet_FeedCollection(t *testing.T) {
 		result, err := feedCollectionService.Get(1)
 
 		mockFeedCollectionRepo.AssertExpectations(t)
-		assert.NotNil(t, err)
+		assert.Nil(t, err)
 		assert.Nil(t, result)
 	})
 }
