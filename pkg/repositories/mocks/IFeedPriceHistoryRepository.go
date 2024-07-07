@@ -76,6 +76,36 @@ func (_m *IFeedPriceHistoryRepository) FirstByQuery(query interface{}, args ...i
 	return r0, r1
 }
 
+// TakeAll provides a mock function with given fields: feedCollectionId
+func (_m *IFeedPriceHistoryRepository) TakeAll(feedCollectionId int) (*[]models.FeedPriceHistory, error) {
+	ret := _m.Called(feedCollectionId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TakeAll")
+	}
+
+	var r0 *[]models.FeedPriceHistory
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) (*[]models.FeedPriceHistory, error)); ok {
+		return rf(feedCollectionId)
+	}
+	if rf, ok := ret.Get(0).(func(int) *[]models.FeedPriceHistory); ok {
+		r0 = rf(feedCollectionId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*[]models.FeedPriceHistory)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(feedCollectionId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // TakeById provides a mock function with given fields: id
 func (_m *IFeedPriceHistoryRepository) TakeById(id int) (*models.FeedPriceHistory, error) {
 	ret := _m.Called(id)
