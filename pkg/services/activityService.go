@@ -175,6 +175,30 @@ func (sv activityServiceImp) TakePage(clientId, page, pageSize int, orderBy, key
 		return nil, err
 	}
 
+	for idx, item := range *items {
+		if item.Mode == string(constants.SellType) {
+			sellDetails, err := sv.SellDetailRepo.ListByQuery("\"SellId\" = ? AND \"DelFlag\" = ?", item.Id, false)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(sellDetails) == 0 {
+				return nil, errors.New("sell detail not found")
+			}
+
+			totalWeight := 0.0
+			for _, sellDetail := range sellDetails {
+				totalWeight += sellDetail.Amount
+			}
+
+			(*items)[idx].TotalWeight = totalWeight
+			(*items)[idx].Unit = sellDetails[0].FishUnit
+		} else {
+			(*items)[idx].TotalWeight = *item.FishWeight * float64(*item.Amount)
+			(*items)[idx].Unit = *item.FishUnit
+		}
+	}
+
 	result.Items = items
 	result.Total = total
 

@@ -22,6 +22,14 @@ type Activity struct {
 	Base
 }
 
+type ActivityPage struct {
+	Activity
+	TotalWeight float64 `json:"totalWeight"`
+	Unit        string  `json:"unit"`
+	FarmName    string  `json:"farmName" gorm:"column:FarmName"`
+	PondName    string  `json:"pondName" gorm:"column:PondName"`
+}
+
 type CreateActivityRequest struct {
 	ActivePondId   int             `json:"activePondId" gorm:"column:ActivePondId"`
 	ToActivePondId *int            `json:"toActivePondId,omitempty" gorm:"column:ToActivePondId"`

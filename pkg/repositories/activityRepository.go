@@ -12,7 +12,7 @@ import (
 type IActivityRepository interface {
 	Create(request *models.Activity) (*models.Activity, error)
 	TakeById(id int) (*models.Activity, error)
-	TakePage(clientId, page, pageSize int, orderBy, keyword string, mode *string, farmId *int) (*[]models.Activity, int64, error)
+	TakePage(clientId, page, pageSize int, orderBy, keyword string, mode *string, farmId *int) (*[]models.ActivityPage, int64, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Activity, error)
 	Update(request *models.Activity) error
 	WithTrx(trxHandle *gorm.DB) IActivityRepository
@@ -47,8 +47,8 @@ func (rp activityRepositoryImp) TakeById(id int) (*models.Activity, error) {
 	return result, nil
 }
 
-func (rp activityRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, keyword string, mode *string, farmId *int) (*[]models.Activity, int64, error) {
-	var result *[]models.Activity
+func (rp activityRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, keyword string, mode *string, farmId *int) (*[]models.ActivityPage, int64, error) {
+	var result *[]models.ActivityPage
 	var total int64
 
 	joinActivePond := fmt.Sprintf("LEFT JOIN %s ON %s.\"ActivePondId\" = %s.\"Id\"", dbconst.TActivePond, dbconst.TActivitiy, dbconst.TActivePond)
@@ -58,7 +58,8 @@ func (rp activityRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, 
 	firstWhereClause := fmt.Sprintf("%s.\"DelFlag\" = ? AND %s.\"DelFlag\" = ? AND %s.\"DelFlag\" = ? AND %s.\"DelFlag\" = ?", dbconst.TActivitiy, dbconst.TActivePond, dbconst.TPond, dbconst.TFarm)
 	whereClient := fmt.Sprintf("%s.\"ClientId\" = ?", dbconst.TFarm)
 
-	query := rp.dbContext.Table(dbconst.TActivitiy).Select(dbconst.TActivitiy+".*").Joins(joinActivePond).Joins(joinPond).Joins(joinFarm).Order(orderBy).Where(firstWhereClause, false, false, false, false).Where(whereClient, clientId)
+	query := rp.dbContext.Table(dbconst.TActivitiy).Select(fmt.Sprintf("%s.*, %s.\"Name\" as \"FarmName\", %s.\"Name\" as \"PondName\"", dbconst.TActivitiy, dbconst.TFarm, dbconst.TPond)).Joins(joinActivePond).Joins(joinPond).Joins(joinFarm).Order(orderBy).Where(firstWhereClause, false, false, false, false).Where(whereClient, clientId)
+	// .Select(dbconst.TFarm+".\"Name\" as \"FarmName\"").Select(dbconst.TPond+".\"Name\" as \"PondName\"")
 
 	if keyword != "" {
 		whereKeyword := fmt.Sprintf("(%s.\"Code\" LIKE ? OR %s.\"Name\" LIKE ?)", dbconst.TPond, dbconst.TPond)

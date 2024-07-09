@@ -2,6 +2,6 @@ package constants
 
 // kilogram
 const (
-	Kilogram = "กิโลกรัม"
-	Keed     = "ขีด"
+	Kilogram = "Kilogram"
+	Keed     = "Keed"
 )
