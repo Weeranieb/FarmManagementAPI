@@ -4,6 +4,7 @@ import (
 	"boonmafarm/api/controllers"
 	"boonmafarm/api/middlewares"
 	dbContext "boonmafarm/api/pkg/dbcontext"
+	"boonmafarm/api/pkg/processors"
 	"boonmafarm/api/pkg/repositories"
 	"boonmafarm/api/pkg/services"
 	"fmt"
@@ -86,6 +87,9 @@ func main() {
 	feedCollectionService := services.NewFeedCollectionService(feedCollectionRepo)
 	dailyFeedService := services.NewDailyFeedService(dailyFeedRepo)
 
+	// processor
+	activityProcessor := processors.NewActivityProcessor(activePondService, activityService)
+
 	// controllers
 	userController := controllers.NewUserController(userService)
 	authController := controllers.NewAuthController(authService)
@@ -95,7 +99,7 @@ func main() {
 	farmOnFarmGroupController := controllers.NewFarmOnFarmGroupController(farmOnFarmGroupService)
 	pondController := controllers.NewPondController(pondService)
 	activePondController := controllers.NewActivePondController(activePondService)
-	activityController := controllers.NewActivityController(activityService)
+	activityController := controllers.NewActivityController(activityService, activityProcessor)
 	billController := controllers.NewBillController(billService)
 	workerController := controllers.NewWorkerController(workerService)
 	merchantController := controllers.NewMerchantController(merchantService)

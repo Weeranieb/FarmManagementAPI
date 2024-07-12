@@ -4,12 +4,18 @@ import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories"
 	"errors"
+	"time"
+
+	"gorm.io/gorm"
 )
 
 type IActivePondService interface {
 	Create(request models.AddActivePond, userIdentity string) (*models.ActivePond, error)
+	WithTrx(trxHandle *gorm.DB) IActivePondService
 	Get(id int) (*models.ActivePond, error)
 	GetList(farmId int) ([]*models.PondWithActive, error)
+	CheckNewActivePondAvailable(pondId int) (bool, error)
+	GetActivePondByDate(pondId int, activityDate time.Time) (*models.ActivePond, error)
 	Update(request *models.ActivePond, userIdentity string) error
 }
 
@@ -52,6 +58,28 @@ func (sv activePondServiceImp) Create(request models.AddActivePond, userIdentity
 	}
 
 	return newActivePond, nil
+}
+
+func (sv activePondServiceImp) WithTrx(trxHandle *gorm.DB) IActivePondService {
+	sv.ActivePondRepo = sv.ActivePondRepo.WithTrx(trxHandle)
+	return sv
+}
+
+func (sv activePondServiceImp) CheckNewActivePondAvailable(pondId int) (bool, error) {
+	activePonds, err := sv.ActivePondRepo.FirstByQuery("\"PondId\" = ? AND \"IsActive\" = ? AND \"DelFlag\" = ?", pondId, true, false)
+	if err != nil {
+		return false, err
+	}
+
+	if activePonds == nil {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (sv activePondServiceImp) GetActivePondByDate(pondId int, activityDate time.Time) (*models.ActivePond, error) {
+	return sv.ActivePondRepo.GetActivePondByDate(pondId, activityDate)
 }
 
 func (sv activePondServiceImp) Get(id int) (*models.ActivePond, error) {

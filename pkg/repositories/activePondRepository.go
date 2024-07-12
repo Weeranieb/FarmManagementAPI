@@ -5,6 +5,7 @@ import (
 	"boonmafarm/api/pkg/repositories/dbconst"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -15,6 +16,8 @@ type IActivePondRepository interface {
 	FirstByQuery(query interface{}, args ...interface{}) (*models.ActivePond, error)
 	Update(activePond *models.ActivePond) error
 	GetListWithActive(farmId int) ([]*models.PondWithActive, error)
+	WithTrx(trxHandle *gorm.DB) IActivePondRepository
+	GetActivePondByDate(pondId int, activityDate time.Time) (*models.ActivePond, error)
 }
 
 type activePondRepositoryImp struct {
@@ -24,6 +27,17 @@ type activePondRepositoryImp struct {
 func NewActivePondRepository(db *gorm.DB) IActivePondRepository {
 	return &activePondRepositoryImp{
 		dbContext: db,
+	}
+}
+
+func (rp activePondRepositoryImp) WithTrx(trxHandle *gorm.DB) IActivePondRepository {
+	if trxHandle == nil {
+		fmt.Println("Transaction Database not found")
+		return rp
+	}
+
+	return &activePondRepositoryImp{
+		dbContext: trxHandle,
 	}
 }
 
@@ -105,6 +119,24 @@ ORDER BY
 
 	if err := rp.dbContext.Raw(rawSql, farmId).Scan(&result).Error; err != nil {
 		return nil, err
+	}
+
+	return result, nil
+}
+
+func (rp activePondRepositoryImp) GetActivePondByDate(pondId int, activityDate time.Time) (*models.ActivePond, error) {
+	var result *models.ActivePond
+	// "2023-05-30"
+	date := activityDate.Format("2006-01-02")
+	if err := rp.dbContext.Table(dbconst.TActivePond).Where("(\"IsActive\" = ? AND (\"EndDate\" IS NULL OR \"EndDate\" >= ?)) OR (\"IsActive\" = ? AND \"EndDate\" IS NOT NULL)", true, date, false).
+		Where("\"PondId\" = ? AND \"DelFlag\" = ?", pondId, false).
+		Where("? BETWEEN \"StartDate\" AND COALESCE(\"EndDate\", ?)", date, date).
+		First(&result).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		fmt.Println("Record not found Active Pond GetActivePondByDate", pondId, activityDate)
+		return nil, nil
 	}
 
 	return result, nil

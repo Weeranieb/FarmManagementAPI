@@ -7,13 +7,17 @@ import (
 	"boonmafarm/api/pkg/repositories"
 	"boonmafarm/api/utils/httputil"
 	"errors"
+
+	"gorm.io/gorm"
 )
 
 type IActivityService interface {
-	Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error)
+	// Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error)
+	CreateFill(request models.CreateFillActivityRequest, userIdentity string, activePondId int) (*models.Activity, error)
 	Get(id int) (*models.ActivityWithSellDetail, error)
 	Update(request *models.ActivityWithSellDetail, userIdentity string) ([]*models.SellDetail, error)
 	TakePage(clientId, page, pageSize int, orderBy, keyword string, mode string, farmId int) (*httputil.PageModel, error)
+	WithTrx(trxHandle *gorm.DB) IActivityService
 }
 
 type activityServiceImp struct {
@@ -28,14 +32,75 @@ func NewActivityService(activePondRepo repositories.IActivityRepository, sellDet
 	}
 }
 
-func (sv activityServiceImp) Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error) {
+// func (sv activityServiceImp) Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error) {
+// 	// validate request
+// 	if err := request.Validation(); err != nil {
+// 		return nil, err
+// 	}
+
+// 	// check check activity if exist
+// 	checkActivity, err := sv.ActivityRepo.FirstByQuery("\"Mode\" = ? AND \"ActivityDate\" = ? AND \"DelFlag\" = ?", request.Mode, request.ActivityDate, false)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	if checkActivity != nil {
+// 		return nil, errors.New("the activity already exist on the given date")
+// 	}
+
+// 	// declare variable
+// 	newActivity := &models.Activity{}
+// 	newSellDetail := []models.SellDetail{}
+// 	var ret models.ActivityWithSellDetail
+
+// 	request.Transfer(newActivity, &newSellDetail)
+// 	newActivity.UpdatedBy = userIdentity
+// 	newActivity.CreatedBy = userIdentity
+
+// 	db := dbContext.Context.Postgresql
+// 	tx := db.Begin()
+// 	// create user
+// 	newActivity, err = sv.ActivityRepo.WithTrx(tx).Create(newActivity)
+// 	if err != nil {
+// 		tx.Rollback()
+// 		return nil, err
+// 	}
+
+// 	ret.Activity = *newActivity
+// 	sellId := newActivity.Id
+
+// 	if newActivity.Mode == string(constants.SellType) {
+// 		// add updated by and created by to sell detail
+// 		for i := range newSellDetail {
+// 			newSellDetail[i].SellId = sellId
+// 			newSellDetail[i].UpdatedBy = userIdentity
+// 			newSellDetail[i].CreatedBy = userIdentity
+// 		}
+
+// 		// create sell detail
+// 		newSellDetail, err = sv.SellDetailRepo.WithTrx(tx).BulkCreate(newSellDetail)
+// 		if err != nil {
+// 			tx.Rollback()
+// 			return nil, err
+// 		}
+
+// 		ret.SellDetail = newSellDetail
+// 	}
+
+// 	// commit transaction
+// 	tx.Commit()
+
+// 	return &ret, nil
+// }
+
+func (sv activityServiceImp) CreateFill(request models.CreateFillActivityRequest, userIdentity string, activePondId int) (*models.Activity, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
 	}
 
 	// check check activity if exist
-	checkActivity, err := sv.ActivityRepo.FirstByQuery("\"Mode\" = ? AND \"ActivityDate\" = ? AND \"DelFlag\" = ?", request.Mode, request.ActivityDate, false)
+	checkActivity, err := sv.ActivityRepo.FirstByQuery("\"Mode\" = ? AND \"ActivityDate\" = ? AND \"DelFlag\" = ?", string(constants.FillType), request.ActivityDate, false)
 	if err != nil {
 		return nil, err
 	}
@@ -46,47 +111,22 @@ func (sv activityServiceImp) Create(request models.CreateActivityRequest, userId
 
 	// declare variable
 	newActivity := &models.Activity{}
-	newSellDetail := []models.SellDetail{}
-	var ret models.ActivityWithSellDetail
 
-	request.Transfer(newActivity, &newSellDetail)
+	request.Transfer(newActivity, activePondId)
 	newActivity.UpdatedBy = userIdentity
 	newActivity.CreatedBy = userIdentity
 
-	db := dbContext.Context.Postgresql
-	tx := db.Begin()
-	// create user
-	newActivity, err = sv.ActivityRepo.WithTrx(tx).Create(newActivity)
+	newActivity, err = sv.ActivityRepo.Create(newActivity)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	ret.Activity = *newActivity
-	sellId := newActivity.Id
+	return newActivity, nil
+}
 
-	if newActivity.Mode == string(constants.SellType) {
-		// add updated by and created by to sell detail
-		for i := range newSellDetail {
-			newSellDetail[i].SellId = sellId
-			newSellDetail[i].UpdatedBy = userIdentity
-			newSellDetail[i].CreatedBy = userIdentity
-		}
-
-		// create sell detail
-		newSellDetail, err = sv.SellDetailRepo.WithTrx(tx).BulkCreate(newSellDetail)
-		if err != nil {
-			tx.Rollback()
-			return nil, err
-		}
-
-		ret.SellDetail = newSellDetail
-	}
-
-	// commit transaction
-	tx.Commit()
-
-	return &ret, nil
+func (sv activityServiceImp) WithTrx(trxHandle *gorm.DB) IActivityService {
+	sv.ActivityRepo = sv.ActivityRepo.WithTrx(trxHandle)
+	return sv
 }
 
 // get with sell detail check case

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"boonmafarm/api/pkg/models"
+	"boonmafarm/api/pkg/processors"
 	"boonmafarm/api/pkg/services"
 	"boonmafarm/api/utils/httputil"
 	"boonmafarm/api/utils/jwtutil"
@@ -17,12 +18,14 @@ type IActivityController interface {
 }
 
 type activityControllerImp struct {
-	ActivityService services.IActivityService
+	ActivityService   services.IActivityService
+	ActivityProcessor processors.IActivityProcessor
 }
 
-func NewActivityController(activityService services.IActivityService) IActivityController {
+func NewActivityController(activityService services.IActivityService, activityProcessor processors.IActivityProcessor) IActivityController {
 	return &activityControllerImp{
-		ActivityService: activityService,
+		ActivityService:   activityService,
+		ActivityProcessor: activityProcessor,
 	}
 }
 
@@ -31,7 +34,8 @@ func (c activityControllerImp) ApplyRoute(router *gin.Engine) {
 	{
 		eg := v1.Group("/activity")
 		{
-			eg.POST("", c.AddActivity)
+			// eg.POST("", c.AddActivity)
+			eg.POST("fill", c.AddFillActivity)
 			eg.GET(":id", c.GetActivity)
 			eg.PUT("", c.UpdateActivity)
 			eg.GET("", c.ListActivity)
@@ -39,38 +43,23 @@ func (c activityControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
-// AddActivity creates a new activity.
-// It handles the HTTP POST request and expects the request body to contain JSON data representing the new activity.
-// It returns a JSON response indicating success or failure of the creation, along with any relevant data.
-// @Summary      Add a new activity
-// @Description  Add a new activity
-// @Tags         activity
-// @Accept       json
-// @Produce      json
-// @Param        Authorization header string true "Bearer token"
-// @Param        body body models.CreateActivityRequest true "New Activity data"
-// @Success      200  {object}  httputil.ResponseModel
-// @Failure      400  {object}  httputil.ErrorResponseModel
-// @Failure      401  {object}  httputil.ErrorResponseModel
-// @Failure      500  {object}  httputil.ErrorResponseModel
-// @Router       /api/v1/activity [post]
-func (c activityControllerImp) AddActivity(ctx *gin.Context) {
+func (c activityControllerImp) AddFillActivity(ctx *gin.Context) {
 	var response httputil.ResponseModel
-	var addActivity models.CreateActivityRequest
+	var addFillActivity models.CreateFillActivityRequest
 
 	defer func() {
 		if r := recover(); r != nil {
 			errRes := httputil.ErrorResponseModel{}
-			errRes.Error(ctx, "Err_Activity_AddActivity_01", fmt.Sprint(r))
+			errRes.Error(ctx, "Err_Activity_AddFillActivity_01", fmt.Sprint(r))
 			response.Error = errRes
 			ctx.JSON(http.StatusOK, response)
 			return
 		}
 	}()
 
-	if err := ctx.ShouldBindJSON(&addActivity); err != nil {
+	if err := ctx.ShouldBindJSON(&addFillActivity); err != nil {
 		errRes := httputil.ErrorResponseModel{}
-		errRes.Error(ctx, "Err_Activity_AddActivity_02", err.Error())
+		errRes.Error(ctx, "Err_Activity_AddAFillctivity_02", err.Error())
 		response.Error = errRes
 		ctx.JSON(http.StatusOK, response)
 		return
@@ -80,23 +69,119 @@ func (c activityControllerImp) AddActivity(ctx *gin.Context) {
 	username, err := jwtutil.GetUsername(ctx)
 	if err != nil {
 		errRes := httputil.ErrorResponseModel{}
-		errRes.Error(ctx, "Err_Activity_AddActivity_03", err.Error())
+		errRes.Error(ctx, "Err_Activity_AddFillActivity_03", err.Error())
 		response.Error = errRes
 		ctx.JSON(http.StatusOK, response)
 		return
 	}
 
-	newActivity, err := c.ActivityService.Create(addActivity, username)
+	newActivity, activePond, err := c.ActivityProcessor.CreateFill(addFillActivity, username)
 	if err != nil {
-		httputil.NewError(ctx, "Err_Activity_AddActivity_04", err)
+		httputil.NewError(ctx, "Err_Activity_AddFillActivity_04", err)
 		return
 	}
 
+	type ret struct {
+		Activity   *models.Activity   `json:"activity"`
+		ActivePond *models.ActivePond `json:"activePond"`
+	}
+
 	response.Result = true
-	response.Data = newActivity
+	response.Data = ret{
+		Activity:   newActivity,
+		ActivePond: activePond,
+	}
 
 	ctx.JSON(http.StatusOK, response)
 }
+
+// func (c activityControllerImp) AddMoveActivity(ctx *gin.Context) {
+// 	var response httputil.ResponseModel
+// 	var addMoveActivity models.CreateMoveActivityRequest
+
+// 	defer func() {
+// 		if r := recover(); r != nil {
+// 			errRes := httputil.ErrorResponseModel{}
+// 			errRes.Error(ctx, "Err_Activity_AddFillActivity_01", fmt.Sprint(r))
+// 			response.Error = errRes
+// 			ctx.JSON(http.StatusOK, response)
+// 			return
+// 		}
+// 	}()
+
+// 	if err := ctx.ShouldBindJSON(&addMoveActivity); err != nil {
+// 		errRes := httputil.ErrorResponseModel{}
+// 		errRes.Error(ctx, "Err_Activity_AddFillctivity_02", err.Error())
+// 		response.Error = errRes
+// 		ctx.JSON(http.StatusOK, response)
+// 		return
+// 	}
+
+// 	// get username
+// 	username, err := jwtutil.GetUsername(ctx)
+// 	if err != nil {
+// 		errRes := httputil.ErrorResponseModel{}
+// 		errRes.Error(ctx, "Err_Activity_AddFillActivity_03", err.Error())
+// 		response.Error = errRes
+// 		ctx.JSON(http.StatusOK, response)
+// 		return
+// 	}
+
+// 	newActivity, err := c.ActivityService.CreateMove(addMoveActivity, username)
+// 	if err != nil {
+// 		httputil.NewError(ctx, "Err_Activity_AddFillActivity_04", err)
+// 		return
+// 	}
+
+// 	response.Result = true
+// 	response.Data = newActivity
+
+// 	ctx.JSON(http.StatusOK, response)
+// }
+
+// func (c activityControllerImp) AddSellActivity(ctx *gin.Context) {
+// 	var response httputil.ResponseModel
+// 	var addFillActivity models.CreateFillActivityRequest
+
+// 	defer func() {
+// 		if r := recover(); r != nil {
+// 			errRes := httputil.ErrorResponseModel{}
+// 			errRes.Error(ctx, "Err_Activity_AddSellActivity_01", fmt.Sprint(r))
+// 			response.Error = errRes
+// 			ctx.JSON(http.StatusOK, response)
+// 			return
+// 		}
+// 	}()
+
+// 	if err := ctx.ShouldBindJSON(&addFillActivity); err != nil {
+// 		errRes := httputil.ErrorResponseModel{}
+// 		errRes.Error(ctx, "Err_Activity_AddSellctivity_02", err.Error())
+// 		response.Error = errRes
+// 		ctx.JSON(http.StatusOK, response)
+// 		return
+// 	}
+
+// 	// get username
+// 	username, err := jwtutil.GetUsername(ctx)
+// 	if err != nil {
+// 		errRes := httputil.ErrorResponseModel{}
+// 		errRes.Error(ctx, "Err_Activity_AddSellActivity_03", err.Error())
+// 		response.Error = errRes
+// 		ctx.JSON(http.StatusOK, response)
+// 		return
+// 	}
+
+// 	newActivity, err := c.ActivityService.CreateSell(addFillActivity, username)
+// 	if err != nil {
+// 		httputil.NewError(ctx, "Err_Activity_AddSellActivity_04", err)
+// 		return
+// 	}
+
+// 	response.Result = true
+// 	response.Data = newActivity
+
+// 	ctx.JSON(http.StatusOK, response)
+// }
 
 // GetActivity retrieves an activity based on the provided ID.
 // It handles the HTTP GET request and returns the activity as a JSON response.
