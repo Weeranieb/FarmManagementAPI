@@ -15,6 +15,7 @@ type IActivityService interface {
 	// Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error)
 	CreateFill(request models.CreateFillActivityRequest, userIdentity string, activePondId int) (*models.Activity, error)
 	CreateMove(request models.CreateMoveActivityRequest, userIdentity string, fromActivePondId int, toActivePondId int) (*models.Activity, error)
+	CreateSell(request models.CreateSellActivityRequest, userIdentity string, activePondId int, trxHandle *gorm.DB) (*models.Activity, *[]models.SellDetail, error)
 	Get(id int) (*models.ActivityWithSellDetail, error)
 	Update(request *models.ActivityWithSellDetail, userIdentity string) ([]*models.SellDetail, error)
 	TakePage(clientId, page, pageSize int, orderBy, keyword string, mode string, farmId int) (*httputil.PageModel, error)
@@ -132,7 +133,7 @@ func (sv activityServiceImp) CreateMove(request models.CreateMoveActivityRequest
 	}
 
 	// check check activity if exist
-	checkActivity, err := sv.ActivityRepo.FirstByQuery("\"Mode\" = ? AND \"ActivityDate\" = ? AND \"DelFlag\" = ?", string(constants.FillType), request.ActivityDate, false)
+	checkActivity, err := sv.ActivityRepo.FirstByQuery("\"Mode\" = ? AND \"ActivityDate\" = ? AND \"DelFlag\" = ?", string(constants.MoveType), request.ActivityDate, false)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +155,54 @@ func (sv activityServiceImp) CreateMove(request models.CreateMoveActivityRequest
 	}
 
 	return newActivity, nil
+}
+
+func (sv activityServiceImp) CreateSell(request models.CreateSellActivityRequest, userIdentity string, activePondId int, trxHandle *gorm.DB) (*models.Activity, *[]models.SellDetail, error) {
+	// validate request
+	if err := request.Validation(); err != nil {
+		return nil, nil, err
+	}
+
+	// check check activity if exist
+	checkActivity, err := sv.ActivityRepo.FirstByQuery("\"Mode\" = ? AND \"ActivityDate\" = ? AND \"DelFlag\" = ?", string(constants.SellType), request.ActivityDate, false)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if checkActivity != nil {
+		return nil, nil, errors.New("the activity already exist on the given date")
+	}
+
+	// declare variable
+	newActivity := &models.Activity{}
+	newSellDetail := []models.SellDetail{}
+
+	request.Transfer(newActivity, &newSellDetail, activePondId)
+	newActivity.UpdatedBy = userIdentity
+	newActivity.CreatedBy = userIdentity
+
+	// create user
+	newActivity, err = sv.ActivityRepo.Create(newActivity)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sellId := newActivity.Id
+
+	// add updated by and created by to sell detail
+	for i := range request.SellDetail {
+		request.SellDetail[i].SellId = sellId
+		request.SellDetail[i].UpdatedBy = userIdentity
+		request.SellDetail[i].CreatedBy = userIdentity
+	}
+
+	// create sell detail
+	newSellDetail, err = sv.SellDetailRepo.WithTrx(trxHandle).BulkCreate(request.SellDetail)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return newActivity, &newSellDetail, nil
 }
 
 func (sv activityServiceImp) WithTrx(trxHandle *gorm.DB) IActivityService {

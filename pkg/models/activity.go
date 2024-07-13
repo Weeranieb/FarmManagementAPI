@@ -59,7 +59,7 @@ type CreateSellActivityRequest struct {
 	MerchantId   int          `json:"merchantId" gorm:"column:MerchantId"`
 	ActivityDate time.Time    `json:"activityDate" gorm:"column:ActivityDate"`
 	SellDetail   []SellDetail `json:"sellDetails,omitempty"`
-	IsClosing    bool         `json:"isClosing,omitempty" gorm:"column:IsClosing"`
+	IsClose      bool         `json:"isClose,omitempty" gorm:"column:IsClose"`
 }
 
 type ActivityWithSellDetail struct {
@@ -163,8 +163,8 @@ func (a CreateMoveActivityRequest) Transfer(activity *Activity, fromActivePondId
 }
 
 // Transfer Add Sell
-func (a CreateSellActivityRequest) Transfer(activity *Activity, sellDetail *[]SellDetail) {
-	activity.ActivePondId = a.PondId
+func (a CreateSellActivityRequest) Transfer(activity *Activity, sellDetail *[]SellDetail, activePondId int) {
+	activity.ActivePondId = activePondId
 	activity.MerchantId = &a.MerchantId
 	activity.ActivityDate = a.ActivityDate
 	activity.Mode = string(constants.SellType)

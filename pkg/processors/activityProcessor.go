@@ -10,6 +10,7 @@ import (
 type IActivityProcessor interface {
 	CreateFill(request models.CreateFillActivityRequest, userIdentity string) (*models.Activity, *models.ActivePond, error)
 	CreateMove(request models.CreateMoveActivityRequest, userIdentity string) (*models.Activity, *models.ActivePond, *models.ActivePond, error)
+	CreateSell(request models.CreateSellActivityRequest, userIdentity string) (*models.Activity, *models.ActivePond, *[]models.SellDetail, error)
 }
 
 type activityProcessorImp struct {
@@ -104,6 +105,11 @@ func (sv activityProcessorImp) CreateMove(request models.CreateMoveActivityReque
 	}
 
 	if isClose {
+		if !fromActivePond.IsActive {
+			tx.Rollback()
+			return nil, nil, nil, errors.New("the pond is already close")
+		}
+
 		fromActivePond.IsActive = false
 		fromActivePond.EndDate = &request.ActivityDate
 
@@ -162,4 +168,53 @@ func (sv activityProcessorImp) CreateMove(request models.CreateMoveActivityReque
 	tx.Commit()
 
 	return newActivity, fromActivePond, toActivePond, nil
+}
+
+func (sv activityProcessorImp) CreateSell(request models.CreateSellActivityRequest, userIdentity string) (*models.Activity, *models.ActivePond, *[]models.SellDetail, error) {
+	db := dbContext.Context.Postgresql
+	tx := db.Begin()
+
+	isClose := request.IsClose
+
+	var currentActivePond *models.ActivePond
+
+	// get current active pond
+	var err error
+	currentActivePond, err = sv.ActivePondService.WithTrx(tx).GetActivePondByDate(request.PondId, request.ActivityDate)
+	if err != nil {
+		tx.Rollback()
+		return nil, nil, nil, err
+	}
+
+	if currentActivePond == nil {
+		tx.Rollback()
+		return nil, nil, nil, errors.New("the pond is not active")
+	}
+
+	// update active pond
+	if isClose {
+		if !currentActivePond.IsActive {
+			tx.Rollback()
+			return nil, nil, nil, errors.New("the pond is already close")
+		}
+
+		currentActivePond.IsActive = false
+		currentActivePond.EndDate = &request.ActivityDate
+		if err != sv.ActivePondService.WithTrx(tx).Update(currentActivePond, userIdentity) {
+			tx.Rollback()
+			return nil, nil, nil, err
+		}
+	}
+
+	// update activity
+	newActivity, sellDetails, err := sv.ActivityService.WithTrx(tx).CreateSell(request, userIdentity, currentActivePond.Id, tx)
+	if err != nil {
+		tx.Rollback()
+		return nil, nil, nil, err
+	}
+
+	// commit transaction
+	tx.Commit()
+
+	return newActivity, currentActivePond, sellDetails, nil
 }

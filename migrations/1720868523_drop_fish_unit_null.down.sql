@@ -1,0 +1,2 @@
+ALTER TABLE "Activities" ALTER COLUMN "FishUnit" SET NOT NULL;
+ALTER TABLE "Activities" ALTER COLUMN "FishUnit" SET DEFAULT '';
