@@ -50,6 +50,8 @@ type CreateMoveActivityRequest struct {
 	PricePerUnit float64   `json:"pricePerUnit,omitempty" gorm:"column:PricePerUnit"`
 	FishUnit     string    `json:"fishUnit" gorm:"column:FishUnit"`
 	ActivityDate time.Time `json:"activityDate" gorm:"column:ActivityDate"`
+	IsNewPond    bool      `json:"isNewPond,omitempty" gorm:"column:IsNewPond"`
+	IsClose      bool      `json:"isClose,omitempty" gorm:"column:IsClose"`
 }
 
 type CreateSellActivityRequest struct {
@@ -57,6 +59,7 @@ type CreateSellActivityRequest struct {
 	MerchantId   int          `json:"merchantId" gorm:"column:MerchantId"`
 	ActivityDate time.Time    `json:"activityDate" gorm:"column:ActivityDate"`
 	SellDetail   []SellDetail `json:"sellDetails,omitempty"`
+	IsClosing    bool         `json:"isClosing,omitempty" gorm:"column:IsClosing"`
 }
 
 type ActivityWithSellDetail struct {
@@ -146,11 +149,25 @@ func (a CreateFillActivityRequest) Transfer(activity *Activity, activePondId int
 	activity.ActivityDate = a.ActivityDate
 }
 
+// Transfer Add Move
+func (a CreateMoveActivityRequest) Transfer(activity *Activity, fromActivePondId int, toActivePondId int) {
+	activity.Mode = string(constants.MoveType)
+	activity.ActivePondId = fromActivePondId
+	activity.ToActivePondId = &toActivePondId
+	activity.Amount = &a.Amount
+	activity.FishType = &a.FishType
+	activity.FishWeight = &a.FishWeight
+	activity.FishUnit = &a.FishUnit
+	activity.PricePerUnit = &a.PricePerUnit
+	activity.ActivityDate = a.ActivityDate
+}
+
 // Transfer Add Sell
 func (a CreateSellActivityRequest) Transfer(activity *Activity, sellDetail *[]SellDetail) {
 	activity.ActivePondId = a.PondId
 	activity.MerchantId = &a.MerchantId
 	activity.ActivityDate = a.ActivityDate
+	activity.Mode = string(constants.SellType)
 
 	tempSellDetail := make([]SellDetail, len(a.SellDetail))
 	for i, sellDetail := range a.SellDetail {

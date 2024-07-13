@@ -14,6 +14,7 @@ import (
 type IActivityService interface {
 	// Create(request models.CreateActivityRequest, userIdentity string) (*models.ActivityWithSellDetail, error)
 	CreateFill(request models.CreateFillActivityRequest, userIdentity string, activePondId int) (*models.Activity, error)
+	CreateMove(request models.CreateMoveActivityRequest, userIdentity string, fromActivePondId int, toActivePondId int) (*models.Activity, error)
 	Get(id int) (*models.ActivityWithSellDetail, error)
 	Update(request *models.ActivityWithSellDetail, userIdentity string) ([]*models.SellDetail, error)
 	TakePage(clientId, page, pageSize int, orderBy, keyword string, mode string, farmId int) (*httputil.PageModel, error)
@@ -113,6 +114,37 @@ func (sv activityServiceImp) CreateFill(request models.CreateFillActivityRequest
 	newActivity := &models.Activity{}
 
 	request.Transfer(newActivity, activePondId)
+	newActivity.UpdatedBy = userIdentity
+	newActivity.CreatedBy = userIdentity
+
+	newActivity, err = sv.ActivityRepo.Create(newActivity)
+	if err != nil {
+		return nil, err
+	}
+
+	return newActivity, nil
+}
+
+func (sv activityServiceImp) CreateMove(request models.CreateMoveActivityRequest, userIdentity string, fromActivePondId int, toActivePondId int) (*models.Activity, error) {
+	// validate request
+	if err := request.Validation(); err != nil {
+		return nil, err
+	}
+
+	// check check activity if exist
+	checkActivity, err := sv.ActivityRepo.FirstByQuery("\"Mode\" = ? AND \"ActivityDate\" = ? AND \"DelFlag\" = ?", string(constants.FillType), request.ActivityDate, false)
+	if err != nil {
+		return nil, err
+	}
+
+	if checkActivity != nil {
+		return nil, errors.New("the activity already exist on the given date")
+	}
+
+	// declare variable
+	newActivity := &models.Activity{}
+
+	request.Transfer(newActivity, fromActivePondId, toActivePondId)
 	newActivity.UpdatedBy = userIdentity
 	newActivity.CreatedBy = userIdentity
 
