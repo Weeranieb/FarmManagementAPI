@@ -14,14 +14,16 @@ type IActivityProcessor interface {
 }
 
 type activityProcessorImp struct {
-	ActivePondService services.IActivePondService
-	ActivityService   services.IActivityService
+	ActivePondService     services.IActivePondService
+	ActivityService       services.IActivityService
+	AdditionalCostService services.IAdditionalCostService
 }
 
-func NewActivityProcessor(activePondService services.IActivePondService, activityService services.IActivityService) IActivityProcessor {
+func NewActivityProcessor(activePondService services.IActivePondService, activityService services.IActivityService, additionalCostService services.IAdditionalCostService) IActivityProcessor {
 	return &activityProcessorImp{
-		ActivePondService: activePondService,
-		ActivityService:   activityService,
+		ActivePondService:     activePondService,
+		ActivityService:       activityService,
+		AdditionalCostService: additionalCostService,
 	}
 }
 
@@ -73,6 +75,20 @@ func (sv activityProcessorImp) CreateFill(request models.CreateFillActivityReque
 	if err != nil {
 		tx.Rollback()
 		return nil, nil, err
+	}
+
+	// create additional cost
+	if request.AdditionalCost != nil {
+		var addAdditionalCost models.AddAdditionalCostRequest = models.AddAdditionalCostRequest{
+			ActivityId: newActivity.Id,
+			Cost:       *request.AdditionalCost,
+			Title:      "ค่าใช้จ่ายเพิ่มเติม (เติม)",
+		}
+		_, err := sv.AdditionalCostService.WithTrx(tx).Create(addAdditionalCost, userIdentity)
+		if err != nil {
+			tx.Rollback()
+			return nil, nil, err
+		}
 	}
 
 	// commit transaction
@@ -164,6 +180,20 @@ func (sv activityProcessorImp) CreateMove(request models.CreateMoveActivityReque
 		return nil, nil, nil, err
 	}
 
+	// create additional cost
+	if request.AdditionalCost != nil {
+		var addAdditionalCost models.AddAdditionalCostRequest = models.AddAdditionalCostRequest{
+			ActivityId: newActivity.Id,
+			Cost:       *request.AdditionalCost,
+			Title:      "ค่าใช้จ่ายเพิ่มเติม (ย้าย)",
+		}
+		_, err := sv.AdditionalCostService.WithTrx(tx).Create(addAdditionalCost, userIdentity)
+		if err != nil {
+			tx.Rollback()
+			return nil, nil, nil, err
+		}
+	}
+
 	// commit transaction
 	tx.Commit()
 
@@ -211,6 +241,20 @@ func (sv activityProcessorImp) CreateSell(request models.CreateSellActivityReque
 	if err != nil {
 		tx.Rollback()
 		return nil, nil, nil, err
+	}
+
+	// create additional cost
+	if request.AdditionalCost != nil {
+		var addAdditionalCost models.AddAdditionalCostRequest = models.AddAdditionalCostRequest{
+			ActivityId: newActivity.Id,
+			Cost:       *request.AdditionalCost,
+			Title:      "ค่าใช้จ่ายเพิ่มเติม (ขาย)",
+		}
+		_, err := sv.AdditionalCostService.WithTrx(tx).Create(addAdditionalCost, userIdentity)
+		if err != nil {
+			tx.Rollback()
+			return nil, nil, nil, err
+		}
 	}
 
 	// commit transaction

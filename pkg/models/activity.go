@@ -31,35 +31,38 @@ type ActivityPage struct {
 }
 
 type CreateFillActivityRequest struct {
-	PondId       int       `json:"pondId" gorm:"column:PondId"`
-	Amount       int       `json:"amount,omitempty" gorm:"column:Amount"`
-	FishType     string    `json:"fishType,omitempty" gorm:"column:FishType"`
-	FishWeight   float64   `json:"fishWeight,omitempty" gorm:"column:FishWeight"`
-	PricePerUnit float64   `json:"pricePerUnit,omitempty" gorm:"column:PricePerUnit"`
-	FishUnit     string    `json:"fishUnit" gorm:"column:FishUnit"`
-	ActivityDate time.Time `json:"activityDate" gorm:"column:ActivityDate"`
-	IsNewPond    bool      `json:"isNewPond,omitempty" gorm:"column:IsNewPond"`
+	PondId         int       `json:"pondId" gorm:"column:PondId"`
+	Amount         int       `json:"amount,omitempty" gorm:"column:Amount"`
+	FishType       string    `json:"fishType,omitempty" gorm:"column:FishType"`
+	FishWeight     float64   `json:"fishWeight,omitempty" gorm:"column:FishWeight"`
+	PricePerUnit   float64   `json:"pricePerUnit,omitempty" gorm:"column:PricePerUnit"`
+	FishUnit       string    `json:"fishUnit" gorm:"column:FishUnit"`
+	ActivityDate   time.Time `json:"activityDate" gorm:"column:ActivityDate"`
+	IsNewPond      bool      `json:"isNewPond,omitempty" gorm:"column:IsNewPond"`
+	AdditionalCost *float64  `json:"additionalCost,omitempty" gorm:"column:AdditionalCost"`
 }
 
 type CreateMoveActivityRequest struct {
-	PondId       int       `json:"pondId" gorm:"column:PondId"`
-	ToPondId     int       `json:"toPondId" gorm:"column:ToPondId"`
-	Amount       int       `json:"amount,omitempty" gorm:"column:Amount"`
-	FishType     string    `json:"fishType,omitempty" gorm:"column:FishType"`
-	FishWeight   float64   `json:"fishWeight,omitempty" gorm:"column:FishWeight"`
-	PricePerUnit float64   `json:"pricePerUnit,omitempty" gorm:"column:PricePerUnit"`
-	FishUnit     string    `json:"fishUnit" gorm:"column:FishUnit"`
-	ActivityDate time.Time `json:"activityDate" gorm:"column:ActivityDate"`
-	IsNewPond    bool      `json:"isNewPond,omitempty" gorm:"column:IsNewPond"`
-	IsClose      bool      `json:"isClose,omitempty" gorm:"column:IsClose"`
+	PondId         int       `json:"pondId" gorm:"column:PondId"`
+	ToPondId       int       `json:"toPondId" gorm:"column:ToPondId"`
+	Amount         int       `json:"amount,omitempty" gorm:"column:Amount"`
+	FishType       string    `json:"fishType,omitempty" gorm:"column:FishType"`
+	FishWeight     float64   `json:"fishWeight,omitempty" gorm:"column:FishWeight"`
+	PricePerUnit   float64   `json:"pricePerUnit,omitempty" gorm:"column:PricePerUnit"`
+	FishUnit       string    `json:"fishUnit" gorm:"column:FishUnit"`
+	ActivityDate   time.Time `json:"activityDate" gorm:"column:ActivityDate"`
+	AdditionalCost *float64  `json:"additionalCost,omitempty" gorm:"column:AdditionalCost"`
+	IsNewPond      bool      `json:"isNewPond,omitempty" gorm:"column:IsNewPond"`
+	IsClose        bool      `json:"isClose,omitempty" gorm:"column:IsClose"`
 }
 
 type CreateSellActivityRequest struct {
-	PondId       int          `json:"pondId" gorm:"column:PondId"`
-	MerchantId   int          `json:"merchantId" gorm:"column:MerchantId"`
-	ActivityDate time.Time    `json:"activityDate" gorm:"column:ActivityDate"`
-	SellDetail   []SellDetail `json:"sellDetails,omitempty"`
-	IsClose      bool         `json:"isClose,omitempty" gorm:"column:IsClose"`
+	PondId         int          `json:"pondId" gorm:"column:PondId"`
+	MerchantId     int          `json:"merchantId" gorm:"column:MerchantId"`
+	ActivityDate   time.Time    `json:"activityDate" gorm:"column:ActivityDate"`
+	AdditionalCost *float64     `json:"additionalCost,omitempty" gorm:"column:AdditionalCost"`
+	SellDetail     []SellDetail `json:"sellDetails,omitempty"`
+	IsClose        bool         `json:"isClose,omitempty" gorm:"column:IsClose"`
 }
 
 type ActivityWithSellDetail struct {
