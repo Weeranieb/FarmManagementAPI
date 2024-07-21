@@ -57,12 +57,12 @@ type CreateMoveActivityRequest struct {
 }
 
 type CreateSellActivityRequest struct {
-	PondId         int          `json:"pondId" gorm:"column:PondId"`
-	MerchantId     int          `json:"merchantId" gorm:"column:MerchantId"`
-	ActivityDate   time.Time    `json:"activityDate" gorm:"column:ActivityDate"`
-	AdditionalCost *float64     `json:"additionalCost,omitempty" gorm:"column:AdditionalCost"`
-	SellDetail     []SellDetail `json:"sellDetails,omitempty"`
-	IsClose        bool         `json:"isClose,omitempty" gorm:"column:IsClose"`
+	PondId         int             `json:"pondId" gorm:"column:PondId"`
+	MerchantId     int             `json:"merchantId" gorm:"column:MerchantId"`
+	ActivityDate   time.Time       `json:"activityDate" gorm:"column:ActivityDate"`
+	AdditionalCost *float64        `json:"additionalCost,omitempty" gorm:"column:AdditionalCost"`
+	SellDetail     []AddSellDetail `json:"sellDetails,omitempty"`
+	IsClose        bool            `json:"isClose,omitempty" gorm:"column:IsClose"`
 }
 
 type ActivityWithSellDetail struct {

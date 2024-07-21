@@ -182,22 +182,22 @@ func (sv activityServiceImp) CreateSell(request models.CreateSellActivityRequest
 	newActivity.CreatedBy = userIdentity
 
 	// create user
-	newActivity, err = sv.ActivityRepo.Create(newActivity)
+	newActivity, err = sv.ActivityRepo.WithTrx(trxHandle).Create(newActivity)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	sellId := newActivity.Id
-
+	var payload []models.SellDetail
 	// add updated by and created by to sell detail
-	for i := range request.SellDetail {
-		request.SellDetail[i].SellId = sellId
-		request.SellDetail[i].UpdatedBy = userIdentity
-		request.SellDetail[i].CreatedBy = userIdentity
+	for _, temp := range request.SellDetail {
+		var tempSellDetail models.SellDetail
+		temp.Transfer(&tempSellDetail, sellId)
+		payload = append(payload, tempSellDetail)
 	}
 
 	// create sell detail
-	newSellDetail, err = sv.SellDetailRepo.WithTrx(trxHandle).BulkCreate(request.SellDetail)
+	newSellDetail, err = sv.SellDetailRepo.WithTrx(trxHandle).BulkCreate(payload)
 	if err != nil {
 		return nil, nil, err
 	}

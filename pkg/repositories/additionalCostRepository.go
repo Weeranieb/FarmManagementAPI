@@ -3,6 +3,7 @@ package repositories
 import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories/dbconst"
+	"boonmafarm/api/utils/dbutil"
 	"errors"
 	"fmt"
 
@@ -57,38 +58,6 @@ func (rp additionalCostRepositoryImp) WithTrx(trxHandle *gorm.DB) IAdditionalCos
 	}
 }
 
-// func (rp additionalCostRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, keyword string, billType *string, farmGroupId *int) (*[]models.BillWithFarmGroupName, int64, error) {
-// 	var result *[]models.BillWithFarmGroupName
-// 	var total int64
-
-// 	joinFarmGroup := fmt.Sprintf("LEFT JOIN %s ON %s.\"FarmGroupId\" = %s.\"Id\"", dbconst.TFarmGroup, dbconst.TBill, dbconst.TFarmGroup)
-
-// 	firstWhereClause := fmt.Sprintf("%s.\"DelFlag\" = ? AND %s.\"DelFlag\" = ?", dbconst.TFarmGroup, dbconst.TBill)
-// 	whereClient := fmt.Sprintf("%s.\"ClientId\" = ?", dbconst.TFarmGroup)
-
-// 	query := rp.dbContext.Table(dbconst.TBill).Select(dbconst.TBill+".*").Select(dbconst.TFarmGroup+".\"Name\"").Joins(joinFarmGroup).Order(orderBy).Where(firstWhereClause, false, false).Where(whereClient, clientId)
-// 	// .Select(dbconst.TFarmGroup+".\"Name\"")
-// 	if keyword != "" {
-// 		whereKeyword := fmt.Sprintf("(%s.\"Other\" LIKE ? OR %s.\"Type\" LIKE ? OR %s.\"Name\" LIKE ? OR %s.\"Code\" LIKE ?)", dbconst.TBill, dbconst.TBill, dbconst.TFarmGroup, dbconst.TFarmGroup)
-// 		query = query.Where(whereKeyword, "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
-// 	}
-
-// 	if billType != nil {
-// 		whereMode := fmt.Sprintf("%s.\"Type\" = ?", dbconst.TBill)
-// 		query = query.Where(whereMode, *billType)
-// 	}
-
-// 	if farmGroupId != nil {
-// 		whereFarm := fmt.Sprintf("%s.\"Id\" = ?", dbconst.TFarmGroup)
-// 		query = query.Where(whereFarm, *farmGroupId)
-// 	}
-
-// 	if err := query.Limit(1).Count(&total).Limit(pageSize).Offset(page * pageSize).Find(&result).Error; err != nil {
-// 		return nil, 0, err
-// 	}
-// 	return result, total, nil
-// }
-
 func (rp additionalCostRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.AdditionalCost, error) {
 	var result *models.AdditionalCost
 	if err := rp.dbContext.Table(dbconst.TAdditionalCost).Where(query, args...).First(&result).Error; err != nil {
@@ -102,7 +71,8 @@ func (rp additionalCostRepositoryImp) FirstByQuery(query interface{}, args ...in
 }
 
 func (rp additionalCostRepositoryImp) Update(request *models.AdditionalCost) error {
-	if err := rp.dbContext.Table(dbconst.TAdditionalCost).Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+	obj := dbutil.StructToMap(request)
+	if err := rp.dbContext.Table(dbconst.TAdditionalCost).Where("\"Id\" = ?", request.Id).Updates(obj).Error; err != nil {
 		return err
 	}
 	return nil

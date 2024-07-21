@@ -3,6 +3,7 @@ package repositories
 import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories/dbconst"
+	"boonmafarm/api/utils/dbutil"
 	"errors"
 	"fmt"
 
@@ -77,7 +78,8 @@ func (rp sellDetailRepositoryImp) WithTrx(trxHandle *gorm.DB) ISellDetailReposit
 }
 
 func (rp sellDetailRepositoryImp) Update(request *models.SellDetail) error {
-	if err := rp.dbContext.Table(dbconst.TSellDetail).Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+	obj := dbutil.StructToMap(request)
+	if err := rp.dbContext.Table(dbconst.TSellDetail).Where("\"Id\" = ?", request.Id).Updates(obj).Error; err != nil {
 		return err
 	}
 	return nil

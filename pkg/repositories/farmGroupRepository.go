@@ -3,6 +3,7 @@ package repositories
 import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories/dbconst"
+	"boonmafarm/api/utils/dbutil"
 	"errors"
 
 	"gorm.io/gorm"
@@ -53,7 +54,8 @@ func (rp farmGroupRepositoryImp) TakeById(id int) (*models.FarmGroup, error) {
 }
 
 func (rp farmGroupRepositoryImp) Update(request *models.FarmGroup) error {
-	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+	obj := dbutil.StructToMap(request)
+	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where("\"Id\" = ?", request.Id).Updates(obj).Error; err != nil {
 		return err
 	}
 	return nil

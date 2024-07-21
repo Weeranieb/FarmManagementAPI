@@ -3,6 +3,7 @@ package repositories
 import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories/dbconst"
+	"boonmafarm/api/utils/dbutil"
 	"errors"
 	"fmt"
 
@@ -104,7 +105,8 @@ func (rp activityRepositoryImp) WithTrx(trxHandle *gorm.DB) IActivityRepository 
 }
 
 func (rp activityRepositoryImp) Update(request *models.Activity) error {
-	if err := rp.dbContext.Table(dbconst.TActivitiy).Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+	obj := dbutil.StructToMap(request)
+	if err := rp.dbContext.Table(dbconst.TActivitiy).Where("\"Id\" = ?", request.Id).Updates(obj).Error; err != nil {
 		return err
 	}
 	return nil

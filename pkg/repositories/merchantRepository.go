@@ -3,6 +3,7 @@ package repositories
 import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories/dbconst"
+	"boonmafarm/api/utils/dbutil"
 	"errors"
 	"fmt"
 
@@ -58,7 +59,8 @@ func (rp merchantRepositoryImp) FirstByQuery(query interface{}, args ...interfac
 }
 
 func (rp merchantRepositoryImp) Update(request *models.Merchant) error {
-	if err := rp.dbContext.Table(dbconst.TMerchant).Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+	obj := dbutil.StructToMap(request)
+	if err := rp.dbContext.Table(dbconst.TMerchant).Where("\"Id\" = ?", request.Id).Updates(obj).Error; err != nil {
 		return err
 	}
 	return nil

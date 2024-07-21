@@ -18,7 +18,6 @@ type SellDetail struct {
 }
 
 type AddSellDetail struct {
-	SellId       int     `json:"sellId" gorm:"column:SellId"`
 	Size         string  `json:"size" gorm:"column:Size"`
 	FishType     string  `json:"fishType" gorm:"column:FishType"`
 	Amount       float64 `json:"amount" gorm:"column:Amount"`
@@ -44,6 +43,16 @@ func (a AddSellDetail) Validation() error {
 		return errors.New(ErrPricePerUnitEmpty)
 	}
 	return nil
+}
+
+// transfer
+func (a AddSellDetail) Transfer(sellDetail *SellDetail, sellId int) {
+	sellDetail.SellId = sellId
+	sellDetail.Amount = a.Amount
+	sellDetail.Size = a.Size
+	sellDetail.FishType = a.FishType
+	sellDetail.FishUnit = a.FishUnit
+	sellDetail.PricePerUnit = a.PricePerUnit
 }
 
 const (

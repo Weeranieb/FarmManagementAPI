@@ -69,6 +69,7 @@ func main() {
 	feedPriceHistoryRepo := repositories.NewFeedPriceHistoryRepository(db)
 	feedCollectionRepo := repositories.NewFeedCollectionRepository(db)
 	dailyFeedRepo := repositories.NewDailyFeedRepository(db)
+	additionalCostRepo := repositories.NewAdditionalCostRepository(db)
 
 	// services
 	userService := services.NewUserService(userRepo)
@@ -86,9 +87,10 @@ func main() {
 	feedPriceHistoryService := services.NewFeedPriceHistoryService(feedPriceHistoryRepo)
 	feedCollectionService := services.NewFeedCollectionService(feedCollectionRepo)
 	dailyFeedService := services.NewDailyFeedService(dailyFeedRepo)
+	additionalCostService := services.NewAdditionalCostService(additionalCostRepo)
 
 	// processor
-	activityProcessor := processors.NewActivityProcessor(activePondService, activityService)
+	activityProcessor := processors.NewActivityProcessor(activePondService, activityService, additionalCostService)
 
 	// controllers
 	userController := controllers.NewUserController(userService)

@@ -3,6 +3,7 @@ package repositories
 import (
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/repositories/dbconst"
+	"boonmafarm/api/utils/dbutil"
 	"errors"
 	"fmt"
 
@@ -59,7 +60,8 @@ func (rp feedPriceHistoryRepositoryImp) FirstByQuery(query interface{}, args ...
 }
 
 func (rp feedPriceHistoryRepositoryImp) Update(request *models.FeedPriceHistory) error {
-	if err := rp.dbContext.Table(dbconst.TFeedPriceHistory).Where("\"Id\" = ?", request.Id).Updates(&request).Error; err != nil {
+	obj := dbutil.StructToMap(request)
+	if err := rp.dbContext.Table(dbconst.TFeedPriceHistory).Where("\"Id\" = ?", request.Id).Updates(obj).Error; err != nil {
 		return err
 	}
 	return nil
