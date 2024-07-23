@@ -42,7 +42,7 @@ func (p feedProcessorImp) CreateFeedCollection(request models.CreateFeedRequest,
 
 	// create feed price history
 	var feedPriceHistories []models.FeedPriceHistory
-	feedPriceHistories, err = p.FeedPriceHistoryService.WithTrx(tx).Bulk(request.FeedPriceHistory, userIdentity, feedCollection.Id)
+	feedPriceHistories, err = p.FeedPriceHistoryService.WithTrx(tx).Bulk(request.FeedPriceHistories, userIdentity, feedCollection.Id)
 	if err != nil {
 		tx.Rollback()
 		return nil, nil, err

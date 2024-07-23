@@ -13,7 +13,7 @@ import (
 type IFeedCollectionRepository interface {
 	Create(feedCollection *models.FeedCollection) (*models.FeedCollection, error)
 	TakeById(id int) (*models.FeedCollection, error)
-	TakePage(clientId, page, pageSize int, orderBy, keyword string) (*[]models.FeedCollection, int64, error)
+	TakePage(clientId, page, pageSize int, orderBy, keyword string) (*[]models.FeedCollectionPage, int64, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.FeedCollection, error)
 	Update(feedCollection *models.FeedCollection) error
 	WithTrx(trxHandle *gorm.DB) IFeedCollectionRepository
@@ -59,21 +59,34 @@ func (rp feedCollectionRepositoryImp) TakeById(id int) (*models.FeedCollection, 
 	return result, nil
 }
 
-func (rp feedCollectionRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, keyword string) (*[]models.FeedCollection, int64, error) {
-	var result *[]models.FeedCollection
+func (rp feedCollectionRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, keyword string) (*[]models.FeedCollectionPage, int64, error) {
+	var result []models.FeedCollectionPage
 	var total int64
 
-	query := rp.dbContext.Table(dbconst.TFeedCollection).Order(orderBy).Where("\"ClientId\" = ? AND \"DelFlag\" = ?", clientId, false)
+	// Subquery to find the latest price update date for each feed collection
+	subQuery := rp.dbContext.Table(dbconst.TFeedPriceHistory).
+		Select("\"FeedCollectionId\", MAX(\"PriceUpdatedDate\") as \"LatestPriceUpdatedDate\"").
+		Group("\"FeedCollectionId\"")
+
+	// Main query
+	query := rp.dbContext.Table(dbconst.TFeedCollection).
+		Select(fmt.Sprintf(`%s.*, 
+            %s."Price" as "LatestPrice",
+            %s."PriceUpdatedDate" as "LatestPriceUpdatedDate"`, dbconst.TFeedCollection, dbconst.TFeedPriceHistory, dbconst.TFeedPriceHistory)).
+		Joins(fmt.Sprintf("LEFT JOIN (?) as LatestPriceHistory ON %s.\"Id\" = LatestPriceHistory.\"FeedCollectionId\"", dbconst.TFeedCollection), subQuery).
+		Joins(fmt.Sprintf("LEFT JOIN %s ON %s.\"Id\" = %s.\"FeedCollectionId\" AND %s.\"PriceUpdatedDate\" = LatestPriceHistory.\"LatestPriceUpdatedDate\"", dbconst.TFeedPriceHistory, dbconst.TFeedCollection, dbconst.TFeedPriceHistory, dbconst.TFeedPriceHistory)).
+		Where(fmt.Sprintf("%s.\"ClientId\" = ? AND %s.\"DelFlag\" = ?", dbconst.TFeedCollection, dbconst.TFeedCollection), clientId, false).
+		Order(orderBy)
 
 	if keyword != "" {
-		whereKeyword := "(\"Code\" LIKE ? OR \"Name\" LIKE ? OR \"Unit\" LIKE ?)"
+		whereKeyword := fmt.Sprintf("(%s.\"Code\" LIKE ? OR %s.\"Name\" LIKE ? OR %s.\"Unit\" LIKE ?)", dbconst.TFeedCollection, dbconst.TFeedCollection, dbconst.TFeedCollection)
 		query = query.Where(whereKeyword, "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
 	}
 
-	if err := query.Limit(1).Count(&total).Limit(pageSize).Offset(page * pageSize).Find(&result).Error; err != nil {
+	if err := query.Count(&total).Limit(pageSize).Offset(page * pageSize).Find(&result).Error; err != nil {
 		return nil, 0, err
 	}
-	return result, total, nil
+	return &result, total, nil
 }
 
 func (rp feedCollectionRepositoryImp) FirstByQuery(query interface{}, args ...interface{}) (*models.FeedCollection, error) {

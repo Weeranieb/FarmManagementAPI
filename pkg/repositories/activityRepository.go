@@ -60,7 +60,6 @@ func (rp activityRepositoryImp) TakePage(clientId, page, pageSize int, orderBy, 
 	whereClient := fmt.Sprintf("%s.\"ClientId\" = ?", dbconst.TFarm)
 
 	query := rp.dbContext.Table(dbconst.TActivitiy).Select(fmt.Sprintf("%s.*, %s.\"Name\" as \"FarmName\", %s.\"Name\" as \"PondName\"", dbconst.TActivitiy, dbconst.TFarm, dbconst.TPond)).Joins(joinActivePond).Joins(joinPond).Joins(joinFarm).Order(orderBy).Where(firstWhereClause, false, false, false, false).Where(whereClient, clientId)
-	// .Select(dbconst.TFarm+".\"Name\" as \"FarmName\"").Select(dbconst.TPond+".\"Name\" as \"PondName\"")
 
 	if keyword != "" {
 		whereKeyword := fmt.Sprintf("(%s.\"Code\" LIKE ? OR %s.\"Name\" LIKE ?)", dbconst.TPond, dbconst.TPond)
