@@ -193,6 +193,8 @@ func (sv activityServiceImp) CreateSell(request models.CreateSellActivityRequest
 	for _, temp := range request.SellDetail {
 		var tempSellDetail models.SellDetail
 		temp.Transfer(&tempSellDetail, sellId)
+		tempSellDetail.UpdatedBy = userIdentity
+		tempSellDetail.CreatedBy = userIdentity
 		payload = append(payload, tempSellDetail)
 	}
 

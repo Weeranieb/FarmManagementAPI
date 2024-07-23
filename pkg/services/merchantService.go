@@ -10,6 +10,7 @@ type IMerchantService interface {
 	Create(request models.AddMerchant, userIdentity string) (*models.Merchant, error)
 	Get(id int) (*models.Merchant, error)
 	Update(request *models.Merchant, userIdentity string) error
+	GetList() ([]*models.Merchant, error)
 }
 
 type merchantServiceImp struct {
@@ -63,4 +64,8 @@ func (sv merchantServiceImp) Update(request *models.Merchant, userIdentity strin
 		return err
 	}
 	return nil
+}
+
+func (sv merchantServiceImp) GetList() ([]*models.Merchant, error) {
+	return sv.MerchantRepo.TakeList()
 }

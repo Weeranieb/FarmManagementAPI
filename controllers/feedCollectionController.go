@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"boonmafarm/api/pkg/models"
+	"boonmafarm/api/pkg/processors"
 	"boonmafarm/api/pkg/services"
 	"boonmafarm/api/utils/httputil"
 	"boonmafarm/api/utils/jwtutil"
@@ -17,11 +18,13 @@ type IFeedCollectionController interface {
 }
 
 type feedCollectionControllerImp struct {
+	FeedProcessor         processors.IFeedProcessor
 	FeedCollectionService services.IFeedCollectionService
 }
 
-func NewFeedCollectionController(feedCollectionService services.IFeedCollectionService) IFeedCollectionController {
+func NewFeedCollectionController(feedProcessor processors.IFeedProcessor, feedCollectionService services.IFeedCollectionService) IFeedCollectionController {
 	return &feedCollectionControllerImp{
+		FeedProcessor:         feedProcessor,
 		FeedCollectionService: feedCollectionService,
 	}
 }
@@ -39,21 +42,9 @@ func (c feedCollectionControllerImp) ApplyRoute(router *gin.Engine) {
 	}
 }
 
-// POST /api/v1/feedcollection
-// Add a feed collection.
-// @Summary      Add a feed collection
-// @Description  Add a new feed collection with the provided details
-// @Tags         feedcollection
-// @Accept       json
-// @Produce      json
-// @Param        body body models.AddFeedCollection true "Feed collection data"
-// @Success      200  {object}  httputil.ResponseModel
-// @Failure      400  {object}  httputil.ErrorResponseModel
-// @Failure      500  {object}  httputil.ErrorResponseModel
-// @Router       /api/v1/feedcollection [post]
 func (c feedCollectionControllerImp) AddFeedCollection(ctx *gin.Context) {
 	var response httputil.ResponseModel
-	var addFeedCollection models.AddFeedCollection
+	var addFeedCollection models.CreateFeedRequest
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -93,14 +84,22 @@ func (c feedCollectionControllerImp) AddFeedCollection(ctx *gin.Context) {
 		return
 	}
 
-	newPond, err := c.FeedCollectionService.Create(addFeedCollection, username, clientId)
+	newFeedCollection, newFeedPriceHistory, err := c.FeedProcessor.CreateFeedCollection(addFeedCollection, username, clientId)
 	if err != nil {
 		httputil.NewError(ctx, "Err_FeedCollection_AddFeedCollection_04", err)
 		return
 	}
 
+	type ret struct {
+		FeedCollection   *models.FeedCollection    `json:"feedCollection"`
+		FeedPriceHistory []models.FeedPriceHistory `json:"feedPriceHistory"`
+	}
+
 	response.Result = true
-	response.Data = newPond
+	response.Data = ret{
+		FeedCollection:   newFeedCollection,
+		FeedPriceHistory: newFeedPriceHistory,
+	}
 
 	ctx.JSON(http.StatusOK, response)
 }

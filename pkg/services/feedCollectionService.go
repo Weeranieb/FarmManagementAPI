@@ -5,6 +5,8 @@ import (
 	"boonmafarm/api/pkg/repositories"
 	"boonmafarm/api/utils/httputil"
 	"errors"
+
+	"gorm.io/gorm"
 )
 
 type IFeedCollectionService interface {
@@ -12,15 +14,16 @@ type IFeedCollectionService interface {
 	Get(id int) (*models.FeedCollection, error)
 	Update(request *models.FeedCollection, userIdentity string) error
 	TakePage(clientId, page, pageSize int, orderBy, keyword string) (*httputil.PageModel, error)
+	WithTrx(trxHandle *gorm.DB) IFeedCollectionService
 }
 
 type feedCollectionServiceImp struct {
-	FeedCollection repositories.IFeedCollectionRepository
+	FeedCollectionRepo repositories.IFeedCollectionRepository
 }
 
 func NewFeedCollectionService(feedCollectionRepo repositories.IFeedCollectionRepository) IFeedCollectionService {
 	return &feedCollectionServiceImp{
-		FeedCollection: feedCollectionRepo,
+		FeedCollectionRepo: feedCollectionRepo,
 	}
 }
 
@@ -31,7 +34,7 @@ func (sv feedCollectionServiceImp) Create(request models.AddFeedCollection, user
 	}
 
 	// check feed collection if exist
-	checkFeedCollection, err := sv.FeedCollection.FirstByQuery("\"ClientId\" = ? AND \"Code\" = ? AND \"DelFlag\" = ?", clientId, request.Code, false)
+	checkFeedCollection, err := sv.FeedCollectionRepo.FirstByQuery("\"ClientId\" = ? AND \"Code\" = ? AND \"DelFlag\" = ?", clientId, request.Code, false)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +50,7 @@ func (sv feedCollectionServiceImp) Create(request models.AddFeedCollection, user
 	newFeedCollection.CreatedBy = userIdentity
 
 	// create feed collection
-	newFeedCollection, err = sv.FeedCollection.Create(newFeedCollection)
+	newFeedCollection, err = sv.FeedCollectionRepo.Create(newFeedCollection)
 	if err != nil {
 		return nil, err
 	}
@@ -56,13 +59,13 @@ func (sv feedCollectionServiceImp) Create(request models.AddFeedCollection, user
 }
 
 func (sv feedCollectionServiceImp) Get(id int) (*models.FeedCollection, error) {
-	return sv.FeedCollection.TakeById(id)
+	return sv.FeedCollectionRepo.TakeById(id)
 }
 
 func (sv feedCollectionServiceImp) Update(request *models.FeedCollection, userIdentity string) error {
 	// update feed collection
 	request.UpdatedBy = userIdentity
-	if err := sv.FeedCollection.Update(request); err != nil {
+	if err := sv.FeedCollectionRepo.Update(request); err != nil {
 		return err
 	}
 	return nil
@@ -70,7 +73,7 @@ func (sv feedCollectionServiceImp) Update(request *models.FeedCollection, userId
 
 func (sv feedCollectionServiceImp) TakePage(clientId, page, pageSize int, orderBy, keyword string) (*httputil.PageModel, error) {
 	result := &httputil.PageModel{}
-	items, total, err := sv.FeedCollection.TakePage(clientId, page, pageSize, orderBy, keyword)
+	items, total, err := sv.FeedCollectionRepo.TakePage(clientId, page, pageSize, orderBy, keyword)
 	if err != nil {
 		return nil, err
 	}
@@ -79,4 +82,9 @@ func (sv feedCollectionServiceImp) TakePage(clientId, page, pageSize int, orderB
 	result.Total = total
 
 	return result, nil
+}
+
+func (sv feedCollectionServiceImp) WithTrx(trxHandle *gorm.DB) IFeedCollectionService {
+	sv.FeedCollectionRepo = sv.FeedCollectionRepo.WithTrx(trxHandle)
+	return sv
 }

@@ -17,6 +17,12 @@ type AddFeedCollection struct {
 	Name string `json:"name" gorm:"column:Name"`
 	Unit string `json:"unit" gorm:"column:Unit"`
 }
+type CreateFeedRequest struct {
+	Code             string                `json:"code" gorm:"column:Code"`
+	Name             string                `json:"name" gorm:"column:Name"`
+	Unit             string                `json:"unit" gorm:"column:Unit"`
+	FeedPriceHistory []AddFeedPriceHistory `json:"feedPriceHistory"`
+}
 
 // Validation Add
 func (a AddFeedCollection) Validation() error {

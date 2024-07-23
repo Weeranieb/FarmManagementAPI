@@ -16,6 +16,7 @@ type IFeedCollectionRepository interface {
 	TakePage(clientId, page, pageSize int, orderBy, keyword string) (*[]models.FeedCollection, int64, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.FeedCollection, error)
 	Update(feedCollection *models.FeedCollection) error
+	WithTrx(trxHandle *gorm.DB) IFeedCollectionRepository
 }
 
 type feedCollectionRepositoryImp struct {
@@ -25,6 +26,17 @@ type feedCollectionRepositoryImp struct {
 func NewFeedCollectionRepository(db *gorm.DB) IFeedCollectionRepository {
 	return &feedCollectionRepositoryImp{
 		dbContext: db,
+	}
+}
+
+func (rp feedCollectionRepositoryImp) WithTrx(trxHandle *gorm.DB) IFeedCollectionRepository {
+	if trxHandle == nil {
+		fmt.Println("Transaction Database not found")
+		return rp
+	}
+
+	return &feedCollectionRepositoryImp{
+		dbContext: trxHandle,
 	}
 }
 

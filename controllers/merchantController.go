@@ -33,6 +33,7 @@ func (c merchantControllerImp) ApplyRoute(router *gin.Engine) {
 		{
 			eg.POST("", c.AddMerchant)
 			eg.GET(":id", c.GetMerchant)
+			eg.GET("", c.GetMerchantList)
 			eg.PUT("", c.UpdateMerchant)
 		}
 	}
@@ -196,6 +197,35 @@ func (c merchantControllerImp) UpdateMerchant(ctx *gin.Context) {
 	}
 
 	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c merchantControllerImp) GetMerchantList(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	var merchantList []*models.Merchant
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Merchant_GetMerchantList_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	merchantList, err := c.MerchantService.GetList()
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Merchant_GetMerchantList_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
+	response.Data = merchantList
 
 	ctx.JSON(http.StatusOK, response)
 }

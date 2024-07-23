@@ -53,7 +53,7 @@ func (c feedPriceHistoryControllerImp) ApplyRoute(router *gin.Engine) {
 // @Router       /api/v1/feedpricehistory [post]
 func (c feedPriceHistoryControllerImp) AddFeedPriceHistory(ctx *gin.Context) {
 	var response httputil.ResponseModel
-	var addPond models.AddFeedPriceHistory
+	var addFeedPriceHistory models.AddFeedPriceHistory
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -65,7 +65,7 @@ func (c feedPriceHistoryControllerImp) AddFeedPriceHistory(ctx *gin.Context) {
 		}
 	}()
 
-	if err := ctx.ShouldBindJSON(&addPond); err != nil {
+	if err := ctx.ShouldBindJSON(&addFeedPriceHistory); err != nil {
 		errRes := httputil.ErrorResponseModel{}
 		errRes.Error(ctx, "Err_FeedPriceHistory_AddFeedPriceHistory_02", err.Error())
 		response.Error = errRes
@@ -83,14 +83,14 @@ func (c feedPriceHistoryControllerImp) AddFeedPriceHistory(ctx *gin.Context) {
 		return
 	}
 
-	newPond, err := c.FeedPriceHistoryService.Create(addPond, username)
+	newFeedPriceHistory, err := c.FeedPriceHistoryService.Create(addFeedPriceHistory, username)
 	if err != nil {
 		httputil.NewError(ctx, "Err_FeedPriceHistory_AddFeedPriceHistory_04", err)
 		return
 	}
 
 	response.Result = true
-	response.Data = newPond
+	response.Data = newFeedPriceHistory
 
 	ctx.JSON(http.StatusOK, response)
 }

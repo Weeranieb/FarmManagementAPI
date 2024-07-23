@@ -16,6 +16,8 @@ type IFeedPriceHistoryRepository interface {
 	TakeAll(feedCollectionId int) (*[]models.FeedPriceHistory, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.FeedPriceHistory, error)
 	Update(feedPriceHistory *models.FeedPriceHistory) error
+	BulkCreate(request []models.FeedPriceHistory) ([]models.FeedPriceHistory, error)
+	WithTrx(trxHandle *gorm.DB) IFeedPriceHistoryRepository
 }
 
 type feedPriceHistoryRepositoryImp struct {
@@ -28,7 +30,25 @@ func NewFeedPriceHistoryRepository(db *gorm.DB) IFeedPriceHistoryRepository {
 	}
 }
 
+func (rp feedPriceHistoryRepositoryImp) WithTrx(trxHandle *gorm.DB) IFeedPriceHistoryRepository {
+	if trxHandle == nil {
+		fmt.Println("Transaction Database not found")
+		return rp
+	}
+
+	return &feedPriceHistoryRepositoryImp{
+		dbContext: trxHandle,
+	}
+}
+
 func (rp feedPriceHistoryRepositoryImp) Create(request *models.FeedPriceHistory) (*models.FeedPriceHistory, error) {
+	if err := rp.dbContext.Table(dbconst.TFeedPriceHistory).Create(&request).Error; err != nil {
+		return nil, err
+	}
+	return request, nil
+}
+
+func (rp feedPriceHistoryRepositoryImp) BulkCreate(request []models.FeedPriceHistory) ([]models.FeedPriceHistory, error) {
 	if err := rp.dbContext.Table(dbconst.TFeedPriceHistory).Create(&request).Error; err != nil {
 		return nil, err
 	}

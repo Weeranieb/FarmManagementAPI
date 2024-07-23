@@ -13,6 +13,7 @@ import (
 type IMerchantRepository interface {
 	Create(merchant *models.Merchant) (*models.Merchant, error)
 	TakeById(id int) (*models.Merchant, error)
+	TakeList() ([]*models.Merchant, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Merchant, error)
 	Update(merchant *models.Merchant) error
 }
@@ -64,4 +65,12 @@ func (rp merchantRepositoryImp) Update(request *models.Merchant) error {
 		return err
 	}
 	return nil
+}
+
+func (rp merchantRepositoryImp) TakeList() ([]*models.Merchant, error) {
+	var result []*models.Merchant
+	if err := rp.dbContext.Table(dbconst.TMerchant).Where("\"DelFlag\" = ?", false).Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }

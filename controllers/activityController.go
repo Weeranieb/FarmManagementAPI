@@ -34,7 +34,6 @@ func (c activityControllerImp) ApplyRoute(router *gin.Engine) {
 	{
 		eg := v1.Group("/activity")
 		{
-			// eg.POST("", c.AddActivity)
 			eg.POST("fill", c.AddFillActivity)
 			eg.POST("move", c.AddMoveActivity)
 			eg.POST("sell", c.AddSellActivity)

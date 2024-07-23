@@ -22,9 +22,9 @@ type AddFeedPriceHistory struct {
 
 // Validation Add
 func (a AddFeedPriceHistory) Validation() error {
-	if a.FeedCollectionId == 0 {
-		return errors.New(ErrFeedCollectionIdEmpty)
-	}
+	// if a.FeedCollectionId == 0 {
+	// 	return errors.New(ErrFeedCollectionIdEmpty)
+	// }
 	if a.Price == 0 {
 		return errors.New(ErrPriceEmpty)
 	}
