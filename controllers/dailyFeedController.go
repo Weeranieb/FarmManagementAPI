@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"boonmafarm/api/pkg/models"
+	"boonmafarm/api/pkg/processors"
 	"boonmafarm/api/pkg/services"
 	"boonmafarm/api/utils/httputil"
 	"boonmafarm/api/utils/jwtutil"
@@ -17,12 +18,14 @@ type IDailyFeedController interface {
 }
 
 type dailyFeedControllerImp struct {
-	DailyFeedService services.IDailyFeedService
+	DailyFeedProcessor processors.IDailyFeedProcessor
+	DailyFeedService   services.IDailyFeedService
 }
 
-func NewDailyFeedController(dailyFeedService services.IDailyFeedService) IDailyFeedController {
+func NewDailyFeedController(dailyFeedProcessor processors.IDailyFeedProcessor, dailyFeedService services.IDailyFeedService) IDailyFeedController {
 	return &dailyFeedControllerImp{
-		DailyFeedService: dailyFeedService,
+		DailyFeedProcessor: dailyFeedProcessor,
+		DailyFeedService:   dailyFeedService,
 	}
 }
 
@@ -34,6 +37,7 @@ func (c dailyFeedControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("", c.AddDailyFeed)
 			eg.GET(":id", c.GetDailyFeed)
 			eg.PUT("", c.UpdateDailyFeed)
+			eg.GET("/download", c.DownloadExcelForm)
 		}
 	}
 }
@@ -197,4 +201,72 @@ func (c dailyFeedControllerImp) UpdateDailyFeed(ctx *gin.Context) {
 	response.Result = true
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+func (c dailyFeedControllerImp) DownloadExcelForm(ctx *gin.Context) {
+	var response httputil.ResponseModel
+
+	formType := ctx.Query("type")
+	if formType == "" {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_DownloadExcelForm_02", "Missing form type")
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+	sFeedId := ctx.Query("feedId")
+	feedId, err := strconv.Atoi(sFeedId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_DownloadExcelForm_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	sFarmId := ctx.Query("farmId")
+	farmId, err := strconv.Atoi(sFarmId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_DownloadExcelForm_04", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	date := ctx.Query("date") // 2024-01-01
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_DailyFeed_DownloadExcelForm_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	clientId, err := jwtutil.GetClientId(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_DownloadExcelForm_05", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	excelBytes, err := c.DailyFeedProcessor.DownloadExcelForm(clientId, formType, feedId, farmId, date)
+	if err != nil {
+		httputil.NewError(ctx, "Err_DailyFeed_DownloadExcelForm_02", err)
+		return
+	}
+
+	// Set response headers to trigger download
+	ctx.Header("Content-Description", "File Transfer")
+	ctx.Header("Content-Disposition", "attachment; filename=dailyfeed.xlsx")
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Header("Content-Length", fmt.Sprint(len(excelBytes)))
+
+	// Write the byte data to the response
+	ctx.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelBytes)
 }

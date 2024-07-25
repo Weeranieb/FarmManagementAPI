@@ -10,6 +10,7 @@ type IPondService interface {
 	Create(request models.AddPond, userIdentity string) (*models.Pond, error)
 	CreateBatch(request []models.AddPond, userIdentity string) ([]*models.Pond, error)
 	Get(id int) (*models.Pond, error)
+	GetPondNameList(farmId int) ([]string, error)
 	Update(request *models.Pond, userIdentity string) error
 	GetList(farmId int) ([]*models.Pond, error)
 }
@@ -107,4 +108,18 @@ func (sv pondServiceImp) Update(request *models.Pond, userIdentity string) error
 
 func (sv pondServiceImp) GetList(farmId int) ([]*models.Pond, error) {
 	return sv.PondRepo.TakeAll(farmId)
+}
+
+func (sv pondServiceImp) GetPondNameList(farmId int) ([]string, error) {
+	ponds, err := sv.PondRepo.TakeAll(farmId)
+	if err != nil {
+		return nil, err
+	}
+
+	pondNames := make([]string, 0)
+	for _, pond := range ponds {
+		pondNames = append(pondNames, pond.Name)
+	}
+
+	return pondNames, nil
 }

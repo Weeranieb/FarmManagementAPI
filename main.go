@@ -92,6 +92,7 @@ func main() {
 	// processor
 	activityProcessor := processors.NewActivityProcessor(activePondService, activityService, additionalCostService)
 	feedProcessor := processors.NewFeedProcessor(feedCollectionService, feedPriceHistoryService)
+	dailyFeedProcessor := processors.NewDailyFeedProcessor(dailyFeedService, feedCollectionService, farmService, pondService)
 
 	// controllers
 	userController := controllers.NewUserController(userService)
@@ -108,7 +109,7 @@ func main() {
 	merchantController := controllers.NewMerchantController(merchantService)
 	feedPriceHistoryController := controllers.NewFeedPriceHistoryController(feedPriceHistoryService)
 	feedCollectionController := controllers.NewFeedCollectionController(feedProcessor, feedCollectionService)
-	dailyFeedController := controllers.NewDailyFeedController(dailyFeedService)
+	dailyFeedController := controllers.NewDailyFeedController(dailyFeedProcessor, dailyFeedService)
 
 	// apply route
 	userController.ApplyRoute(router)
