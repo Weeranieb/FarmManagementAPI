@@ -161,14 +161,39 @@ func (p dailyFeedProcessorImp) DownloadExcelForm(clientId int, formType string, 
 		},
 	})
 
-	// styleBorders, _ := f.NewStyle(&excelize.Style{
-	// 	Border: []excelize.Border{
-	// 		{Type: "left", Color: "000000", Style: 1},
-	// 		{Type: "right", Color: "000000", Style: 1},
-	// 		{Type: "top", Color: "000000", Style: 1},
-	// 		{Type: "bottom", Color: "000000", Style: 1},
-	// 	},
-	// })
+	styleFillData_A, _ := f.NewStyle(&excelize.Style{
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#ffff04"},
+			Pattern: 1,
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+		},
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		},
+	})
+
+	styleFillData_B, _ := f.NewStyle(&excelize.Style{
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#f1c233"},
+			Pattern: 1,
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+		},
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		},
+	})
 
 	// Write data to the sheet
 	f.SetCellValue(sheetName, "A1", "ประเภท:")
@@ -217,7 +242,14 @@ func (p dailyFeedProcessorImp) DownloadExcelForm(clientId int, formType string, 
 		dayString := fmt.Sprintf("%d %s %d", day, timeutil.ThaiMonths[date.Month()], date.Year()+543)
 
 		f.SetCellValue(sheetName, cell, dayString)
-		f.SetCellStyle(sheetName, cell, cell, styleCenterAlign)
+
+		startCell := fmt.Sprintf("C%d", day+2)
+		endCell := fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+1), day+2)
+		if day%2 == 0 {
+			f.SetCellStyle(sheetName, startCell, endCell, styleFillData_B)
+		} else {
+			f.SetCellStyle(sheetName, startCell, endCell, styleFillData_A)
+		}
 
 		f.SetCellFormula(sheetName, fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), day+2), fmt.Sprintf("SUM(C%d:%s%d)", day+2, excelutil.ColName(len(excelObj.PondNames)+1), day+2))
 	}
