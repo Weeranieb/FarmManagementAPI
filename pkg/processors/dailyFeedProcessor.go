@@ -237,6 +237,10 @@ func (p dailyFeedProcessorImp) DownloadExcelForm(clientId int, formType string, 
 	f.SetCellValue(sheetName, "H1", excelObj.FarmName)
 	f.SetCellStyle(sheetName, "G1", "H1", styleRightAlign)
 
+	f.SetCellValue(sheetName, "I1", "ปี:")
+	f.SetCellValue(sheetName, "J1", excelObj.Year+543)
+	f.SetCellStyle(sheetName, "I1", "J1", styleRightAlign)
+
 	f.SetCellValue(sheetName, "A2", "เดือน")
 	f.SetCellValue(sheetName, "B2", "วันที่")
 
