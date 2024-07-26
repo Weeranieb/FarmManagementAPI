@@ -144,6 +144,23 @@ func (p dailyFeedProcessorImp) DownloadExcelForm(clientId int, formType string, 
 		},
 	})
 
+	styleTotalRow, _ := f.NewStyle(&excelize.Style{
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#A52A2A"},
+			Pattern: 1,
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "right",
+		},
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		},
+	})
+
 	styleBackground, _ := f.NewStyle(&excelize.Style{
 		Fill: excelize.Fill{
 			Type:    "pattern",
@@ -223,70 +240,90 @@ func (p dailyFeedProcessorImp) DownloadExcelForm(clientId int, formType string, 
 	f.SetCellValue(sheetName, "A2", "เดือน")
 	f.SetCellValue(sheetName, "B2", "วันที่")
 
-	totalDay := timeutil.DaysInMonth(excelObj.Year, time.Month(*excelObj.Month))
-	endCell := 2 + totalDay
-	err = f.MergeCell(sheetName, "A3", fmt.Sprintf("A%d", endCell))
-	if err != nil {
-		return nil, err
-	}
-
-	f.SetCellValue(sheetName, "A3", timeutil.FullThaiMonths[time.Month(*excelObj.Month)])
-	f.SetCellStyle(sheetName, "A3", fmt.Sprintf("A%d", endCell), styleMidVert)
-
-	// Set dates in column B from row 3
-	for day := 1; day <= totalDay; day++ {
-		cell := fmt.Sprintf("B%d", day+2) // Starting from B3
-		date := time.Date(year, time.Month(*excelObj.Month), day, 0, 0, 0, 0, time.UTC)
-
-		// Format the date as "1 ม.ค. 2564" (in B.E.)
-		dayString := fmt.Sprintf("%d %s %d", day, timeutil.ThaiMonths[date.Month()], date.Year()+543)
-
-		f.SetCellValue(sheetName, cell, dayString)
-
-		startCell := fmt.Sprintf("C%d", day+2)
-		endCell := fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+1), day+2)
-		if day%2 == 0 {
-			f.SetCellStyle(sheetName, startCell, endCell, styleFillData_B)
-		} else {
-			f.SetCellStyle(sheetName, startCell, endCell, styleFillData_A)
-		}
-
-		f.SetCellFormula(sheetName, fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), day+2), fmt.Sprintf("SUM(C%d:%s%d)", day+2, excelutil.ColName(len(excelObj.PondNames)+1), day+2))
-	}
-
 	// Set pond names header
 	for i, pondName := range excelObj.PondNames {
 		cell := fmt.Sprintf("%s2", excelutil.ColName(i+2))
 		trimPond := strings.TrimLeft(pondName, "บ่อ")
 		trimPond = strings.TrimSpace(trimPond)
 		f.SetCellValue(sheetName, cell, trimPond)
-
-		f.SetCellFormula(sheetName, fmt.Sprintf("%s%d", excelutil.ColName(i+2), endCell+1), fmt.Sprintf("SUM(%s%d:%s%d)", excelutil.ColName(i+2), 3, excelutil.ColName(i+2), endCell))
 	}
 
-	bottomRowIdx := endCell + 1
 	columnTotalRight := fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), 2)
-	err = f.MergeCell(sheetName, fmt.Sprintf("A%d", bottomRowIdx), fmt.Sprintf("B%d", bottomRowIdx))
-	if err != nil {
-		return nil, err
-	}
-	columnTotalBottom := fmt.Sprintf("A%d", bottomRowIdx)
 	f.SetCellValue(sheetName, columnTotalRight, fmt.Sprintf("รวม%s", excelObj.FarmName))
-	f.SetCellValue(sheetName, columnTotalBottom, "รวม")
 
-	f.SetCellFormula(sheetName, fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), bottomRowIdx), fmt.Sprintf("SUM(%s%d:%s%d)", excelutil.ColName(len(excelObj.PondNames)+2), 3, excelutil.ColName(len(excelObj.PondNames)+2), endCell))
+	//use for loop to set month or year
+
+	// variable before loop
+	latestRow := 2
+
+	for i := 1; i <= 12; i++ {
+		if excelObj.Month != nil && i != *excelObj.Month {
+			continue
+		}
+
+		totalDay := timeutil.DaysInMonth(excelObj.Year, time.Month(i))
+		startRow := latestRow + 1
+		endRow := latestRow + totalDay
+		totalMonthRow := endRow + 1
+
+		startCell := fmt.Sprintf("A%d", startRow)
+		err = f.MergeCell(sheetName, startCell, fmt.Sprintf("A%d", endRow))
+		if err != nil {
+			return nil, err
+		}
+
+		f.SetCellValue(sheetName, startCell, timeutil.FullThaiMonths[i])
+		f.SetCellStyle(sheetName, startCell, fmt.Sprintf("A%d", endRow), styleMidVert)
+
+		// Set dates in column B from row 3
+		for day := 1; day <= totalDay; day++ {
+			cell := fmt.Sprintf("B%d", day+latestRow)
+			date := time.Date(year, time.Month(i), day, 0, 0, 0, 0, time.UTC)
+
+			// Format the date as "1 ม.ค. 2564" (in B.E.)
+			dayString := fmt.Sprintf("%d %s %d", day, timeutil.ThaiMonths[i], date.Year()+543)
+
+			f.SetCellValue(sheetName, cell, dayString)
+
+			startStylingrow := fmt.Sprintf("C%d", day+latestRow)
+			endStylingrow := fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+1), day+latestRow)
+			if day%2 == 0 {
+				f.SetCellStyle(sheetName, startStylingrow, endStylingrow, styleFillData_B)
+			} else {
+				f.SetCellStyle(sheetName, startStylingrow, endStylingrow, styleFillData_A)
+			}
+
+			f.SetCellFormula(sheetName, fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), day+latestRow), fmt.Sprintf("SUM(C%d:%s%d)", day+latestRow, excelutil.ColName(len(excelObj.PondNames)+1), day+latestRow))
+		}
+
+		err = f.MergeCell(sheetName, fmt.Sprintf("A%d", totalMonthRow), fmt.Sprintf("B%d", totalMonthRow))
+		if err != nil {
+			return nil, err
+		}
+		columnTotalBottom := fmt.Sprintf("A%d", totalMonthRow)
+		f.SetCellValue(sheetName, columnTotalBottom, fmt.Sprintf("รวมเดือน: %s", timeutil.FullThaiMonths[time.Month(i)]))
+		f.SetCellStyle(sheetName, fmt.Sprintf("A%d", totalMonthRow), fmt.Sprintf("B%d", totalMonthRow), styleRightAlign)
+		// Set background color of the total row
+		f.SetCellStyle(sheetName, fmt.Sprintf("A%d", totalMonthRow), fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), totalMonthRow), styleBackground)
+
+		// set formula for total row
+		for j := range excelObj.PondNames {
+			cell := fmt.Sprintf("%s%d", excelutil.ColName(j+2), totalMonthRow)
+			f.SetCellFormula(sheetName, cell, fmt.Sprintf("SUM(%s%d:%s%d)", excelutil.ColName(j+2), startRow+1, excelutil.ColName(j+2), endRow))
+		}
+
+		f.SetCellFormula(sheetName, fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), totalMonthRow), fmt.Sprintf("SUM(%s%d:%s%d)", excelutil.ColName(len(excelObj.PondNames)+2), startRow, excelutil.ColName(len(excelObj.PondNames)+2), endRow))
+		f.SetCellStyle(sheetName, fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), totalMonthRow), fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), totalMonthRow), styleTotalRow)
+
+		// set variable
+		latestRow = totalMonthRow
+	}
 
 	// Set row 2 center
 	f.SetCellStyle(sheetName, "A2", fmt.Sprintf("%s2", excelutil.ColName(len(excelObj.PondNames)+2)), styleCenterAlign)
 	f.SetColWidth(sheetName, "B", "B", 12)
-	f.SetCellStyle(sheetName, fmt.Sprintf("A%d", bottomRowIdx), fmt.Sprintf("B%d", bottomRowIdx), styleRightAlign)
 
-	// Set background color
-	f.SetCellStyle(sheetName, fmt.Sprintf("A%d", bottomRowIdx), fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), bottomRowIdx), styleBackground)
-	f.SetCellStyle(sheetName, fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), 2), fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), bottomRowIdx), styleBackground)
-
-	// // Set borders
-	// f.SetCellStyle(sheetName, "A2", fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), bottomRowIdx), styleBorders)
+	f.SetCellStyle(sheetName, fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), 2), fmt.Sprintf("%s%d", excelutil.ColName(len(excelObj.PondNames)+2), latestRow), styleBackground)
 
 	// Convert the Excel file to bytes
 	var buf bytes.Buffer
