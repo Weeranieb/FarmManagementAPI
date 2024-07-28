@@ -6,6 +6,7 @@ import (
 	"boonmafarm/api/utils/dbutil"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -16,6 +17,7 @@ type IDailyFeedRepository interface {
 	TakeById(id int) (*models.DailyFeed, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.DailyFeed, error)
 	Update(dailyFeed *models.DailyFeed) error
+	GetDailyFeedByFarm(feedId, farmId int, startDate, endDate time.Time) (*models.DailyFeed, error)
 }
 
 type dailyFeedRepositoryImp struct {
@@ -72,4 +74,24 @@ func (rp dailyFeedRepositoryImp) Update(request *models.DailyFeed) error {
 		return err
 	}
 	return nil
+}
+
+func (rp dailyFeedRepositoryImp) GetDailyFeedByFarm(feedId, farmId int, startDate, endDate time.Time) (*models.DailyFeed, error) {
+	var result *models.DailyFeed
+	if err := rp.dbContext.Table(dbconst.TDailyFeed).
+		Joins(fmt.Sprintf("JOIN %s ON %s.\"PondId\" = %s.\"Id\"", dbconst.TPond, dbconst.TDailyFeed, dbconst.TPond)).
+		Where(fmt.Sprintf("%s.\"FeedCollectionId\" = ?", dbconst.TDailyFeed), feedId).
+		Where(fmt.Sprintf("%s.\"FeedDate\" >= ? AND %s.\"FeedDate\" < ?", dbconst.TDailyFeed, dbconst.TDailyFeed), startDate, endDate).
+		Where(fmt.Sprintf("%s.\"DelFlag\" = ?", dbconst.TDailyFeed), false).
+		Where(fmt.Sprintf("%s.\"DelFlag\" = ?", dbconst.TPond), false).
+		Where(fmt.Sprintf("%s.\"FarmId\" = ?", dbconst.TPond), farmId).
+		First(&result).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+
+		fmt.Println("Record not found DailyFeed GetDailyFeedByFarm", feedId, farmId, startDate, endDate)
+		return nil, nil
+	}
+	return result, nil
 }

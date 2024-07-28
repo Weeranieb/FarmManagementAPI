@@ -11,6 +11,7 @@ type IFarmService interface {
 	Get(id, clientId int) (*models.Farm, error)
 	Update(request *models.Farm, userIdentity string) error
 	GetList(clientId int) ([]*models.Farm, error)
+	GetFarmIdByName(farmName string, clientId int) (int, error)
 }
 
 type farmServiceImp struct {
@@ -78,4 +79,17 @@ func (sv farmServiceImp) Update(request *models.Farm, userIdentity string) error
 
 func (sv farmServiceImp) GetList(clientId int) ([]*models.Farm, error) {
 	return sv.FarmRepo.TakeAll(clientId)
+}
+
+func (sv farmServiceImp) GetFarmIdByName(farmName string, clientId int) (int, error) {
+	farm, err := sv.FarmRepo.FirstByQuery("\"Name\" = ? AND \"ClientId\" = ? AND \"DelFlag\" = ?", farmName, clientId, false)
+	if err != nil {
+		return 0, err
+	}
+
+	if farm == nil {
+		return 0, errors.New("farm not found")
+	}
+
+	return farm.Id, nil
 }

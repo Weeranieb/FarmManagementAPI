@@ -8,7 +8,8 @@ import (
 // DailyFeed represents a daily feed in the system.
 type DailyFeed struct {
 	Id               int       `json:"id" gorm:"column:Id;primaryKey;autoIncrement"`
-	ActivePondId     int       `json:"activePondId" gorm:"column:ActivePondId"`
+	ActivePondId     *int      `json:"activePondId" gorm:"column:ActivePondId"`
+	PondId           int       `json:"pondId" gorm:"column:PondId"`
 	FeedCollectionId int       `json:"feedCollectionId" gorm:"column:FeedCollectionId"`
 	Amount           float64   `json:"amount" gorm:"column:Amount"`
 	FeedDate         time.Time `json:"feedDate" gorm:"column:FeedDate"`
@@ -16,7 +17,7 @@ type DailyFeed struct {
 }
 
 type AddDailyFeed struct {
-	ActivePondId     int       `json:"activePondId" gorm:"column:ActivePondId"`
+	PondId           int       `json:"pondId" gorm:"column:PondId"`
 	FeedCollectionId int       `json:"feedCollectionId" gorm:"column:FeedCollectionId"`
 	Amount           float64   `json:"amount" gorm:"column:Amount"`
 	FeedDate         time.Time `json:"feedDate" gorm:"column:FeedDate"`
@@ -24,8 +25,8 @@ type AddDailyFeed struct {
 
 // Validation Add
 func (a AddDailyFeed) Validation() error {
-	if a.ActivePondId == 0 {
-		return errors.New(ErrActivePondIdEmpty)
+	if a.PondId == 0 {
+		return errors.New(ErrPondIdEmpty)
 	}
 	if a.FeedCollectionId == 0 {
 		return errors.New(ErrFeedCollectionIdEmpty)
@@ -41,7 +42,7 @@ func (a AddDailyFeed) Validation() error {
 
 // Transfer Add
 func (a AddDailyFeed) Transfer(dailyFeed *DailyFeed) {
-	dailyFeed.ActivePondId = a.ActivePondId
+	dailyFeed.PondId = a.PondId
 	dailyFeed.FeedCollectionId = a.FeedCollectionId
 	dailyFeed.Amount = a.Amount
 	dailyFeed.FeedDate = a.FeedDate

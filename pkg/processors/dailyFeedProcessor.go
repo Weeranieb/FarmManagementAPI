@@ -1,11 +1,14 @@
 package processors
 
 import (
+	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/services"
 	"boonmafarm/api/utils/excelutil"
 	"boonmafarm/api/utils/timeutil"
 	"bytes"
 	"fmt"
+	"mime/multipart"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +17,7 @@ import (
 
 type IDailyFeedProcessor interface {
 	DownloadExcelForm(clientId int, formType string, feedId, farmId int, date string) ([]byte, error)
+	UploadExcelForm(file *multipart.FileHeader, username string, clientId int) error
 }
 
 type dailyFeedProcessorImp struct {
@@ -337,4 +341,137 @@ func (p dailyFeedProcessorImp) DownloadExcelForm(clientId int, formType string, 
 
 	// Send the response
 	return buf.Bytes(), nil
+}
+
+func (p dailyFeedProcessorImp) UploadExcelForm(file *multipart.FileHeader, username string, clientId int) error {
+	// Open the file
+	src, err := file.Open()
+	if err != nil {
+		return err
+	}
+
+	// Read the file
+	excelFile, err := excelize.OpenReader(src)
+	if err != nil {
+		return err
+	}
+
+	// Get the sheet name
+	sheetName := excelFile.GetSheetName(0)
+	fmt.Printf("Sheet Name: %s", sheetName)
+
+	if sheetName != "รายเดือน" && sheetName != "รายปี" {
+		return fmt.Errorf("invalid sheet name")
+	}
+
+	// Get detail from the sheet
+	sFeedId, _ := excelFile.GetCellValue(sheetName, "F1")
+
+	feedId, err := strconv.Atoi(sFeedId)
+	if err != nil {
+		return err
+	}
+
+	sYear, _ := excelFile.GetCellValue(sheetName, "J1")
+
+	year, err := strconv.Atoi(sYear)
+	if err != nil {
+		return err
+	}
+
+	year -= 543
+
+	farmName, _ := excelFile.GetCellValue(sheetName, "H1")
+
+	sMonth, _ := excelFile.GetCellValue(sheetName, "A3")
+	month := timeutil.FullThaiMonthToTime[sMonth]
+	monthInt := int(month)
+
+	// get farmId by name
+	farmId, err := p.FarmService.GetFarmIdByName(farmName, clientId)
+	if err != nil {
+		return err
+	}
+
+	if sheetName == "รายเดือน" {
+		isAvailable, err := p.DailyFeedService.IsFeedOnDateAvailable(feedId, farmId, year, &monthInt)
+		if err != nil {
+			return err
+		}
+
+		if !isAvailable {
+			return fmt.Errorf("feed already exist")
+		}
+	} else if sheetName == "รายปี" {
+		isAvailable, err := p.DailyFeedService.IsFeedOnDateAvailable(feedId, farmId, year, nil)
+		if err != nil {
+			return err
+		}
+
+		if !isAvailable {
+			return fmt.Errorf("feed already exist")
+		}
+	}
+
+	// get pond List
+	pondList, err := p.PondService.GetPondList(farmId)
+	if err != nil {
+		return err
+	}
+
+	// check if pond Name in excel is the same as the pond name in the database
+	expectedTotalCell := fmt.Sprintf("%s%d", excelutil.ColName(len(pondList)+2), 2)
+	if val, _ := excelFile.GetCellValue(sheetName, expectedTotalCell); !strings.Contains(val, "รวม") {
+		return fmt.Errorf("excel format is out of date")
+	}
+
+	// isLeapYear := timeutil.IsLeapYear(year)
+	rows, _ := excelFile.GetRows(sheetName)
+	rows = rows[2:]
+
+	var payload []*models.AddDailyFeed
+
+	day := 1
+	totalDay := timeutil.DaysInMonth(year, timeutil.FullThaiMonthToTime[sMonth])
+	totalCellRow := totalDay
+	for rowIdx, row := range rows {
+		column := row[2 : len(row)-1]
+		if rowIdx == totalCellRow {
+			if sheetName == "รายปี" {
+				day = 1
+
+				month++
+				totalCellRow += timeutil.DaysInMonth(year, month) + 1
+			}
+
+			continue
+			// set new totalDay
+		}
+		for i, cell := range column {
+			if cell == "" {
+				continue
+			}
+
+			temp := &models.AddDailyFeed{}
+			amount, err := strconv.ParseFloat(cell, 64)
+			if err != nil {
+				return err
+			}
+
+			temp.FeedCollectionId = feedId
+			temp.Amount = amount
+			temp.FeedDate = time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+			temp.PondId = pondList[i].Id
+
+			payload = append(payload, temp)
+		}
+		day++
+	}
+
+	// bulk insert daily feed
+	if err := p.DailyFeedService.BulkCreate(payload, username); err != nil {
+		return err
+	}
+
+	return nil
 }

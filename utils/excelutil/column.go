@@ -1,5 +1,6 @@
 package excelutil
 
+// 0 -> A, 1 -> B, 2 -> C, ..., 25 -> Z, 26 -> AA, 27 -> AB, ...
 func ColName(index int) string {
 	column := make([]byte, 0)
 	for index >= 0 {

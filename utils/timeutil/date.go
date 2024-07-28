@@ -13,6 +13,10 @@ func DaysInMonth(year int, month time.Month) int {
 	return lastDayOfMonth.Day()
 }
 
+func IsLeapYear(year int) bool {
+	return year%4 == 0 && (year%100 != 0 || year%400 == 0)
+}
+
 var ThaiMonths = [...]string{
 	"",      // Padding to align month numbers with indexes
 	"ม.ค.",  // January
@@ -43,4 +47,19 @@ var FullThaiMonths = [...]string{
 	"ตุลาคม",     // October
 	"พฤศจิกายน",  // November
 	"ธันวาคม",    // December
+}
+
+var FullThaiMonthToTime = map[string]time.Month{
+	"มกราคม":     time.January,
+	"กุมภาพันธ์": time.February,
+	"มีนาคม":     time.March,
+	"เมษายน":     time.April,
+	"พฤษภาคม":    time.May,
+	"มิถุนายน":   time.June,
+	"กรกฎาคม":    time.July,
+	"สิงหาคม":    time.August,
+	"กันยายน":    time.September,
+	"ตุลาคม":     time.October,
+	"พฤศจิกายน":  time.November,
+	"ธันวาคม":    time.December,
 }

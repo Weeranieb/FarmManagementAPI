@@ -11,6 +11,7 @@ type IPondService interface {
 	CreateBatch(request []models.AddPond, userIdentity string) ([]*models.Pond, error)
 	Get(id int) (*models.Pond, error)
 	GetPondNameList(farmId int) ([]string, error)
+	GetPondList(farmId int) ([]*models.Pond, error)
 	Update(request *models.Pond, userIdentity string) error
 	GetList(farmId int) ([]*models.Pond, error)
 }
@@ -122,4 +123,8 @@ func (sv pondServiceImp) GetPondNameList(farmId int) ([]string, error) {
 	}
 
 	return pondNames, nil
+}
+
+func (sv pondServiceImp) GetPondList(farmId int) ([]*models.Pond, error) {
+	return sv.PondRepo.TakeAll(farmId)
 }

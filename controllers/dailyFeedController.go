@@ -38,6 +38,7 @@ func (c dailyFeedControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.GET(":id", c.GetDailyFeed)
 			eg.PUT("", c.UpdateDailyFeed)
 			eg.GET("/download", c.DownloadExcelForm)
+			eg.POST("/upload", c.Upload)
 		}
 	}
 }
@@ -269,4 +270,49 @@ func (c dailyFeedControllerImp) DownloadExcelForm(ctx *gin.Context) {
 
 	// Write the byte data to the response
 	ctx.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelBytes)
+}
+
+func (c dailyFeedControllerImp) Upload(ctx *gin.Context) {
+	var response httputil.ResponseModel
+
+	excelFile, err := ctx.FormFile("file")
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_Upload_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	// get username
+	username, err := jwtutil.GetUsername(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_Upload_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	// get client id
+	clientId, err := jwtutil.GetClientId(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_Upload_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	err = c.DailyFeedProcessor.UploadExcelForm(excelFile, username, clientId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_Upload_04", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
+	ctx.JSON(http.StatusOK, response)
 }
