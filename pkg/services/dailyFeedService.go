@@ -13,6 +13,7 @@ type IDailyFeedService interface {
 	Get(id int) (*models.DailyFeed, error)
 	Update(request *models.DailyFeed, userIdentity string) error
 	IsFeedOnDateAvailable(feedId, farmId, year int, month *int) (bool, error)
+	GetDailyFeedList(farmId, feedId int, date string) ([]*models.DailyFeed, error)
 }
 
 type dailyFeedServiceImp struct {
@@ -113,4 +114,17 @@ func (sv dailyFeedServiceImp) IsFeedOnDateAvailable(feedId, farmId, year int, mo
 	}
 
 	return true, nil
+}
+
+func (sv dailyFeedServiceImp) GetDailyFeedList(farmId, feedId int, date string) ([]*models.DailyFeed, error) {
+	dateTime, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return nil, err
+	}
+
+	// take just month and year
+	startDate := time.Date(dateTime.Year(), dateTime.Month(), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0)
+
+	return sv.DailyFeedRepo.TakeAllDailyFeed(feedId, farmId, startDate, endDate)
 }

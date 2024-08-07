@@ -36,6 +36,7 @@ func (c dailyFeedControllerImp) ApplyRoute(router *gin.Engine) {
 		{
 			eg.POST("", c.AddDailyFeed)
 			eg.GET(":id", c.GetDailyFeed)
+			eg.GET("", c.GetDailyFeedList)
 			eg.PUT("", c.UpdateDailyFeed)
 			eg.GET("/download", c.DownloadExcelForm)
 			eg.POST("/upload", c.Upload)
@@ -145,6 +146,71 @@ func (c dailyFeedControllerImp) GetDailyFeed(ctx *gin.Context) {
 
 	response.Result = true
 	response.Data = pond
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+// GET /api/v1/dailyfeed
+// Get daily feed list.
+// @Summary      Get daily feed list
+// @Description  Retrieve a list of daily feed entries
+// @Tags         dailyfeed
+// @Accept       json
+// @Produce      json
+// @Param        feedId query int true "Feed ID"
+// @Param        farmId query int true "Farm ID"
+// @Param        date query string true "Date (YYYY-MM-DD)"
+// @Success      200  {object}  httputil.ResponseModel
+// @Failure      400  {object}  httputil.ErrorResponseModel
+// @Failure      500  {object}  httputil.ErrorResponseModel
+// @Router       /api/v1/dailyfeed [get]
+func (c dailyFeedControllerImp) GetDailyFeedList(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	var dailyFeedList []*models.DailyFeed
+
+	sFeedId := ctx.Query("feedId")
+	feedId, err := strconv.Atoi(sFeedId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_GetDailyList_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	sFarmId := ctx.Query("farmId")
+	farmId, err := strconv.Atoi(sFarmId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_GetDailyList_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	date := ctx.Query("date") // 2024-01-01
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_DailyFeed_GetDailyList_03", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	dailyFeedList, err = c.DailyFeedService.GetDailyFeedList(feedId, farmId, date)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_GetDailyList_04", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
+	response.Data = dailyFeedList
 
 	ctx.JSON(http.StatusOK, response)
 }
