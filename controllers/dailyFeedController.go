@@ -38,6 +38,7 @@ func (c dailyFeedControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.GET(":id", c.GetDailyFeed)
 			eg.GET("", c.GetDailyFeedList)
 			eg.PUT("", c.UpdateDailyFeed)
+			eg.PUT("bulk", c.BulkUpdateDailyFeed)
 			eg.GET("/download", c.DownloadExcelForm)
 			eg.POST("/upload", c.Upload)
 		}
@@ -380,5 +381,48 @@ func (c dailyFeedControllerImp) Upload(ctx *gin.Context) {
 	}
 
 	response.Result = true
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c dailyFeedControllerImp) BulkUpdateDailyFeed(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	var updateDailyFeedList []*models.DailyFeed
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_DailyFeed_BulkUpdateDailyFeed_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	if err := ctx.ShouldBindJSON(&updateDailyFeedList); err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_BulkUpdateDailyFeed_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	// get username
+	username, err := jwtutil.GetUsername(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_DailyFeed_BulkUpdateDailyFeed_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	err = c.DailyFeedProcessor.BulkCreateAndUpdate(updateDailyFeedList, username)
+	if err != nil {
+		httputil.NewError(ctx, "Err_DailyFeed_BulkUpdateDailyFeed_04", err)
+		return
+	}
+
+	response.Result = true
+
 	ctx.JSON(http.StatusOK, response)
 }

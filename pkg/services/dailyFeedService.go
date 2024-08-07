@@ -10,6 +10,7 @@ import (
 type IDailyFeedService interface {
 	Create(request models.AddDailyFeed, userIdentity string) (*models.DailyFeed, error)
 	BulkCreate(dailyFeeds []*models.AddDailyFeed, userIdentity string) error
+	BulkUpdate(dailyFeeds []*models.DailyFeed, userIdentity string) error
 	Get(id int) (*models.DailyFeed, error)
 	Update(request *models.DailyFeed, userIdentity string) error
 	IsFeedOnDateAvailable(feedId, farmId, year int, month *int) (bool, error)
@@ -26,7 +27,6 @@ func NewDailyFeedService(dailyFeedRepo repositories.IDailyFeedRepository) IDaily
 	}
 }
 
-// FIXME: implement BulkCreate
 func (sv dailyFeedServiceImp) Create(request models.AddDailyFeed, userIdentity string) (*models.DailyFeed, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
@@ -78,6 +78,17 @@ func (sv dailyFeedServiceImp) BulkCreate(dailyFeeds []*models.AddDailyFeed, user
 		return err
 	}
 
+	return nil
+}
+
+func (sv dailyFeedServiceImp) BulkUpdate(dailyFeeds []*models.DailyFeed, userIdentity string) error {
+	for _, dailyFeed := range dailyFeeds {
+		// update feed collection
+		dailyFeed.UpdatedBy = userIdentity
+		if err := sv.DailyFeedRepo.Update(dailyFeed); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -18,6 +18,7 @@ import (
 type IDailyFeedProcessor interface {
 	DownloadExcelForm(clientId int, formType string, feedId, farmId int, date string) ([]byte, error)
 	UploadExcelForm(file *multipart.FileHeader, username string, clientId int) error
+	BulkCreateAndUpdate(dailyFeeds []*models.DailyFeed, username string) error
 }
 
 type dailyFeedProcessorImp struct {
@@ -471,6 +472,42 @@ func (p dailyFeedProcessorImp) UploadExcelForm(file *multipart.FileHeader, usern
 	// bulk insert daily feed
 	if err := p.DailyFeedService.BulkCreate(payload, username); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (p dailyFeedProcessorImp) BulkCreateAndUpdate(dailyFeeds []*models.DailyFeed, username string) error {
+	// separate daily feed to create and update by checking the id
+	var createPayload []*models.AddDailyFeed
+	var updatePayload []*models.DailyFeed
+
+	for _, dailyFeed := range dailyFeeds {
+		if dailyFeed.Id == 0 {
+			temp := &models.AddDailyFeed{}
+			temp.Amount = dailyFeed.Amount
+			temp.FeedCollectionId = dailyFeed.FeedCollectionId
+			temp.FeedDate = dailyFeed.FeedDate
+			temp.PondId = dailyFeed.PondId
+
+			createPayload = append(createPayload, temp)
+		} else {
+			updatePayload = append(updatePayload, dailyFeed)
+		}
+	}
+
+	// bulk insert daily feed
+	if len(createPayload) > 0 {
+		if err := p.DailyFeedService.BulkCreate(createPayload, username); err != nil {
+			return err
+		}
+	}
+
+	// bulk update daily feed
+	if len(updatePayload) > 0 {
+		if err := p.DailyFeedService.BulkUpdate(updatePayload, username); err != nil {
+			return err
+		}
 	}
 
 	return nil
