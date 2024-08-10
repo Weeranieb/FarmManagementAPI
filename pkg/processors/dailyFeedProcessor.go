@@ -1,6 +1,7 @@
 package processors
 
 import (
+	dbContext "boonmafarm/api/pkg/dbcontext"
 	"boonmafarm/api/pkg/models"
 	"boonmafarm/api/pkg/services"
 	"boonmafarm/api/utils/excelutil"
@@ -478,6 +479,10 @@ func (p dailyFeedProcessorImp) UploadExcelForm(file *multipart.FileHeader, usern
 }
 
 func (p dailyFeedProcessorImp) BulkCreateAndUpdate(dailyFeeds []*models.DailyFeed, username string) error {
+	// start transaction
+	db := dbContext.Context.Postgresql
+	tx := db.Begin()
+
 	// separate daily feed to create and update by checking the id
 	var createPayload []*models.AddDailyFeed
 	var updatePayload []*models.DailyFeed
@@ -498,17 +503,20 @@ func (p dailyFeedProcessorImp) BulkCreateAndUpdate(dailyFeeds []*models.DailyFee
 
 	// bulk insert daily feed
 	if len(createPayload) > 0 {
-		if err := p.DailyFeedService.BulkCreate(createPayload, username); err != nil {
+		if err := p.DailyFeedService.WithTrx(tx).BulkCreate(createPayload, username); err != nil {
 			return err
 		}
 	}
 
 	// bulk update daily feed
 	if len(updatePayload) > 0 {
-		if err := p.DailyFeedService.BulkUpdate(updatePayload, username); err != nil {
+		if err := p.DailyFeedService.WithTrx(tx).BulkUpdate(updatePayload, username); err != nil {
 			return err
 		}
 	}
+
+	// commit transaction
+	tx.Commit()
 
 	return nil
 }

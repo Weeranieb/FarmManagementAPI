@@ -51,3 +51,7 @@ func (a AddDailyFeed) Transfer(dailyFeed *DailyFeed) {
 const (
 	ErrFeedDateEmpty = "feedDate is empty"
 )
+
+type RequestBulkUploadDailyFeed struct {
+	DailyFeeds []*DailyFeed `json:"dailyFeeds"`
+}

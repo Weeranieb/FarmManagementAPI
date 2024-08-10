@@ -386,7 +386,7 @@ func (c dailyFeedControllerImp) Upload(ctx *gin.Context) {
 
 func (c dailyFeedControllerImp) BulkUpdateDailyFeed(ctx *gin.Context) {
 	var response httputil.ResponseModel
-	var updateDailyFeedList []*models.DailyFeed
+	var updateDailyFeedList models.RequestBulkUploadDailyFeed
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -416,7 +416,7 @@ func (c dailyFeedControllerImp) BulkUpdateDailyFeed(ctx *gin.Context) {
 		return
 	}
 
-	err = c.DailyFeedProcessor.BulkCreateAndUpdate(updateDailyFeedList, username)
+	err = c.DailyFeedProcessor.BulkCreateAndUpdate(updateDailyFeedList.DailyFeeds, username)
 	if err != nil {
 		httputil.NewError(ctx, "Err_DailyFeed_BulkUpdateDailyFeed_04", err)
 		return

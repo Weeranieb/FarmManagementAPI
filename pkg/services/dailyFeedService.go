@@ -5,6 +5,8 @@ import (
 	"boonmafarm/api/pkg/repositories"
 	"errors"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type IDailyFeedService interface {
@@ -15,6 +17,7 @@ type IDailyFeedService interface {
 	Update(request *models.DailyFeed, userIdentity string) error
 	IsFeedOnDateAvailable(feedId, farmId, year int, month *int) (bool, error)
 	GetDailyFeedList(farmId, feedId int, date string) ([]*models.DailyFeed, error)
+	WithTrx(trxHandle *gorm.DB) IDailyFeedService
 }
 
 type dailyFeedServiceImp struct {
@@ -64,6 +67,16 @@ func (sv dailyFeedServiceImp) BulkCreate(dailyFeeds []*models.AddDailyFeed, user
 		// validate request
 		if err := dailyFeed.Validation(); err != nil {
 			return err
+		}
+
+		// is exist
+		checkDailyFeed, err := sv.DailyFeedRepo.FirstByQuery("\"PondId\" = ? AND \"FeedCollectionId\" = ? AND \"FeedDate\" = ? AND \"DelFlag\" = ?", dailyFeed.PondId, dailyFeed.FeedCollectionId, dailyFeed.FeedDate, false)
+		if err != nil {
+			return err
+		}
+
+		if checkDailyFeed != nil {
+			return errors.New("daily feed already exist")
 		}
 
 		dailyFeed.Transfer(&temp)
@@ -138,4 +151,9 @@ func (sv dailyFeedServiceImp) GetDailyFeedList(farmId, feedId int, date string) 
 	endDate := startDate.AddDate(0, 1, 0)
 
 	return sv.DailyFeedRepo.TakeAllDailyFeed(feedId, farmId, startDate, endDate)
+}
+
+func (sv dailyFeedServiceImp) WithTrx(trxHandle *gorm.DB) IDailyFeedService {
+	sv.DailyFeedRepo = sv.DailyFeedRepo.WithTrx(trxHandle)
+	return sv
 }

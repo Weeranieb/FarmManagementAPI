@@ -19,6 +19,7 @@ type IDailyFeedRepository interface {
 	Update(dailyFeed *models.DailyFeed) error
 	GetDailyFeedByFarm(feedId, farmId int, startDate, endDate time.Time) (*models.DailyFeed, error)
 	TakeAllDailyFeed(feedId, farmId int, startDate, endDate time.Time) ([]*models.DailyFeed, error)
+	WithTrx(trxHandle *gorm.DB) IDailyFeedRepository
 }
 
 type dailyFeedRepositoryImp struct {
@@ -116,4 +117,15 @@ func (rp dailyFeedRepositoryImp) TakeAllDailyFeed(feedId, farmId int, startDate,
 		return nil, nil
 	}
 	return result, nil
+}
+
+func (rp dailyFeedRepositoryImp) WithTrx(trxHandle *gorm.DB) IDailyFeedRepository {
+	if trxHandle == nil {
+		fmt.Println("Transaction Database not found")
+		return rp
+	}
+
+	return &dailyFeedRepositoryImp{
+		dbContext: trxHandle,
+	}
 }
