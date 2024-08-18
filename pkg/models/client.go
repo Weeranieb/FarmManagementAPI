@@ -46,3 +46,9 @@ const (
 	ErrOwnerNameEmpty     = "owner name is empty"
 	ErrContactNumberEmpty = "contact number is empty"
 )
+
+type ClientWithFarms struct {
+	Farm
+	ClientId   int    `json:"clientId" gorm:"column:ClientId"`
+	ClientName string `json:"clientName" gorm:"column:ClientName"`
+}

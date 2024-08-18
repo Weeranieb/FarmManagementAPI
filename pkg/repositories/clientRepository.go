@@ -16,6 +16,7 @@ type IClientRepository interface {
 	Update(request *models.Client) error
 	TakeById(id int) (*models.Client, error)
 	WithTrx(trxHandle *gorm.DB) IClientRepository
+	GetClientWithFarms(clientId *int) ([]*models.ClientWithFarms, error)
 }
 
 type clientRepositoryImp struct {
@@ -74,4 +75,31 @@ func (rp clientRepositoryImp) Update(request *models.Client) error {
 		return err
 	}
 	return nil
+}
+
+func (rp clientRepositoryImp) GetClientWithFarms(clientId *int) ([]*models.ClientWithFarms, error) {
+	var clientsWithFarms []*models.ClientWithFarms
+
+	// Build the join clause
+	joinClause := fmt.Sprintf("JOIN %s ON %s.\"ClientId\" = %s.\"Id\"", dbconst.TClient, dbconst.TFarm, dbconst.TClient)
+
+	// Prepare the query
+	query := rp.dbContext.Table(dbconst.TFarm).
+		Select(fmt.Sprintf("%s.*, %s.\"Id\" as \"ClientId\", %s.\"Name\" as \"ClientName\"", dbconst.TFarm, dbconst.TClient, dbconst.TClient)).
+		Joins(joinClause).
+		Where(fmt.Sprintf("%s.\"DelFlag\" = ? AND %s.\"DelFlag\" = ?", dbconst.TFarm, dbconst.TClient), false, false)
+
+	// Add filter by clientId if provided
+	if clientId != nil {
+		query = query.Where(fmt.Sprintf("%s.\"ClientId\" = ?", dbconst.TFarm), *clientId)
+	}
+
+	// Execute the query
+	err := query.Scan(&clientsWithFarms).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return clientsWithFarms, nil
 }

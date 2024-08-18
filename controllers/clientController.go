@@ -7,6 +7,7 @@ import (
 	"boonmafarm/api/utils/jwtutil"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,6 +32,8 @@ func (c clientControllerImp) ApplyRoute(router *gin.Engine) {
 		eg := v1.Group("/client")
 		{
 			eg.POST("", c.AddClient)
+			eg.GET("/:clientId/farms", c.GetClientWithFarms)
+			eg.GET("/farms", c.GetAllClientWithFarms)
 			eg.GET("", c.GetClient)
 			eg.PUT("", c.UpdateClient)
 		}
@@ -184,6 +187,85 @@ func (c clientControllerImp) UpdateClient(ctx *gin.Context) {
 	}
 
 	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c clientControllerImp) GetClientWithFarms(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	sClientId := ctx.Param("clientId")
+
+	clientId, err := strconv.Atoi(sClientId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Client_GetClientWithFarms_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Client_GetClientWithFarms_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	userLevel, err := jwtutil.GetUserLevel(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Client_GetClientWithFarms_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	clientWithFarm, err := c.ClientService.GetClientWithFarms(userLevel, &clientId)
+	if err != nil {
+		httputil.NewError(ctx, "Err_Client_GetClientWithFarms_04", err)
+		return
+	}
+
+	response.Result = true
+	response.Data = clientWithFarm
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c clientControllerImp) GetAllClientWithFarms(ctx *gin.Context) {
+	var response httputil.ResponseModel
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Client_GetAllClientWithFarms_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	userLevel, err := jwtutil.GetUserLevel(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Client_GetAllClientWithFarms_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	clientWithFarms, err := c.ClientService.GetClientWithFarms(userLevel, nil)
+
+	if err != nil {
+		httputil.NewError(ctx, "Err_Client_GetClientWithFarms_04", err)
+		return
+	}
+
+	response.Result = true
+	response.Data = clientWithFarms
 
 	ctx.JSON(http.StatusOK, response)
 }
