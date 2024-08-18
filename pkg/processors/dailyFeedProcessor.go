@@ -488,7 +488,7 @@ func (p dailyFeedProcessorImp) BulkCreateAndUpdate(dailyFeeds []*models.DailyFee
 	var updatePayload []*models.DailyFeed
 
 	for _, dailyFeed := range dailyFeeds {
-		if dailyFeed.Id == 0 {
+		if dailyFeed.Id == -1 {
 			temp := &models.AddDailyFeed{}
 			temp.Amount = dailyFeed.Amount
 			temp.FeedCollectionId = dailyFeed.FeedCollectionId

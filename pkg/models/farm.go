@@ -12,12 +12,16 @@ type Farm struct {
 }
 
 type AddFarm struct {
-	Code string `json:"code" gorm:"column:Code"`
-	Name string `json:"name" gorm:"column:Name"`
+	ClientId int    `json:"clientId" gorm:"column:ClientId"`
+	Code     string `json:"code" gorm:"column:Code"`
+	Name     string `json:"name" gorm:"column:Name"`
 }
 
 // Validation Add
 func (a AddFarm) Validation() error {
+	if a.ClientId == 0 {
+		return errors.New(ErrClientIdEmpty)
+	}
 	if a.Code == "" {
 		return errors.New(ErrCodeEmpty)
 	}
@@ -30,6 +34,7 @@ func (a AddFarm) Validation() error {
 
 // Transfer Add
 func (a AddFarm) Transfer(farm *Farm) {
+	farm.ClientId = a.ClientId
 	farm.Code = a.Code
 	farm.Name = a.Name
 }

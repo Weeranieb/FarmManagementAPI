@@ -84,17 +84,7 @@ func (c farmControllerImp) AddFarm(ctx *gin.Context) {
 		return
 	}
 
-	// get clientId
-	clientId, err := jwtutil.GetClientId(ctx)
-	if err != nil {
-		errRes := httputil.ErrorResponseModel{}
-		errRes.Error(ctx, "Err_Farm_AddFarm_05", err.Error())
-		response.Error = errRes
-		ctx.JSON(http.StatusOK, response)
-		return
-	}
-
-	newFarm, err := c.FarmService.Create(addFarm, username, clientId)
+	newFarm, err := c.FarmService.Create(addFarm, username)
 	if err != nil {
 		httputil.NewError(ctx, "Err_Farm_AddFarm_03", err)
 		return

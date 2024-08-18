@@ -7,7 +7,7 @@ import (
 )
 
 type IFarmService interface {
-	Create(request models.AddFarm, userIdentity string, clientId int) (*models.Farm, error)
+	Create(request models.AddFarm, userIdentity string) (*models.Farm, error)
 	Get(id, clientId int) (*models.Farm, error)
 	Update(request *models.Farm, userIdentity string) error
 	GetList(clientId int) ([]*models.Farm, error)
@@ -24,14 +24,14 @@ func NewFarmService(farmRepo repositories.IFarmRepository) IFarmService {
 	}
 }
 
-func (sv farmServiceImp) Create(request models.AddFarm, userIdentity string, clientId int) (*models.Farm, error) {
+func (sv farmServiceImp) Create(request models.AddFarm, userIdentity string) (*models.Farm, error) {
 	// validate request
 	if err := request.Validation(); err != nil {
 		return nil, err
 	}
 
 	// check farm if exist
-	checkFarm, err := sv.FarmRepo.FirstByQuery("\"Code\" = ? AND \"ClientId\" = ? AND \"DelFlag\" = ?", request.Code, clientId, false)
+	checkFarm, err := sv.FarmRepo.FirstByQuery("\"Code\" = ? AND \"ClientId\" = ? AND \"DelFlag\" = ?", request.Code, request.ClientId, false)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,6 @@ func (sv farmServiceImp) Create(request models.AddFarm, userIdentity string, cli
 
 	newFarm := &models.Farm{}
 	request.Transfer(newFarm)
-	newFarm.ClientId = clientId
 	newFarm.UpdatedBy = userIdentity
 	newFarm.CreatedBy = userIdentity
 
