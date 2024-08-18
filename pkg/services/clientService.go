@@ -11,6 +11,7 @@ type IClientService interface {
 	Get(id int) (*models.Client, error)
 	Update(request *models.Client, userIdentity string) error
 	GetClientWithFarms(userLevel int, clientId *int) ([]*models.ClientWithFarms, error)
+	GetAllClient(userLevel int, keyword string) ([]*models.Client, error)
 }
 
 type clientServiceImp struct {
@@ -76,6 +77,21 @@ func (sv clientServiceImp) GetClientWithFarms(userLevel int, clientId *int) ([]*
 
 	// get client by id
 	response, err := sv.ClientRepo.GetClientWithFarms(clientId)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (sv clientServiceImp) GetAllClient(userLevel int, keyword string) ([]*models.Client, error) {
+	// check user level
+	if userLevel < 2 {
+		return nil, errors.New("permission denied")
+	}
+
+	// get all client
+	response, err := sv.ClientRepo.TakePage(keyword)
 	if err != nil {
 		return nil, err
 	}

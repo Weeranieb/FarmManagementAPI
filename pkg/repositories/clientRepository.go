@@ -17,6 +17,8 @@ type IClientRepository interface {
 	TakeById(id int) (*models.Client, error)
 	WithTrx(trxHandle *gorm.DB) IClientRepository
 	GetClientWithFarms(clientId *int) ([]*models.ClientWithFarms, error)
+	TakeAll() ([]*models.Client, error)
+	TakePage(keyword string) ([]*models.Client, error)
 }
 
 type clientRepositoryImp struct {
@@ -102,4 +104,20 @@ func (rp clientRepositoryImp) GetClientWithFarms(clientId *int) ([]*models.Clien
 	}
 
 	return clientsWithFarms, nil
+}
+
+func (rp clientRepositoryImp) TakeAll() ([]*models.Client, error) {
+	var result []*models.Client
+	if err := rp.dbContext.Table(dbconst.TClient).Where("\"DelFlag\" = ?", false).Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (rp clientRepositoryImp) TakePage(keyword string) ([]*models.Client, error) {
+	var result []*models.Client
+	if err := rp.dbContext.Table(dbconst.TClient).Where("\"Name\" LIKE ? AND \"DelFlag\" = ?", "%"+keyword+"%", false).Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }

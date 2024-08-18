@@ -35,6 +35,7 @@ func (c clientControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.GET("/:clientId/farms", c.GetClientWithFarms)
 			eg.GET("/farms", c.GetAllClientWithFarms)
 			eg.GET("", c.GetClient)
+			eg.GET("list", c.GetAllClient)
 			eg.PUT("", c.UpdateClient)
 		}
 	}
@@ -266,6 +267,41 @@ func (c clientControllerImp) GetAllClientWithFarms(ctx *gin.Context) {
 
 	response.Result = true
 	response.Data = clientWithFarms
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c clientControllerImp) GetAllClient(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	keyword := ctx.Query("keyword")
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Client_GetAllClient_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	userLevel, err := jwtutil.GetUserLevel(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Client_GetAllClient_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	clients, err := c.ClientService.GetAllClient(userLevel, keyword)
+	if err != nil {
+		httputil.NewError(ctx, "Err_Client_GetAllClient_03", err)
+		return
+	}
+
+	response.Result = true
+	response.Data = clients
 
 	ctx.JSON(http.StatusOK, response)
 }
