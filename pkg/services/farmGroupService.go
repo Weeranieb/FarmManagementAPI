@@ -11,6 +11,7 @@ type IFarmGroupService interface {
 	Get(id, clientId int) (*models.FarmGroup, error)
 	GetFarmList(id int) (*[]models.Farm, error)
 	Update(request *models.FarmGroup, userIdentity string) error
+	Delete(id int, username string) error
 }
 
 type farmGroupServiceImp struct {
@@ -66,6 +67,14 @@ func (sv farmGroupServiceImp) Get(id, clientId int) (*models.FarmGroup, error) {
 	return farm, nil
 }
 
+func (sv farmGroupServiceImp) GetList(clientId int) (*[]models.FarmGroup, error) {
+	farmGroup, err := sv.FarmGroupRepo.TakeAllByClientId(clientId)
+	if err != nil {
+		return nil, err
+	}
+	return farmGroup, nil
+}
+
 func (sv farmGroupServiceImp) Update(request *models.FarmGroup, userIdentity string) error {
 	// update farm
 	request.UpdatedBy = userIdentity
@@ -81,4 +90,12 @@ func (sv farmGroupServiceImp) GetFarmList(id int) (*[]models.Farm, error) {
 		return nil, err
 	}
 	return farm, nil
+}
+
+func (sv farmGroupServiceImp) Delete(id int, username string) error {
+	// delete pond
+	if err := sv.FarmGroupRepo.Delete(id, username); err != nil {
+		return err
+	}
+	return nil
 }

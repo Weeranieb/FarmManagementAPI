@@ -35,6 +35,7 @@ func (c pondControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.POST("/batch", c.AddPonds)
 			eg.GET(":id", c.GetPond)
 			eg.PUT("", c.UpdatePond)
+			eg.DELETE(":id", c.DeletePond)
 			eg.GET("", c.GetPondList)
 		}
 	}
@@ -295,6 +296,52 @@ func (c pondControllerImp) GetPondList(ctx *gin.Context) {
 
 	response.Result = true
 	response.Data = ponds
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c pondControllerImp) DeletePond(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	// get id from param
+	ids := ctx.Param("id")
+	id, err := strconv.Atoi(ids)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Pond_DeletePond_01", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_Pond_DeletePond_02", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+			return
+		}
+	}()
+
+	username, err := jwtutil.GetUsername(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Pond_DeletePond_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	err = c.PondService.Delete(id, username)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_Pond_DeletePond_04", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
 
 	ctx.JSON(http.StatusOK, response)
 }

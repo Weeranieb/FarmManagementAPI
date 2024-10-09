@@ -17,6 +17,7 @@ type IPondRepository interface {
 	FirstByQuery(query interface{}, args ...interface{}) (*models.Pond, error)
 	Update(pond *models.Pond) error
 	TakeAll(farmId int) ([]*models.Pond, error)
+	Delete(id int, username string) error
 }
 
 type pondRepositoryImp struct {
@@ -81,4 +82,11 @@ func (rp pondRepositoryImp) TakeAll(clientId int) ([]*models.Pond, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func (rp pondRepositoryImp) Delete(id int, username string) error {
+	if err := rp.dbContext.Table(dbconst.TPond).Where("\"Id\" = ?", id).Updates(map[string]interface{}{"\"DelFlag\"": true, "\"UpdatedBy\"": username}).Error; err != nil {
+		return err
+	}
+	return nil
 }

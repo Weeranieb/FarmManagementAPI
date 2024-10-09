@@ -14,6 +14,7 @@ type IPondService interface {
 	GetPondList(farmId int) ([]*models.Pond, error)
 	Update(request *models.Pond, userIdentity string) error
 	GetList(farmId int) ([]*models.Pond, error)
+	Delete(id int, userIdentity string) error
 }
 
 type pondServiceImp struct {
@@ -127,4 +128,12 @@ func (sv pondServiceImp) GetPondNameList(farmId int) ([]string, error) {
 
 func (sv pondServiceImp) GetPondList(farmId int) ([]*models.Pond, error) {
 	return sv.PondRepo.TakeAll(farmId)
+}
+
+func (sv pondServiceImp) Delete(id int, userIdentity string) error {
+	// delete pond
+	if err := sv.PondRepo.Delete(id, userIdentity); err != nil {
+		return err
+	}
+	return nil
 }

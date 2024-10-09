@@ -35,6 +35,8 @@ func (c farmGroupControllerImp) ApplyRoute(router *gin.Engine) {
 			eg.GET(":id", c.GetFarmGroup)
 			eg.PUT("", c.UpdateFarmGroup)
 			eg.GET(":id/farmList", c.GetFarmList)
+			eg.DELETE(":id", c.DeleteFarmGroup)
+			eg.GET("", c.ListFarmGroup)
 		}
 	}
 }
@@ -266,6 +268,72 @@ func (c farmGroupControllerImp) GetFarmList(ctx *gin.Context) {
 
 	response.Result = true
 	response.Data = farmList
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c farmGroupControllerImp) DeleteFarmGroup(ctx *gin.Context) {
+	var response httputil.ResponseModel
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		httputil.NewError(ctx, "Err_FarmGroup_DeleteFarmGroup_01", err)
+		return
+	}
+
+	// get username
+	username, err := jwtutil.GetUsername(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FarmGroup_DeleteFarmGroup_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	err = c.FarmGroupService.Delete(id, username)
+	if err != nil {
+		httputil.NewError(ctx, "Err_FarmGroup_DeleteFarmGroup_03", err)
+		return
+	}
+
+	response.Result = true
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c farmGroupControllerImp) ListFarmGroup(ctx *gin.Context) {
+	var response httputil.ResponseModel
+
+	defer func() {
+		if r := recover(); r != nil {
+			errRes := httputil.ErrorResponseModel{}
+			errRes.Error(ctx, "Err_FarmGroup_ListFarmGroup_01", fmt.Sprint(r))
+			response.Error = errRes
+			ctx.JSON(http.StatusOK, response)
+		}
+	}()
+
+	// get clientId
+	clientId, err := jwtutil.GetClientId(ctx)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FarmGroup_ListFarmGroup_02", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	farmGroup, err := c.FarmGroupService.GetFarmList(clientId)
+	if err != nil {
+		errRes := httputil.ErrorResponseModel{}
+		errRes.Error(ctx, "Err_FarmGroup_ListFarmGroup_03", err.Error())
+		response.Error = errRes
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	response.Result = true
+	response.Data = farmGroup
 
 	ctx.JSON(http.StatusOK, response)
 }

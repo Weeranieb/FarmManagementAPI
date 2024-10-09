@@ -13,7 +13,9 @@ type IFarmGroupRepository interface {
 	Create(request *models.FarmGroup) (*models.FarmGroup, error)
 	FirstByQuery(query interface{}, args ...interface{}) (*models.FarmGroup, error)
 	GetFarmList(farmGroupId int) (*[]models.Farm, error)
+	TakeAllByClientId(clientId int) (*[]models.FarmGroup, error)
 	Update(request *models.FarmGroup) error
+	Delete(id int, username string) error
 	TakeById(id int) (*models.FarmGroup, error)
 }
 
@@ -53,6 +55,17 @@ func (rp farmGroupRepositoryImp) TakeById(id int) (*models.FarmGroup, error) {
 	return result, nil
 }
 
+func (rp farmGroupRepositoryImp) TakeAllByClientId(clientId int) (*[]models.FarmGroup, error) {
+	var result []models.FarmGroup
+	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where("\"ClientId\" = ? AND \"DelFlag\" = ?", clientId, false).Find(&result).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		return nil, nil
+	}
+	return &result, nil
+}
+
 func (rp farmGroupRepositoryImp) Update(request *models.FarmGroup) error {
 	obj := dbutil.StructToMap(request)
 	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where("\"Id\" = ?", request.Id).Updates(obj).Error; err != nil {
@@ -78,4 +91,11 @@ func (rp farmGroupRepositoryImp) GetFarmList(farmGroupId int) (*[]models.Farm, e
 	}
 
 	return &result, nil
+}
+
+func (rp farmGroupRepositoryImp) Delete(id int, username string) error {
+	if err := rp.dbContext.Table(dbconst.TFarmGroup).Where("\"Id\" = ?", id).Updates(map[string]interface{}{"\"DelFlag\"": true, "\"UpdatedBy\"": username}).Error; err != nil {
+		return err
+	}
+	return nil
 }
