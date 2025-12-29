@@ -1,0 +1,426 @@
+package handler
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"net/http/httptest"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
+)
+
+// Helper middleware to set locals for testing
+func setLocalsMiddleware(locals map[string]interface{}) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		for key, value := range locals {
+			c.Locals(key, value)
+		}
+		return c.Next()
+	}
+}
+
+// Test AddUser handler
+func (s *HandlerTestSuite) TestAddUser_Success() {
+	createReq := &dto.CreateUserRequest{
+		Username:      "testuser",
+		Password:      "password123",
+		FirstName:     "Test",
+		LastName:      stringPtr("User"),
+		UserLevel:     1,
+		ContactNumber: "1234567890",
+	}
+
+	expectedResponse := &dto.UserResponse{
+		Id:            1,
+		ClientId:      1,
+		Username:      createReq.Username,
+		FirstName:     createReq.FirstName,
+		LastName:      createReq.LastName,
+		UserLevel:     createReq.UserLevel,
+		ContactNumber: createReq.ContactNumber,
+		CreatedAt:     time.Now(),
+		CreatedBy:     "admin",
+		UpdatedAt:     time.Now(),
+		UpdatedBy:     "admin",
+	}
+
+	username := "admin"
+	clientId := 1
+	s.userService.On("Create", *createReq, username, clientId).Return(expectedResponse, nil)
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]interface{}{
+		"username": username,
+		"clientId": clientId,
+	}))
+	app.Post("/api/v1/user", s.userHandler.AddUser)
+
+	body, _ := json.Marshal(createReq)
+	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.userService.AssertExpectations(s.T())
+}
+
+func (s *HandlerTestSuite) TestAddUser_InvalidBody() {
+	app := fiber.New()
+	app.Post("/api/v1/user", s.userHandler.AddUser)
+
+	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer([]byte("invalid json")))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+}
+
+func (s *HandlerTestSuite) TestAddUser_ValidationError() {
+	req := &dto.CreateUserRequest{
+		Username: "ab",  // Too short
+		Password: "123", // Too short
+	}
+
+	app := fiber.New()
+	app.Post("/api/v1/user", s.userHandler.AddUser)
+
+	body, _ := json.Marshal(req)
+	reqHTTP := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer(body))
+	reqHTTP.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(reqHTTP)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+}
+
+func (s *HandlerTestSuite) TestAddUser_MissingUsername() {
+	createReq := &dto.CreateUserRequest{
+		Username:      "testuser",
+		Password:      "password123",
+		FirstName:     "Test",
+		UserLevel:     1,
+		ContactNumber: "1234567890",
+	}
+
+	app := fiber.New()
+	app.Post("/api/v1/user", s.userHandler.AddUser)
+
+	body, _ := json.Marshal(createReq)
+	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+}
+
+func (s *HandlerTestSuite) TestAddUser_MissingClientId() {
+	createReq := &dto.CreateUserRequest{
+		Username:      "testuser",
+		Password:      "password123",
+		FirstName:     "Test",
+		UserLevel:     1,
+		ContactNumber: "1234567890",
+	}
+
+	username := "admin"
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]interface{}{
+		"username": username,
+	}))
+	app.Post("/api/v1/user", s.userHandler.AddUser)
+
+	body, _ := json.Marshal(createReq)
+	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+}
+
+func (s *HandlerTestSuite) TestAddUser_ServiceError() {
+	createReq := &dto.CreateUserRequest{
+		Username:      "testuser",
+		Password:      "password123",
+		FirstName:     "Test",
+		UserLevel:     1,
+		ContactNumber: "1234567890",
+	}
+
+	username := "admin"
+	clientId := 1
+	s.userService.On("Create", *createReq, username, clientId).Return(nil, errors.New("user already exist"))
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]interface{}{
+		"username": username,
+		"clientId": clientId,
+	}))
+	app.Post("/api/v1/user", s.userHandler.AddUser)
+
+	body, _ := json.Marshal(createReq)
+	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.userService.AssertExpectations(s.T())
+}
+
+// Test GetUser handler
+func (s *HandlerTestSuite) TestGetUser_Success() {
+	userID := 1
+	expectedResponse := &dto.UserResponse{
+		Id:            userID,
+		ClientId:      1,
+		Username:      "testuser",
+		FirstName:     "Test",
+		LastName:      stringPtr("User"),
+		UserLevel:     1,
+		ContactNumber: "1234567890",
+		CreatedAt:     time.Now(),
+		CreatedBy:     "admin",
+		UpdatedAt:     time.Now(),
+		UpdatedBy:     "admin",
+	}
+
+	s.userService.On("GetUser", userID).Return(expectedResponse, nil)
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]interface{}{
+		"userId": userID,
+	}))
+	app.Get("/api/v1/user", s.userHandler.GetUser)
+
+	req := httptest.NewRequest("GET", "/api/v1/user", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.userService.AssertExpectations(s.T())
+}
+
+func (s *HandlerTestSuite) TestGetUser_MissingUserId() {
+	app := fiber.New()
+	app.Get("/api/v1/user", s.userHandler.GetUser)
+
+	req := httptest.NewRequest("GET", "/api/v1/user", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+}
+
+func (s *HandlerTestSuite) TestGetUser_ServiceError() {
+	userID := 1
+	s.userService.On("GetUser", userID).Return(nil, errors.New("user not found"))
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]interface{}{
+		"userId": userID,
+	}))
+	app.Get("/api/v1/user", s.userHandler.GetUser)
+
+	req := httptest.NewRequest("GET", "/api/v1/user", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.userService.AssertExpectations(s.T())
+}
+
+// Test UpdateUser handler
+func (s *HandlerTestSuite) TestUpdateUser_Success() {
+	updateUser := &model.User{
+		Id:            1,
+		ClientId:      1,
+		Username:      "updateduser",
+		FirstName:     "Updated",
+		LastName:      stringPtr("User"),
+		UserLevel:     1,
+		ContactNumber: "0987654321",
+	}
+
+	username := "admin"
+	s.userService.On("Update", updateUser, username).Return(nil)
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]interface{}{
+		"username": username,
+	}))
+	app.Put("/api/v1/user", s.userHandler.UpdateUser)
+
+	body, _ := json.Marshal(updateUser)
+	req := httptest.NewRequest("PUT", "/api/v1/user", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.userService.AssertExpectations(s.T())
+}
+
+func (s *HandlerTestSuite) TestUpdateUser_InvalidBody() {
+	app := fiber.New()
+	app.Put("/api/v1/user", s.userHandler.UpdateUser)
+
+	req := httptest.NewRequest("PUT", "/api/v1/user", bytes.NewBuffer([]byte("invalid json")))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+}
+
+func (s *HandlerTestSuite) TestUpdateUser_MissingUsername() {
+	updateUser := &model.User{
+		Id:        1,
+		Username:  "updateduser",
+		FirstName: "Updated",
+	}
+
+	app := fiber.New()
+	app.Put("/api/v1/user", s.userHandler.UpdateUser)
+
+	body, _ := json.Marshal(updateUser)
+	req := httptest.NewRequest("PUT", "/api/v1/user", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+}
+
+func (s *HandlerTestSuite) TestUpdateUser_ServiceError() {
+	updateUser := &model.User{
+		Id:        1,
+		Username:  "updateduser",
+		FirstName: "Updated",
+	}
+
+	username := "admin"
+	s.userService.On("Update", updateUser, username).Return(errors.New("update failed"))
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]interface{}{
+		"username": username,
+	}))
+	app.Put("/api/v1/user", s.userHandler.UpdateUser)
+
+	body, _ := json.Marshal(updateUser)
+	req := httptest.NewRequest("PUT", "/api/v1/user", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.userService.AssertExpectations(s.T())
+}
+
+// Test GetUserList handler
+func (s *HandlerTestSuite) TestGetUserList_Success() {
+	clientId := 1
+
+	expectedUsers := []*dto.UserResponse{
+		{
+			Id:            1,
+			ClientId:      clientId,
+			Username:      "user1",
+			FirstName:     "User",
+			LastName:      stringPtr("One"),
+			UserLevel:     1,
+			ContactNumber: "1111111111",
+			CreatedAt:     time.Now(),
+			CreatedBy:     "admin",
+			UpdatedAt:     time.Now(),
+			UpdatedBy:     "admin",
+		},
+		{
+			Id:            2,
+			ClientId:      clientId,
+			Username:      "user2",
+			FirstName:     "User",
+			LastName:      stringPtr("Two"),
+			UserLevel:     1,
+			ContactNumber: "2222222222",
+			CreatedAt:     time.Now(),
+			CreatedBy:     "admin",
+			UpdatedAt:     time.Now(),
+			UpdatedBy:     "admin",
+		},
+	}
+
+	s.userService.On("GetUserList", clientId).Return(expectedUsers, nil)
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]interface{}{
+		"clientId": clientId,
+	}))
+	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
+
+	req := httptest.NewRequest("GET", "/api/v1/user/list", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.userService.AssertExpectations(s.T())
+}
+
+func (s *HandlerTestSuite) TestGetUserList_MissingClientId() {
+	app := fiber.New()
+	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
+
+	req := httptest.NewRequest("GET", "/api/v1/user/list", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+}
+
+func (s *HandlerTestSuite) TestGetUserList_ServiceError() {
+	clientId := 1
+
+	s.userService.On("GetUserList", clientId).Return(nil, errors.New("database error"))
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]interface{}{
+		"clientId": clientId,
+	}))
+	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
+
+	req := httptest.NewRequest("GET", "/api/v1/user/list", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.userService.AssertExpectations(s.T())
+}
+
+// Helper function to create string pointer
+func stringPtr(s string) *string {
+	return &s
+}

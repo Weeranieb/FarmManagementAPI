@@ -1,1 +1,15 @@
-*.db
+# Environment variables
+config/.env
+.env
+
+# Build artifacts
+bin/
+tmp/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,20 @@
+server:
+  port: '8080'
+  host: 'localhost'
+
+database:
+  host: 'localhost'
+  port: '5432'
+  name: 'boonmafarm'
+  user: 'user'
+  password: 'password'
+  ssl_mode: 'disable'
+
+app:
+  environment: 'development'
+  log_level: 'info'
+  debug: false
+
+authentication:
+  jwt_secret: 'FarmSecretKey'
+  jwt_expiry: '24h'

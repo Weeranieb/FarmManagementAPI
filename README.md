@@ -1,39 +1,125 @@
-# Golang Gin GORM starter
+# Go Kit Base
 
-This repository contains a starter template for rapid microservice development
-with Go. It uses [Gin](https://github.com/gin-gonic/gin) and
-[GORM](https://gorm.io).
+A simple Go starter kit with Fiber, GORM, Dependency Injection, and a layered architecture. This template helps you quickly get started with REST APIs using best practices for configuration, repository layer, service layer, and handlers.
 
-## Installation
+## Features
 
-- Get the repository from GitHub
+- [Fiber](https://gofiber.io/) web framework for fast HTTP services
+- [GORM](https://gorm.io/) ORM for database interactions
+- Dependency Injection with [Uber Dig](https://github.com/uber-go/dig)
+- YAML config with environment variable overrides
+- Layered architecture: Config, Handler, Service, Repository, Model
+- Simple User example to get started
+
+## Getting Started
+
+### Prerequisites
+
+- Go 1.18+
+- PostgreSQL (or update for your DB)
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/weeranieb/go-kit-base.git
+   cd go-kit-base
+   ```
+
+2. Install Go dependencies:
+
+   ```bash
+   go mod tidy
+   ```
+
+3. Configure your environment:
+   - Copy `config/config.example.yaml` to `config/config.yaml` and edit your DB creds
+   - OR set environment variables, e.g. `DATABASE_HOST`, `APP_LOG_LEVEL` (see config section below)
+
+### Running
+
+Start the server:
 
 ```bash
-git clone git@github.com:henvo/golang-gin-gorm-starter.git
+go run src/cmd/api/main.go
 ```
 
-- Install dependencies
+Server runs on the port/host set in config (`localhost:8080` by default).
 
-```bash
-go get
+## Configuration
+
+Configuration is managed with Viper and supports YAML config files and environment variables.
+
+Example `config.yaml`:
+
+```yaml
+server:
+  port: '8080'
+  host: 'localhost'
+
+database:
+  host: 'localhost'
+  port: '5432'
+  name: 'example_db'
+  user: 'user'
+  password: 'your-password'
+  ssl_mode: 'disable'
+
+app:
+  environment: 'development'
+  log_level: 'info'
+  debug: true
 ```
 
-- Run app
+Environment variables can override config, using uppercase and underscores (e.g. `DATABASE_HOST`).
+
+## Project Structure
 
 ```
-go run main.go
+src/
+  cmd/api/          # Main entry point
+  internal/
+    config/         # Config loading, DB connect
+    handler/        # HTTP handlers
+    model/          # Structs for database/models
+    repository/     # Data layer
+    service/        # Business logic
+    di/             # Dependency injection setup
+  config/           # Config files
 ```
 
-## Things to consider
+## Example API
 
-- Rename all instances of `github.com/henvo/golang-gin-gorm/` to your package
-- Switch from the default database driver (mysql) to sqlite, postgresql, ...
+- User CRUD routes are scaffolded (see `internal/handler/user_handler.go`)
 
-## Env variables
+## Dependency Injection
 
-- PORT (Default: `8080`)
-- GIN_MODE (Default: `debug`)
-- DATABASE_HOST (Default: `localhost:3306`)
-- DATABASE_NAME (Default: `go_test`)
-- DATABASE_USERNAME (Default: `golang`)
-- DATABASE_PASSWORD (Default: `golang`)
+The [Uber Dig](https://uber-go.github.io/dig/) container wires dependencies:
+
+```go
+container := di.NewContainer(conf)
+```
+
+Which wires together DB connection, repositories, services, and handlers.
+
+## Database
+
+- Connects on start via config in `internal/config/database.go`
+- Uses GORM for migrations and queries
+
+## License
+
+MIT
+
+## Credits
+
+- [Fiber](https://gofiber.io/)
+- [GORM](https://gorm.io/)
+- [Uber Dig](https://github.com/uber-go/dig/)
+
+---
+
+```
+
+```

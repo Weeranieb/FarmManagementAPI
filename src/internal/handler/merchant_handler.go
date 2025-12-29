@@ -1,0 +1,175 @@
+package handler
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+//go:generate go run github.com/vektra/mockery/v2@latest --name=MerchantHandler --output=./mocks --outpkg=handler --filename=merchant_handler.go --structname=MockMerchantHandler --with-expecter=false
+type MerchantHandler interface {
+	AddMerchant(c *fiber.Ctx) error
+	GetMerchant(c *fiber.Ctx) error
+	GetMerchantList(c *fiber.Ctx) error
+	UpdateMerchant(c *fiber.Ctx) error
+}
+
+type merchantHandlerImpl struct {
+	merchantService service.MerchantService
+}
+
+func NewMerchantHandler(merchantService service.MerchantService) MerchantHandler {
+	return &merchantHandlerImpl{
+		merchantService: merchantService,
+	}
+}
+
+// POST /api/v1/merchant
+// Add a new merchant.
+// @Summary      Add a new merchant
+// @Description  Create a new merchant with the provided details
+// @Tags         merchant
+// @Accept       json
+// @Produce      json
+// @Param        Authorization header string true "Bearer token"
+// @Param        body body dto.CreateMerchantRequest true "Merchant data"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /api/v1/merchant [post]
+func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
+	var createMerchantRequest dto.CreateMerchantRequest
+
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	if err := validateAndParse(c, &createMerchantRequest, errors.ErrValidationFailed.Code); err != nil {
+		return err
+	}
+
+	// Get username
+	username, err := utils.GetUsername(c)
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	newMerchant, err := h.merchantService.Create(createMerchantRequest, username)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, newMerchant)
+}
+
+// GET /api/v1/merchant/:id
+// Get a merchant by ID.
+// @Summary      Get a merchant by ID
+// @Description  Retrieve a merchant by its ID
+// @Tags         merchant
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Merchant ID"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      404  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /api/v1/merchant/{id} [get]
+func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	// Get id from param
+	idStr := c.Params("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid merchant ID")
+	}
+
+	merchant, err := h.merchantService.Get(id)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, merchant)
+}
+
+// GET /api/v1/merchant
+// Get list of merchants.
+// @Summary      Get list of merchants
+// @Description  Retrieve a list of all merchants
+// @Tags         merchant
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /api/v1/merchant [get]
+func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	merchantList, err := h.merchantService.GetList()
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, merchantList)
+}
+
+// PUT /api/v1/merchant
+// Update a merchant.
+// @Summary      Update a merchant
+// @Description  Update an existing merchant with new details
+// @Tags         merchant
+// @Accept       json
+// @Produce      json
+// @Param        Authorization header string true "Bearer token"
+// @Param        body body model.Merchant true "Updated merchant data"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /api/v1/merchant [put]
+func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
+	var updateMerchant *model.Merchant
+
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	if err := c.BodyParser(&updateMerchant); err != nil {
+		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
+	}
+
+	// Get username
+	username, err := utils.GetUsername(c)
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	err = h.merchantService.Update(updateMerchant, username)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.SuccessWithoutData(c)
+}
+

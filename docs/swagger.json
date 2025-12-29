@@ -1,395 +1,14 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "A Boonma Farm application with Fiber, GORM, and Dependency Injection",
+        "title": "Boonma Farm API",
+        "contact": {},
+        "version": "1.0"
     },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
     "paths": {
-        "/api/v1/activepond": {
-            "get": {
-                "description": "Get list of active pond",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "activepond"
-                ],
-                "summary": "Get list of active pond",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Farm ID",
-                        "name": "farmId",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update an active pond",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "activepond"
-                ],
-                "summary": "Update an active pond",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated Active Pond data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.ActivePond"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Add a new active pond",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "activepond"
-                ],
-                "summary": "Add a new active pond",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "New Active Pond data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.AddActivePond"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/activepond/{id}": {
-            "get": {
-                "description": "Get an active pond by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "activepond"
-                ],
-                "summary": "Get an active pond by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Active Pond ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/activity": {
-            "put": {
-                "description": "Update an activity",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "activity"
-                ],
-                "summary": "Update an activity",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated Activity data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.ActivityWithSellDetail"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Add a new activity",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "activity"
-                ],
-                "summary": "Add a new activity",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "New Activity data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateActivityRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/activity/{id}": {
-            "get": {
-                "description": "Get an activity by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "activity"
-                ],
-                "summary": "Get an activity by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Activity ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/auth/login": {
             "post": {
                 "description": "Login user with provided credentials and return JWT token",
@@ -410,7 +29,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Login"
+                            "$ref": "#/definitions/dto.LoginRequest"
                         }
                     }
                 ],
@@ -418,25 +37,25 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -462,7 +81,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.AddUser"
+                            "$ref": "#/definitions/dto.RegisterRequest"
                         }
                     }
                 ],
@@ -470,434 +89,67 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/bill": {
-            "put": {
-                "description": "Update an existing bill with the provided details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "bill"
-                ],
-                "summary": "Update an existing bill",
-                "parameters": [
-                    {
-                        "description": "Bill data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Bill"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Add a new bill with the provided details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "bill"
-                ],
-                "summary": "Add a new bill",
-                "parameters": [
-                    {
-                        "description": "Bill data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.AddBill"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/bill/{id}": {
-            "get": {
-                "description": "Get a bill by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "bill"
-                ],
-                "summary": "Get bill by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Bill ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/client": {
-            "get": {
-                "description": "Retrieve details of the currently logged-in client",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "client"
-                ],
-                "summary": "Get client details",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update details of the currently logged-in client",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "client"
-                ],
-                "summary": "Update client details",
-                "parameters": [
-                    {
-                        "description": "Client data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Client"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Add a new client with the provided details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "client"
-                ],
-                "summary": "Add a new client",
-                "parameters": [
-                    {
-                        "description": "Client data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.AddClient"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/dailyfeed": {
-            "put": {
-                "description": "Update details of a daily feed entry",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "dailyfeed"
-                ],
-                "summary": "Update daily feed entry",
-                "parameters": [
-                    {
-                        "description": "Daily Feed data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.DailyFeed"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Add a new daily feed entry with the provided details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "dailyfeed"
-                ],
-                "summary": "Add a new daily feed entry",
-                "parameters": [
-                    {
-                        "description": "Daily Feed data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.AddDailyFeed"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/dailyfeed/{id}": {
-            "get": {
-                "description": "Retrieve details of a specific daily feed entry by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "dailyfeed"
-                ],
-                "summary": "Get daily feed entry by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Daily Feed ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
             }
         },
         "/api/v1/farm": {
+            "get": {
+                "description": "Retrieve a list of farms associated with the current client",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm"
+                ],
+                "summary": "Get list of farms",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
             "put": {
                 "description": "Update details of a farm entry",
                 "consumes": [
@@ -924,7 +176,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Farm"
+                            "$ref": "#/definitions/model.Farm"
                         }
                     }
                 ],
@@ -932,19 +184,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -975,7 +227,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.AddFarm"
+                            "$ref": "#/definitions/dto.CreateFarmRequest"
                         }
                     }
                 ],
@@ -983,19 +235,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1034,293 +286,86 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/farmGroup": {
-            "put": {
-                "description": "Update details of a farm group entry",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "farmGroup"
-                ],
-                "summary": "Update farm group entry",
-                "parameters": [
-                    {
-                        "description": "Farm group data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.FarmGroup"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Add a new farm group entry with the provided details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "farmGroup"
-                ],
-                "summary": "Add a new farm group entry",
-                "parameters": [
-                    {
-                        "description": "Farm group data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.AddFarmGroup"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/farmGroup/{id}": {
-            "get": {
-                "description": "Retrieve details of a specific farm group by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "farmGroup"
-                ],
-                "summary": "Get farm group by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Farm group ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/farmGroup/{id}/farmList": {
-            "get": {
-                "description": "Retrieve a list of farms associated with a specific farm group by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "farmGroup"
-                ],
-                "summary": "Get list of farms associated with a specific farm group",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Farm group ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/farmOnFarmGroup": {
-            "post": {
-                "description": "Add a farm to a farm group with the provided details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "farmOnFarmGroup"
-                ],
-                "summary": "Add a farm to a farm group",
-                "parameters": [
-                    {
-                        "description": "Farm on farm group data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.AddFarmOnFarmGroup"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/farmOnFarmGroup/{id}": {
-            "delete": {
-                "description": "Remove a farm from a farm group by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "farmOnFarmGroup"
-                ],
-                "summary": "Remove a farm from a farm group",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Farm on farm group ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
             }
         },
         "/api/v1/feedcollection": {
+            "get": {
+                "description": "Retrieve a paginated list of feed collections for the current client",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "feedcollection"
+                ],
+                "summary": "Get a list of feed collections with pagination",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order by field",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
             "put": {
                 "description": "Update an existing feed collection with new details",
                 "consumes": [
@@ -1335,12 +380,19 @@
                 "summary": "Update a feed collection",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "Updated feed collection data",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.FeedCollection"
+                            "$ref": "#/definitions/model.FeedCollection"
                         }
                     }
                 ],
@@ -1348,19 +400,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1376,15 +428,22 @@
                 "tags": [
                     "feedcollection"
                 ],
-                "summary": "Add a feed collection",
+                "summary": "Add a new feed collection",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "Feed collection data",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.AddFeedCollection"
+                            "$ref": "#/definitions/dto.CreateFeedCollectionRequest"
                         }
                     }
                 ],
@@ -1392,19 +451,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1436,171 +495,64 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/feedpricehistory": {
-            "put": {
-                "description": "Update an existing entry in the feed price history with new details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "feedpricehistory"
-                ],
-                "summary": "Update a feed price history entry",
-                "parameters": [
-                    {
-                        "description": "Updated feed price history data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.FeedPriceHistory"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Add a new entry to the feed price history with the provided details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "feedpricehistory"
-                ],
-                "summary": "Add a feed price history entry",
-                "parameters": [
-                    {
-                        "description": "Feed price history data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.AddFeedPriceHistory"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/feedpricehistory/{id}": {
-            "get": {
-                "description": "Retrieve a feed price history entry by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "feedpricehistory"
-                ],
-                "summary": "Get a feed price history entry by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Feed price history entry ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
             }
         },
         "/api/v1/merchant": {
+            "get": {
+                "description": "Retrieve a list of all merchants",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "merchant"
+                ],
+                "summary": "Get list of merchants",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
             "put": {
                 "description": "Update an existing merchant with new details",
                 "consumes": [
@@ -1615,12 +567,19 @@
                 "summary": "Update a merchant",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "Updated merchant data",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Merchant"
+                            "$ref": "#/definitions/model.Merchant"
                         }
                     }
                 ],
@@ -1628,19 +587,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1659,12 +618,19 @@
                 "summary": "Add a new merchant",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "Merchant data",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.AddMerchant"
+                            "$ref": "#/definitions/dto.CreateMerchantRequest"
                         }
                     }
                 ],
@@ -1672,19 +638,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1716,25 +682,25 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1766,19 +732,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1797,12 +763,19 @@
                 "summary": "Update a pond",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "Updated pond data",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Pond"
+                            "$ref": "#/definitions/model.Pond"
                         }
                     }
                 ],
@@ -1810,19 +783,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1853,7 +826,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.AddPond"
+                            "$ref": "#/definitions/dto.CreatePondRequest"
                         }
                     }
                 ],
@@ -1861,19 +834,75 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/pond/batch": {
+            "post": {
+                "description": "Create multiple ponds with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Add multiple ponds",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Ponds data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.CreatePondRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1905,25 +934,74 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a pond by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Delete a pond",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1946,25 +1024,25 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -1988,7 +1066,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "$ref": "#/definitions/model.User"
                         }
                     }
                 ],
@@ -1996,19 +1074,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -2032,7 +1110,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.AddUser"
+                            "$ref": "#/definitions/dto.CreateUserRequest"
                         }
                     }
                 ],
@@ -2040,19 +1118,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -2075,19 +1153,234 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ResponseModel"
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponseModel"
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/worker": {
+            "get": {
+                "description": "Retrieve a paginated list of workers for the current client",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "worker"
+                ],
+                "summary": "Get a list of workers with pagination",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order by field",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing worker with new details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "worker"
+                ],
+                "summary": "Update a worker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated worker data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Worker"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Add a new worker with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "worker"
+                ],
+                "summary": "Add a new worker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Worker data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateWorkerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/worker/{id}": {
+            "get": {
+                "description": "Retrieve a worker by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "worker"
+                ],
+                "summary": "Get a worker by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Worker ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     }
                 }
@@ -2095,20 +1388,222 @@
         }
     },
     "definitions": {
-        "httputil.ErrorResponseModel": {
+        "dto.CreateFarmRequest": {
+            "type": "object",
+            "required": [
+                "clientId",
+                "code",
+                "name"
+            ],
+            "properties": {
+                "clientId": {
+                    "type": "integer"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreateFeedCollectionRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "name",
+                "unit"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "feedPriceHistories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CreateFeedPriceHistoryItemRequest"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreateFeedPriceHistoryItemRequest": {
+            "type": "object",
+            "required": [
+                "price",
+                "priceUpdatedDate"
+            ],
+            "properties": {
+                "price": {
+                    "type": "number"
+                },
+                "priceUpdatedDate": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreateMerchantRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "contactNumber": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreatePondRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "farmId",
+                "name"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "farmId": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "firstName",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "contactNumber": {
+                    "type": "string"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "userLevel": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreateWorkerRequest": {
+            "type": "object",
+            "required": [
+                "farmGroupId",
+                "firstName",
+                "nationality",
+                "salary"
+            ],
+            "properties": {
+                "contactNumber": {
+                    "type": "string"
+                },
+                "farmGroupId": {
+                    "type": "integer"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "hireDate": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "nationality": {
+                    "type": "string"
+                },
+                "salary": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.LoginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "clientId",
+                "firstName",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "clientId": {
+                    "type": "integer"
+                },
+                "contactNumber": {
+                    "type": "string"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "userLevel": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.ErrorResponseModel": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "string",
-                    "example": "400"
+                    "example": "100001"
                 },
                 "message": {
                     "type": "string",
-                    "example": "status bad request"
+                    "example": "User already exists"
                 }
             }
         },
-        "httputil.ResponseModel": {
+        "http.ResponseModel": {
             "type": "object",
             "properties": {
                 "data": {},
@@ -2118,196 +1613,7 @@
                 }
             }
         },
-        "models.ActivePond": {
-            "type": "object",
-            "properties": {
-                "createdBy": {
-                    "type": "string"
-                },
-                "createdDate": {
-                    "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
-                },
-                "endDate": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "isActive": {
-                    "type": "boolean"
-                },
-                "pondId": {
-                    "type": "integer"
-                },
-                "startDate": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "updatedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.ActivityWithSellDetail": {
-            "type": "object",
-            "properties": {
-                "activePondId": {
-                    "type": "integer"
-                },
-                "activityDate": {
-                    "type": "string"
-                },
-                "amount": {
-                    "type": "integer"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "createdDate": {
-                    "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
-                },
-                "fishType": {
-                    "type": "string"
-                },
-                "fishUnit": {
-                    "type": "string"
-                },
-                "fishWeight": {
-                    "type": "number"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "merchantId": {
-                    "type": "integer"
-                },
-                "mode": {
-                    "type": "string"
-                },
-                "pricePerUnit": {
-                    "type": "number"
-                },
-                "sellDetails": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.SellDetail"
-                    }
-                },
-                "toActivePondId": {
-                    "type": "integer"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "updatedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddActivePond": {
-            "type": "object",
-            "properties": {
-                "pondId": {
-                    "type": "integer"
-                },
-                "startDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddBill": {
-            "type": "object",
-            "properties": {
-                "farmGroupId": {
-                    "type": "integer"
-                },
-                "other": {
-                    "type": "string"
-                },
-                "paidAmount": {
-                    "type": "number"
-                },
-                "paymentDate": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddClient": {
-            "type": "object",
-            "properties": {
-                "contactNumber": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "ownerName": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddDailyFeed": {
-            "type": "object",
-            "properties": {
-                "activePondId": {
-                    "type": "integer"
-                },
-                "amount": {
-                    "type": "number"
-                },
-                "feedCollectionId": {
-                    "type": "integer"
-                },
-                "feedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddFarm": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddFarmGroup": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddFarmOnFarmGroup": {
-            "type": "object",
-            "properties": {
-                "farmGroupId": {
-                    "type": "integer"
-                },
-                "farmId": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.AddFeedCollection": {
+        "model.Farm": {
             "type": "object",
             "properties": {
                 "clientId": {
@@ -2316,255 +1622,27 @@
                 "code": {
                     "type": "string"
                 },
-                "name": {
+                "created_at": {
                     "type": "string"
                 },
-                "unit": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddFeedPriceHistory": {
-            "type": "object",
-            "properties": {
-                "feedCollectionId": {
-                    "type": "integer"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "priceUpdatedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddMerchant": {
-            "type": "object",
-            "properties": {
-                "contactNumber": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddPond": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "farmId": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddSellDetail": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "number"
-                },
-                "fishType": {
-                    "type": "string"
-                },
-                "fishUnit": {
-                    "type": "string"
-                },
-                "pricePerUnit": {
-                    "type": "number"
-                },
-                "sellId": {
-                    "type": "integer"
-                },
-                "size": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AddUser": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "type": "integer"
-                },
-                "contactNumber": {
-                    "type": "string"
-                },
-                "firstName": {
-                    "type": "string"
-                },
-                "lastName": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "userLevel": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Bill": {
-            "type": "object",
-            "properties": {
-                "createdBy": {
-                    "type": "string"
-                },
-                "createdDate": {
-                    "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
-                },
-                "farmGroupId": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "other": {
-                    "type": "string"
-                },
-                "paidAmount": {
-                    "type": "number"
-                },
-                "paymentDate": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "updatedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Client": {
-            "type": "object",
-            "properties": {
-                "contactNumber": {
-                    "type": "string"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "createdDate": {
-                    "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "isActive": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "ownerName": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "updatedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.CreateActivityRequest": {
-            "type": "object",
-            "properties": {
-                "activePondId": {
-                    "type": "integer"
-                },
-                "activityDate": {
-                    "type": "string"
-                },
-                "amount": {
-                    "type": "integer"
-                },
-                "fishType": {
-                    "type": "string"
-                },
-                "fishUnit": {
-                    "type": "string"
-                },
-                "fishWeight": {
-                    "type": "number"
-                },
-                "merchantId": {
-                    "type": "integer"
-                },
-                "mode": {
-                    "type": "string"
-                },
-                "pricePerUnit": {
-                    "type": "number"
-                },
-                "sellDetails": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.AddSellDetail"
-                    }
-                },
-                "toActivePondId": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.DailyFeed": {
-            "type": "object",
-            "properties": {
-                "activePondId": {
-                    "type": "integer"
-                },
-                "amount": {
-                    "type": "number"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "createdDate": {
-                    "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
-                },
-                "feedCollectionId": {
-                    "type": "integer"
-                },
-                "feedDate": {
+                "created_by": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
                 },
-                "updatedBy": {
+                "name": {
                     "type": "string"
                 },
-                "updatedDate": {
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
                     "type": "string"
                 }
             }
         },
-        "models.Farm": {
+        "model.FeedCollection": {
             "type": "object",
             "properties": {
                 "clientId": {
@@ -2573,78 +1651,11 @@
                 "code": {
                     "type": "string"
                 },
-                "createdBy": {
+                "created_at": {
                     "type": "string"
                 },
-                "createdDate": {
+                "created_by": {
                     "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "updatedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.FarmGroup": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "type": "integer"
-                },
-                "code": {
-                    "type": "string"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "createdDate": {
-                    "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "updatedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.FeedCollection": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "type": "integer"
-                },
-                "code": {
-                    "type": "string"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "createdDate": {
-                    "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
                 },
                 "id": {
                     "type": "integer"
@@ -2655,71 +1666,25 @@
                 "unit": {
                     "type": "string"
                 },
-                "updatedBy": {
+                "updated_at": {
                     "type": "string"
                 },
-                "updatedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.FeedPriceHistory": {
-            "type": "object",
-            "properties": {
-                "createdBy": {
-                    "type": "string"
-                },
-                "createdDate": {
-                    "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
-                },
-                "feedCollectionId": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "priceUpdatedDate": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "updatedDate": {
+                "updated_by": {
                     "type": "string"
                 }
             }
         },
-        "models.Login": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Merchant": {
+        "model.Merchant": {
             "type": "object",
             "properties": {
                 "contactNumber": {
                     "type": "string"
                 },
-                "createdBy": {
+                "created_at": {
                     "type": "string"
                 },
-                "createdDate": {
+                "created_by": {
                     "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
                 },
                 "id": {
                     "type": "integer"
@@ -2730,28 +1695,25 @@
                 "name": {
                     "type": "string"
                 },
-                "updatedBy": {
+                "updated_at": {
                     "type": "string"
                 },
-                "updatedDate": {
+                "updated_by": {
                     "type": "string"
                 }
             }
         },
-        "models.Pond": {
+        "model.Pond": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "string"
                 },
-                "createdBy": {
+                "created_at": {
                     "type": "string"
                 },
-                "createdDate": {
+                "created_by": {
                     "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
                 },
                 "farmId": {
                     "type": "integer"
@@ -2762,56 +1724,15 @@
                 "name": {
                     "type": "string"
                 },
-                "updatedBy": {
+                "updated_at": {
                     "type": "string"
                 },
-                "updatedDate": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.SellDetail": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "number"
-                },
-                "createdBy": {
-                    "type": "string"
-                },
-                "createdDate": {
-                    "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
-                },
-                "fishType": {
-                    "type": "string"
-                },
-                "fishUnit": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "pricePerUnit": {
-                    "type": "number"
-                },
-                "sellId": {
-                    "type": "integer"
-                },
-                "size": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "updatedDate": {
+                "updated_by": {
                     "type": "string"
                 }
             }
         },
-        "models.User": {
+        "model.User": {
             "type": "object",
             "properties": {
                 "clientId": {
@@ -2820,14 +1741,11 @@
                 "contactNumber": {
                     "type": "string"
                 },
-                "createdBy": {
+                "created_at": {
                     "type": "string"
                 },
-                "createdDate": {
+                "created_by": {
                     "type": "string"
-                },
-                "delFlag": {
-                    "type": "boolean"
                 },
                 "firstName": {
                     "type": "string"
@@ -2838,16 +1756,63 @@
                 "lastName": {
                     "type": "string"
                 },
-                "updatedBy": {
+                "updated_at": {
                     "type": "string"
                 },
-                "updatedDate": {
+                "updated_by": {
                     "type": "string"
                 },
                 "userLevel": {
                     "type": "integer"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Worker": {
+            "type": "object",
+            "properties": {
+                "clientId": {
+                    "type": "integer"
+                },
+                "contactNumber": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "farmGroupId": {
+                    "type": "integer"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "hireDate": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "nationality": {
+                    "type": "string"
+                },
+                "salary": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
                     "type": "string"
                 }
             }
