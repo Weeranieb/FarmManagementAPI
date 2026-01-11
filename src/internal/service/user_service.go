@@ -18,7 +18,7 @@ type UserService interface {
 	Create(ctx context.Context, request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error)
 	GetUser(id int) (*dto.UserResponse, error)
 	Update(request *model.User, userIdentity string) error
-	GetUserList(clientId int) ([]*dto.UserResponse, error)
+	GetUserList(ctx context.Context, clientId *int) ([]*dto.UserResponse, error)
 }
 
 type userService struct {
@@ -97,8 +97,8 @@ func (s *userService) Update(request *model.User, userIdentity string) error {
 	return nil
 }
 
-func (s *userService) GetUserList(clientId int) ([]*dto.UserResponse, error) {
-	users, err := s.userRepo.ListByClientId(clientId)
+func (s *userService) GetUserList(ctx context.Context, clientId *int) ([]*dto.UserResponse, error) {
+	users, err := s.userRepo.ListByClientId(ctx, clientId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}

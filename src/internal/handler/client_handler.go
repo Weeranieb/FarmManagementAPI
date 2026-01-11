@@ -31,7 +31,7 @@ func NewClientHandler(clientService service.ClientService) ClientHandler {
 	}
 }
 
-// POST /api/v1/client
+// POST /client
 // Add a new client.
 // @Summary      Add a new client
 // @Description  Add a new client with the provided details. Only super admin can create clients.
@@ -44,7 +44,7 @@ func NewClientHandler(clientService service.ClientService) ClientHandler {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/client [post]
+// @Router       /client [post]
 func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
 	var createClientRequest dto.CreateClientRequest
 
@@ -82,7 +82,7 @@ func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
 	return http.Success(c, newClient)
 }
 
-// GET /api/v1/client/:id
+// GET /client/:id
 // Get a client by ID.
 // @Summary      Get a client by ID
 // @Description  Retrieve a client by its ID. Super admin can access any client, others can only access their own client.
@@ -96,7 +96,7 @@ func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/client/{id} [get]
+// @Router       /client/{id} [get]
 func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -125,7 +125,7 @@ func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
 	return http.Success(c, client)
 }
 
-// PUT /api/v1/client
+// PUT /client
 // Update client.
 // @Summary      Update client
 // @Description  Update details of a client. Super admin can update any client, others can only update their own client.
@@ -139,7 +139,7 @@ func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/client [put]
+// @Router       /client [put]
 func (h *clientHandlerImpl) UpdateClient(c *fiber.Ctx) error {
 	var updateClient *model.Client
 

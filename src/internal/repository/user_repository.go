@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -15,7 +16,7 @@ type UserRepository interface {
 	GetByUsername(username string) (*model.User, error)
 	Update(user *model.User) error
 	Delete(id int) error
-	ListByClientId(clientId int) ([]*model.User, error)
+	ListByClientId(ctx context.Context, clientId *int) ([]*model.User, error)
 }
 
 type userRepository struct {
@@ -62,8 +63,12 @@ func (r *userRepository) Delete(id int) error {
 	return r.db.Delete(&model.User{}, id).Error
 }
 
-func (r *userRepository) ListByClientId(clientId int) ([]*model.User, error) {
+func (r *userRepository) ListByClientId(ctx context.Context, clientId *int) ([]*model.User, error) {
 	var users []*model.User
-	err := r.db.Where("client_id = ? AND deleted_at IS NULL", clientId).Find(&users).Error
+	query := r.db.WithContext(ctx).Where("deleted_at IS NULL")
+	if clientId != nil {
+		query = query.Where("client_id = ?", *clientId)
+	}
+	err := query.Find(&users).Error
 	return users, err
 }

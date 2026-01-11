@@ -29,7 +29,11 @@ var (
 // @version 1.0
 // @description A Boonma Farm application with Fiber, GORM, and Dependency Injection
 // @host localhost:8080
-// @BasePath /
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 func main() {
 	conf := LoadConfigFunc()
 

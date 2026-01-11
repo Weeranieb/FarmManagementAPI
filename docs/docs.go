@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/auth/login": {
+        "/auth/login": {
             "post": {
                 "description": "Login user with provided credentials and return JWT token",
                 "consumes": [
@@ -67,7 +67,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/auth/register": {
+        "/auth/register": {
             "post": {
                 "description": "Register a new user with the provided details",
                 "consumes": [
@@ -113,7 +113,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/client": {
+        "/client": {
             "put": {
                 "description": "Update details of a client. Super admin can update any client, others can only update their own client.",
                 "consumes": [
@@ -235,7 +235,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/client/{id}": {
+        "/client/{id}": {
             "get": {
                 "description": "Retrieve a client by its ID. Super admin can access any client, others can only access their own client.",
                 "consumes": [
@@ -298,7 +298,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/farm": {
+        "/farm": {
             "get": {
                 "description": "Retrieve a list of farms associated with the current client",
                 "consumes": [
@@ -444,7 +444,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/farm/{id}": {
+        "/farm/{id}": {
             "get": {
                 "description": "Retrieve details of a specific farm by its ID",
                 "consumes": [
@@ -495,7 +495,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/feedcollection": {
+        "/feedcollection": {
             "get": {
                 "description": "Retrieve a paginated list of feed collections for the current client",
                 "consumes": [
@@ -660,7 +660,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/feedcollection/{id}": {
+        "/feedcollection/{id}": {
             "get": {
                 "description": "Retrieve a feed collection by its ID",
                 "consumes": [
@@ -710,7 +710,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/merchant": {
+        "/merchant": {
             "get": {
                 "description": "Retrieve a list of all merchants",
                 "consumes": [
@@ -847,7 +847,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/merchant/{id}": {
+        "/merchant/{id}": {
             "get": {
                 "description": "Retrieve a merchant by its ID",
                 "consumes": [
@@ -897,7 +897,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/pond": {
+        "/pond": {
             "get": {
                 "description": "Retrieve a list of ponds belonging to a specific farm",
                 "consumes": [
@@ -1043,7 +1043,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/pond/batch": {
+        "/pond/batch": {
             "post": {
                 "description": "Create multiple ponds with the provided details",
                 "consumes": [
@@ -1099,7 +1099,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/pond/{id}": {
+        "/pond/{id}": {
             "get": {
                 "description": "Retrieve a pond by its ID",
                 "consumes": [
@@ -1198,8 +1198,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/user": {
+        "/user": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve the user details of the currently authenticated user",
                 "consumes": [
                     "application/json"
@@ -1239,6 +1244,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update the details of the currently authenticated user",
                 "consumes": [
                     "application/json"
@@ -1333,8 +1343,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/user/list": {
+        "/user/list": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve a list of users associated with the current client ID",
                 "consumes": [
                     "application/json"
@@ -1368,7 +1383,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/worker": {
+        "/worker": {
             "get": {
                 "description": "Retrieve a paginated list of workers for the current client",
                 "consumes": [
@@ -1533,7 +1548,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/worker/{id}": {
+        "/worker/{id}": {
             "get": {
                 "description": "Retrieve a worker by its ID",
                 "consumes": [
@@ -2068,6 +2083,14 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
@@ -2075,7 +2098,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
-	BasePath:         "/",
+	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Boonma Farm API",
 	Description:      "A Boonma Farm application with Fiber, GORM, and Dependency Injection",

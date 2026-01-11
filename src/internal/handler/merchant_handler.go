@@ -32,7 +32,7 @@ func NewMerchantHandler(merchantService service.MerchantService) MerchantHandler
 	}
 }
 
-// POST /api/v1/merchant
+// POST /merchant
 // Add a new merchant.
 // @Summary      Add a new merchant
 // @Description  Create a new merchant with the provided details
@@ -44,7 +44,7 @@ func NewMerchantHandler(merchantService service.MerchantService) MerchantHandler
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/merchant [post]
+// @Router       /merchant [post]
 func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 	var createMerchantRequest dto.CreateMerchantRequest
 
@@ -72,7 +72,7 @@ func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 	return http.Success(c, newMerchant)
 }
 
-// GET /api/v1/merchant/:id
+// GET /merchant/:id
 // Get a merchant by ID.
 // @Summary      Get a merchant by ID
 // @Description  Retrieve a merchant by its ID
@@ -84,7 +84,7 @@ func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/merchant/{id} [get]
+// @Router       /merchant/{id} [get]
 func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -107,7 +107,7 @@ func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
 	return http.Success(c, merchant)
 }
 
-// GET /api/v1/merchant
+// GET /merchant
 // Get list of merchants.
 // @Summary      Get list of merchants
 // @Description  Retrieve a list of all merchants
@@ -117,7 +117,7 @@ func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/merchant [get]
+// @Router       /merchant [get]
 func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -133,7 +133,7 @@ func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
 	return http.Success(c, merchantList)
 }
 
-// PUT /api/v1/merchant
+// PUT /merchant
 // Update a merchant.
 // @Summary      Update a merchant
 // @Description  Update an existing merchant with new details
@@ -145,7 +145,7 @@ func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/merchant [put]
+// @Router       /merchant [put]
 func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 	var updateMerchant *model.Merchant
 

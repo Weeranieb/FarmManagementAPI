@@ -1,4 +1,4 @@
-basePath: /
+basePath: /api/v1
 definitions:
   dto.CreateClientRequest:
     properties:
@@ -330,7 +330,7 @@ info:
   title: Boonma Farm API
   version: "1.0"
 paths:
-  /api/v1/auth/login:
+  /auth/login:
     post:
       consumes:
       - application/json
@@ -364,7 +364,7 @@ paths:
       summary: Login user
       tags:
       - auth
-  /api/v1/auth/register:
+  /auth/register:
     post:
       consumes:
       - application/json
@@ -394,7 +394,7 @@ paths:
       summary: Register a new user
       tags:
       - auth
-  /api/v1/client:
+  /client:
     post:
       consumes:
       - application/json
@@ -477,7 +477,7 @@ paths:
       summary: Update client
       tags:
       - client
-  /api/v1/client/{id}:
+  /client/{id}:
     get:
       consumes:
       - application/json
@@ -520,7 +520,7 @@ paths:
       summary: Get a client by ID
       tags:
       - client
-  /api/v1/farm:
+  /farm:
     get:
       consumes:
       - application/json
@@ -617,7 +617,7 @@ paths:
       summary: Update farm entry
       tags:
       - farm
-  /api/v1/farm/{id}:
+  /farm/{id}:
     get:
       consumes:
       - application/json
@@ -651,7 +651,7 @@ paths:
       summary: Get farm by ID
       tags:
       - farm
-  /api/v1/feedcollection:
+  /feedcollection:
     get:
       consumes:
       - application/json
@@ -761,7 +761,7 @@ paths:
       summary: Update a feed collection
       tags:
       - feedcollection
-  /api/v1/feedcollection/{id}:
+  /feedcollection/{id}:
     get:
       consumes:
       - application/json
@@ -794,7 +794,7 @@ paths:
       summary: Get a feed collection by ID
       tags:
       - feedcollection
-  /api/v1/merchant:
+  /merchant:
     get:
       consumes:
       - application/json
@@ -885,7 +885,7 @@ paths:
       summary: Update a merchant
       tags:
       - merchant
-  /api/v1/merchant/{id}:
+  /merchant/{id}:
     get:
       consumes:
       - application/json
@@ -918,7 +918,7 @@ paths:
       summary: Get a merchant by ID
       tags:
       - merchant
-  /api/v1/pond:
+  /pond:
     get:
       consumes:
       - application/json
@@ -1015,7 +1015,7 @@ paths:
       summary: Update a pond
       tags:
       - pond
-  /api/v1/pond/{id}:
+  /pond/{id}:
     delete:
       consumes:
       - application/json
@@ -1081,7 +1081,7 @@ paths:
       summary: Get a pond by ID
       tags:
       - pond
-  /api/v1/pond/batch:
+  /pond/batch:
     post:
       consumes:
       - application/json
@@ -1118,7 +1118,7 @@ paths:
       summary: Add multiple ponds
       tags:
       - pond
-  /api/v1/user:
+  /user:
     get:
       consumes:
       - application/json
@@ -1142,6 +1142,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Get the current user
       tags:
       - user
@@ -1206,10 +1208,12 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Update the current user
       tags:
       - user
-  /api/v1/user/list:
+  /user/list:
     get:
       consumes:
       - application/json
@@ -1229,10 +1233,12 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Get a list of users
       tags:
       - user
-  /api/v1/worker:
+  /worker:
     get:
       consumes:
       - application/json
@@ -1342,7 +1348,7 @@ paths:
       summary: Update a worker
       tags:
       - worker
-  /api/v1/worker/{id}:
+  /worker/{id}:
     get:
       consumes:
       - application/json
@@ -1375,4 +1381,10 @@ paths:
       summary: Get a worker by ID
       tags:
       - worker
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

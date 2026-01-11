@@ -32,7 +32,7 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 	}
 }
 
-// POST /api/v1/farm
+// POST /farm
 // Add a new farm entry.
 // @Summary      Add a new farm entry
 // @Description  Add a new farm entry with the provided details
@@ -44,7 +44,7 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/farm [post]
+// @Router       /farm [post]
 func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 	var createFarmRequest dto.CreateFarmRequest
 
@@ -65,12 +65,15 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 	}
 
 	// Get clientId
-	clientId, err := utils.GetClientId(c.UserContext())
+	clientIdPtr, err := utils.GetClientId(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
+	if clientIdPtr == nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
 
-	newFarm, err := h.farmService.Create(createFarmRequest, username, clientId)
+	newFarm, err := h.farmService.Create(createFarmRequest, username, *clientIdPtr)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -78,7 +81,7 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 	return http.Success(c, newFarm)
 }
 
-// GET /api/v1/farm/:id
+// GET /farm/:id
 // Get farm by ID.
 // @Summary      Get farm by ID
 // @Description  Retrieve details of a specific farm by its ID
@@ -90,7 +93,7 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/farm/{id} [get]
+// @Router       /farm/{id} [get]
 func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -106,12 +109,15 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 	}
 
 	// Get clientId
-	clientId, err := utils.GetClientId(c.UserContext())
+	clientIdPtr, err := utils.GetClientId(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
+	if clientIdPtr == nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
 
-	farm, err := h.farmService.Get(id, clientId)
+	farm, err := h.farmService.Get(id, *clientIdPtr)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -119,7 +125,7 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 	return http.Success(c, farm)
 }
 
-// GET /api/v1/farm
+// GET /farm
 // Get list of farms associated with the current client.
 // @Summary      Get list of farms
 // @Description  Retrieve a list of farms associated with the current client
@@ -130,7 +136,7 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/farm [get]
+// @Router       /farm [get]
 func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -139,12 +145,15 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 	}()
 
 	// Get clientId
-	clientId, err := utils.GetClientId(c.UserContext())
+	clientIdPtr, err := utils.GetClientId(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
+	if clientIdPtr == nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
 
-	farmList, err := h.farmService.GetList(clientId)
+	farmList, err := h.farmService.GetList(*clientIdPtr)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -152,7 +161,7 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 	return http.Success(c, farmList)
 }
 
-// PUT /api/v1/farm
+// PUT /farm
 // Update farm entry.
 // @Summary      Update farm entry
 // @Description  Update details of a farm entry
@@ -164,7 +173,7 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/farm [put]
+// @Router       /farm [put]
 func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
 	var updateFarm *model.Farm
 
@@ -191,4 +200,3 @@ func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
 
 	return http.SuccessWithoutData(c)
 }
-

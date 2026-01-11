@@ -43,7 +43,7 @@ func NewUserHandler(userService service.UserService) UserHandler {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/user [post]
+// @Router       /user [post]
 func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 	var addUser dto.CreateUserRequest
 
@@ -73,7 +73,7 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 		}
 		// Use JWT context values
 		username = jwtUsername
-		clientId = &jwtClientId
+		clientId = jwtClientId
 	} else {
 		// System setup - bypass authentication
 		// Use "system" as the creator for setup operations
@@ -95,11 +95,12 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 // @Tags         user
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/user [get]
+// @Router       /user [get]
 func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -128,11 +129,12 @@ func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
 // @Tags         user
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        body body model.User true "Updated user data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/user [put]
+// @Router       /user [put]
 func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 	var updateUser *model.User
 
@@ -167,10 +169,11 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 // @Tags         user
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/user/list [get]
+// @Router       /user/list [get]
 func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -179,12 +182,20 @@ func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
 	}()
 
 	// get clientId
-	clientId, err := utils.GetClientId(c.UserContext())
+	var clientId *int
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
 	if err != nil {
-		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	users, err := h.userService.GetUserList(clientId)
+	if !isSuperAdmin {
+		clientId, err = utils.GetClientId(c.UserContext())
+		if err != nil {
+			return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+		}
+	}
+
+	users, err := h.userService.GetUserList(c.Context(), clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

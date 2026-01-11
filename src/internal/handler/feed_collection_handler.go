@@ -32,7 +32,7 @@ func NewFeedCollectionHandler(feedCollectionService service.FeedCollectionServic
 	}
 }
 
-// POST /api/v1/feedcollection
+// POST /feedcollection
 // Add a new feed collection.
 // @Summary      Add a new feed collection
 // @Description  Add a new feed collection with the provided details
@@ -44,7 +44,7 @@ func NewFeedCollectionHandler(feedCollectionService service.FeedCollectionServic
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/feedcollection [post]
+// @Router       /feedcollection [post]
 func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 	var createFeedCollectionRequest dto.CreateFeedCollectionRequest
 
@@ -65,12 +65,15 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 	}
 
 	// Get client id
-	clientId, err := utils.GetClientId(c.UserContext())
+	clientIdPtr, err := utils.GetClientId(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
+	if clientIdPtr == nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
 
-	result, err := h.feedCollectionService.Create(createFeedCollectionRequest, username, clientId)
+	result, err := h.feedCollectionService.Create(createFeedCollectionRequest, username, *clientIdPtr)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -78,7 +81,7 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 	return http.Success(c, result)
 }
 
-// GET /api/v1/feedcollection/:id
+// GET /feedcollection/:id
 // Get a feed collection by ID.
 // @Summary      Get a feed collection by ID
 // @Description  Retrieve a feed collection by its ID
@@ -90,7 +93,7 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/feedcollection/{id} [get]
+// @Router       /feedcollection/{id} [get]
 func (h *feedCollectionHandlerImpl) GetFeedCollection(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -113,7 +116,7 @@ func (h *feedCollectionHandlerImpl) GetFeedCollection(c *fiber.Ctx) error {
 	return http.Success(c, feedCollection)
 }
 
-// PUT /api/v1/feedcollection
+// PUT /feedcollection
 // Update a feed collection.
 // @Summary      Update a feed collection
 // @Description  Update an existing feed collection with new details
@@ -125,7 +128,7 @@ func (h *feedCollectionHandlerImpl) GetFeedCollection(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/feedcollection [put]
+// @Router       /feedcollection [put]
 func (h *feedCollectionHandlerImpl) UpdateFeedCollection(c *fiber.Ctx) error {
 	var updateFeedCollection *model.FeedCollection
 
@@ -153,7 +156,7 @@ func (h *feedCollectionHandlerImpl) UpdateFeedCollection(c *fiber.Ctx) error {
 	return http.SuccessWithoutData(c)
 }
 
-// GET /api/v1/feedcollection
+// GET /feedcollection
 // Get a list of feed collections with pagination.
 // @Summary      Get a list of feed collections with pagination
 // @Description  Retrieve a paginated list of feed collections for the current client
@@ -167,7 +170,7 @@ func (h *feedCollectionHandlerImpl) UpdateFeedCollection(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/feedcollection [get]
+// @Router       /feedcollection [get]
 func (h *feedCollectionHandlerImpl) ListFeedCollection(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -192,16 +195,18 @@ func (h *feedCollectionHandlerImpl) ListFeedCollection(c *fiber.Ctx) error {
 	}
 
 	// Get client id
-	clientId, err := utils.GetClientId(c.UserContext())
+	clientIdPtr, err := utils.GetClientId(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
+	if clientIdPtr == nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
 
-	feedCollectionList, err := h.feedCollectionService.GetPage(clientId, page, pageSize, orderBy, keyword)
+	feedCollectionList, err := h.feedCollectionService.GetPage(*clientIdPtr, page, pageSize, orderBy, keyword)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
 	return http.Success(c, feedCollectionList)
 }
-

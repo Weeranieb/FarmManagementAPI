@@ -27,7 +27,7 @@ func NewAuthHandler(authService service.AuthService) AuthHandler {
 	}
 }
 
-// POST /api/v1/auth/register
+// POST /auth/register
 // Register a new user.
 // @Summary      Register a new user
 // @Description  Register a new user with the provided details
@@ -38,7 +38,7 @@ func NewAuthHandler(authService service.AuthService) AuthHandler {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/auth/register [post]
+// @Router       /auth/register [post]
 func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
 	var registerRequest dto.RegisterRequest
 
@@ -60,7 +60,7 @@ func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
 	return http.Success(c, newUser)
 }
 
-// POST /api/v1/auth/login
+// POST /auth/login
 // Login user and return JWT token.
 // @Summary      Login user
 // @Description  Login user with provided credentials and return JWT token
@@ -72,7 +72,7 @@ func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      401  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/auth/login [post]
+// @Router       /auth/login [post]
 func (h *authHandlerImpl) Login(c *fiber.Ctx) error {
 	var loginRequest dto.LoginRequest
 

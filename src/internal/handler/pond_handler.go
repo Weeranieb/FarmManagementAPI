@@ -34,7 +34,7 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 	}
 }
 
-// POST /api/v1/pond
+// POST /pond
 // Add a new pond.
 // @Summary      Add a new pond
 // @Description  Create a new pond with the provided details
@@ -46,7 +46,7 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/pond [post]
+// @Router       /pond [post]
 func (h *pondHandlerImpl) AddPond(c *fiber.Ctx) error {
 	var createPondRequest dto.CreatePondRequest
 
@@ -74,7 +74,7 @@ func (h *pondHandlerImpl) AddPond(c *fiber.Ctx) error {
 	return http.Success(c, newPond)
 }
 
-// POST /api/v1/pond/batch
+// POST /pond/batch
 // Add multiple ponds.
 // @Summary      Add multiple ponds
 // @Description  Create multiple ponds with the provided details
@@ -86,7 +86,7 @@ func (h *pondHandlerImpl) AddPond(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/pond/batch [post]
+// @Router       /pond/batch [post]
 func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 	var createPondsRequest dto.CreatePondsRequest
 
@@ -114,7 +114,7 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 	return http.Success(c, newPonds)
 }
 
-// GET /api/v1/pond/:id
+// GET /pond/:id
 // Get a pond by ID.
 // @Summary      Get a pond by ID
 // @Description  Retrieve a pond by its ID
@@ -126,7 +126,7 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/pond/{id} [get]
+// @Router       /pond/{id} [get]
 func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -149,7 +149,7 @@ func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
 	return http.Success(c, pond)
 }
 
-// GET /api/v1/pond
+// GET /pond
 // Get a list of ponds by farm ID.
 // @Summary      Get a list of ponds by farm ID
 // @Description  Retrieve a list of ponds belonging to a specific farm
@@ -160,7 +160,7 @@ func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/pond [get]
+// @Router       /pond [get]
 func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -183,7 +183,7 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 	return http.Success(c, pondList)
 }
 
-// PUT /api/v1/pond
+// PUT /pond
 // Update a pond.
 // @Summary      Update a pond
 // @Description  Update an existing pond with new details
@@ -195,7 +195,7 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/pond [put]
+// @Router       /pond [put]
 func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 	var updatePond *model.Pond
 
@@ -223,7 +223,7 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 	return http.SuccessWithoutData(c)
 }
 
-// DELETE /api/v1/pond/:id
+// DELETE /pond/:id
 // Delete a pond.
 // @Summary      Delete a pond
 // @Description  Delete a pond by its ID
@@ -235,7 +235,7 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /api/v1/pond/{id} [delete]
+// @Router       /pond/{id} [delete]
 func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {

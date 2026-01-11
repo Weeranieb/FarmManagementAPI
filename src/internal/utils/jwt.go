@@ -38,22 +38,24 @@ func GetUserId(ctx context.Context) (int, error) {
 	}
 }
 
-func GetClientId(ctx context.Context) (int, error) {
+func GetClientId(ctx context.Context) (*int, error) {
 	clientId := ctx.Value(clientIdKey)
 	if clientId == nil {
-		return 0, errors.New("client id not found")
+		return nil, errors.New("client id not found")
 	}
 
+	var id int
 	switch v := clientId.(type) {
 	case int:
-		return v, nil
+		id = v
 	case float64:
-		return int(v), nil
+		id = int(v)
 	case int64:
-		return int(v), nil
+		id = int(v)
 	default:
-		return 0, errors.New("invalid client id type")
+		return nil, errors.New("invalid client id type")
 	}
+	return &id, nil
 }
 
 func GetUserLevel(ctx context.Context) (int, error) {
@@ -122,5 +124,9 @@ func CanAccessClient(ctx context.Context, targetClientId int) (bool, error) {
 		return false, err
 	}
 
-	return userClientId == targetClientId, nil
+	if userClientId == nil {
+		return false, nil
+	}
+
+	return *userClientId == targetClientId, nil
 }
