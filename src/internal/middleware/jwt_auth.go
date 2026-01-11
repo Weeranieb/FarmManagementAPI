@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/spf13/viper"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -62,19 +64,26 @@ func JWTAuthMiddleware() fiber.Handler {
 			return http.Error(c, errors.ErrAuthTokenInvalid.Code, "Invalid token claims")
 		}
 
-		// Set user context in locals
+		// Set user context in context.Context
+		ctx := c.UserContext()
+		if ctx == nil {
+			ctx = context.Background()
+		}
 		if userId, ok := claims["userId"].(float64); ok {
-			c.Locals("userId", int(userId))
+			ctx = context.WithValue(ctx, utils.UserIdKey(), int(userId))
 		}
 		if username, ok := claims["username"].(string); ok {
-			c.Locals("username", username)
+			ctx = context.WithValue(ctx, utils.UsernameKey(), username)
 		}
 		if userLevel, ok := claims["userLevel"].(float64); ok {
-			c.Locals("userLevel", int(userLevel))
+			ctx = context.WithValue(ctx, utils.UserLevelKey(), int(userLevel))
 		}
 		if clientId, ok := claims["clientId"].(float64); ok {
-			c.Locals("clientId", int(clientId))
+			ctx = context.WithValue(ctx, utils.ClientIdKey(), int(clientId))
 		}
+
+		// Update the context in the fiber context
+		c.SetUserContext(ctx)
 
 		// Token is valid, continue processing the request
 		return c.Next()

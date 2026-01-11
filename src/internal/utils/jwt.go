@@ -1,13 +1,27 @@
 package utils
 
 import (
+	"context"
 	"errors"
-
-	"github.com/gofiber/fiber/v2"
 )
 
-func GetUserId(c *fiber.Ctx) (int, error) {
-	userId := c.Locals("userId")
+type contextKey string
+
+const (
+	userIdKey    contextKey = "userId"
+	clientIdKey  contextKey = "clientId"
+	userLevelKey contextKey = "userLevel"
+	usernameKey  contextKey = "username"
+)
+
+// Context key getters for use in middleware
+func UserIdKey() contextKey    { return userIdKey }
+func ClientIdKey() contextKey  { return clientIdKey }
+func UserLevelKey() contextKey { return userLevelKey }
+func UsernameKey() contextKey  { return usernameKey }
+
+func GetUserId(ctx context.Context) (int, error) {
+	userId := ctx.Value(userIdKey)
 	if userId == nil {
 		return 0, errors.New("user id not found")
 	}
@@ -24,8 +38,8 @@ func GetUserId(c *fiber.Ctx) (int, error) {
 	}
 }
 
-func GetClientId(c *fiber.Ctx) (int, error) {
-	clientId := c.Locals("clientId")
+func GetClientId(ctx context.Context) (int, error) {
+	clientId := ctx.Value(clientIdKey)
 	if clientId == nil {
 		return 0, errors.New("client id not found")
 	}
@@ -42,8 +56,8 @@ func GetClientId(c *fiber.Ctx) (int, error) {
 	}
 }
 
-func GetUserLevel(c *fiber.Ctx) (int, error) {
-	userLevel := c.Locals("userLevel")
+func GetUserLevel(ctx context.Context) (int, error) {
+	userLevel := ctx.Value(userLevelKey)
 	if userLevel == nil {
 		return 0, errors.New("user level not found")
 	}
@@ -60,8 +74,8 @@ func GetUserLevel(c *fiber.Ctx) (int, error) {
 	}
 }
 
-func GetUsername(c *fiber.Ctx) (string, error) {
-	username := c.Locals("username")
+func GetUsername(ctx context.Context) (string, error) {
+	username := ctx.Value(usernameKey)
 	if username == nil {
 		return "", errors.New("username not found")
 	}
@@ -73,8 +87,8 @@ func GetUsername(c *fiber.Ctx) (string, error) {
 }
 
 // IsSuperAdmin checks if the current user is a super admin
-func IsSuperAdmin(c *fiber.Ctx) (bool, error) {
-	userLevel, err := GetUserLevel(c)
+func IsSuperAdmin(ctx context.Context) (bool, error) {
+	userLevel, err := GetUserLevel(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -82,8 +96,8 @@ func IsSuperAdmin(c *fiber.Ctx) (bool, error) {
 }
 
 // IsClientAdminOrAbove checks if user is client admin or super admin
-func IsClientAdminOrAbove(c *fiber.Ctx) (bool, error) {
-	userLevel, err := GetUserLevel(c)
+func IsClientAdminOrAbove(ctx context.Context) (bool, error) {
+	userLevel, err := GetUserLevel(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -91,8 +105,8 @@ func IsClientAdminOrAbove(c *fiber.Ctx) (bool, error) {
 }
 
 // CanAccessClient checks if user can access a specific client
-func CanAccessClient(c *fiber.Ctx, targetClientId int) (bool, error) {
-	userLevel, err := GetUserLevel(c)
+func CanAccessClient(ctx context.Context, targetClientId int) (bool, error) {
+	userLevel, err := GetUserLevel(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -103,7 +117,7 @@ func CanAccessClient(c *fiber.Ctx, targetClientId int) (bool, error) {
 	}
 
 	// Others can only access their own client
-	userClientId, err := GetClientId(c)
+	userClientId, err := GetClientId(ctx)
 	if err != nil {
 		return false, err
 	}

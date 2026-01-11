@@ -59,7 +59,7 @@ func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 	}
 
 	// Get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -160,7 +160,7 @@ func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 	}
 
 	// Get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}

@@ -1,17 +1,21 @@
 package service
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=UserService --output=./mocks --outpkg=service --filename=user_service.go --structname=MockUserService --with-expecter=false
 type UserService interface {
-	Create(request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error)
+	Create(ctx context.Context, request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error)
 	GetUser(id int) (*dto.UserResponse, error)
 	Update(request *model.User, userIdentity string) error
 	GetUserList(clientId int) ([]*dto.UserResponse, error)
@@ -25,7 +29,15 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 	return &userService{userRepo: userRepo}
 }
 
-func (s *userService) Create(request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error) {
+func (s *userService) Create(ctx context.Context, request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error) {
+	// validate request
+	isSuperAdmin, _ := utils.IsSuperAdmin(ctx)
+	if !isSuperAdmin {
+		if clientId == nil {
+			return nil, errors.ErrValidationFailed.Wrap(fmt.Errorf("client id is required"))
+		}
+	}
+
 	// check user if exist
 	checkUser, err := s.userRepo.GetByUsername(request.Username)
 	if err != nil {

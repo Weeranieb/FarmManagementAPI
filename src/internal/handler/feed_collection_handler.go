@@ -59,13 +59,13 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 	}
 
 	// Get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
 	// Get client id
-	clientId, err := utils.GetClientId(c)
+	clientId, err := utils.GetClientId(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -140,7 +140,7 @@ func (h *feedCollectionHandlerImpl) UpdateFeedCollection(c *fiber.Ctx) error {
 	}
 
 	// Get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -192,7 +192,7 @@ func (h *feedCollectionHandlerImpl) ListFeedCollection(c *fiber.Ctx) error {
 	}
 
 	// Get client id
-	clientId, err := utils.GetClientId(c)
+	clientId, err := utils.GetClientId(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}

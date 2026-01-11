@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
@@ -10,16 +11,35 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 )
 
-// Helper middleware to set locals for testing
+// Helper middleware to set context values for testing
 func setLocalsMiddleware(locals map[string]interface{}) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		for key, value := range locals {
-			c.Locals(key, value)
+		ctx := c.UserContext()
+		if ctx == nil {
+			ctx = context.Background()
 		}
+		
+		// Map string keys to context keys
+		if userId, ok := locals["userId"]; ok {
+			ctx = context.WithValue(ctx, utils.UserIdKey(), userId)
+		}
+		if username, ok := locals["username"]; ok {
+			ctx = context.WithValue(ctx, utils.UsernameKey(), username)
+		}
+		if clientId, ok := locals["clientId"]; ok {
+			ctx = context.WithValue(ctx, utils.ClientIdKey(), clientId)
+		}
+		if userLevel, ok := locals["userLevel"]; ok {
+			ctx = context.WithValue(ctx, utils.UserLevelKey(), userLevel)
+		}
+		
+		c.SetUserContext(ctx)
 		return c.Next()
 	}
 }
@@ -52,12 +72,14 @@ func (s *HandlerTestSuite) TestAddUser_Success() {
 	username := "admin"
 	clientIdInt := 1
 	clientId := lo.ToPtr(1)
-	s.userService.On("Create", *createReq, username, clientId).Return(expectedResponse, nil)
+	userLevel := 3 // Super admin
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil }), *createReq, username, clientId).Return(expectedResponse, nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]interface{}{
-		"username": username,
-		"clientId": clientIdInt, // Set as int, handler will convert to *int
+		"username":  username,
+		"clientId":  clientIdInt, // Set as int, handler will convert to *int
+		"userLevel": userLevel,  // Super admin level
 	}))
 	app.Post("/api/v1/user", s.userHandler.AddUser)
 
@@ -75,7 +97,7 @@ func (s *HandlerTestSuite) TestAddUser_Success() {
 func (s *HandlerTestSuite) TestAddUser_InvalidBody() {
 	// Invalid JSON might still parse to empty struct and call service, so we need a mock
 	emptyReq := dto.CreateUserRequest{}
-	s.userService.On("Create", emptyReq, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), emptyReq, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
 
 	app := fiber.New()
 	app.Post("/api/v1/user", s.userHandler.AddUser)
@@ -98,7 +120,7 @@ func (s *HandlerTestSuite) TestAddUser_ValidationError() {
 	}
 
 	// Handler might still call service even with validation errors, so we need a mock
-	s.userService.On("Create", *req, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *req, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
 
 	app := fiber.New()
 	app.Post("/api/v1/user", s.userHandler.AddUser)
@@ -125,7 +147,7 @@ func (s *HandlerTestSuite) TestAddUser_MissingUsername() {
 	}
 
 	// Mock the service call with nil clientId (system setup)
-	s.userService.On("Create", *createReq, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
 
 	app := fiber.New()
 	app.Post("/api/v1/user", s.userHandler.AddUser)
@@ -151,7 +173,7 @@ func (s *HandlerTestSuite) TestAddUser_MissingClientId() {
 	}
 
 	// Mock the service call with nil clientId (no clientId in request and no JWT)
-	s.userService.On("Create", *createReq, "system", (*int)(nil)).Return(nil, errors.New("service error"))
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "system", (*int)(nil)).Return(nil, errors.New("service error"))
 
 	app := fiber.New()
 	app.Post("/api/v1/user", s.userHandler.AddUser)
@@ -177,7 +199,7 @@ func (s *HandlerTestSuite) TestAddUser_ServiceError() {
 	}
 
 	// When no JWT is present, handler uses "system" as username and nil clientId
-	s.userService.On("Create", *createReq, "system", (*int)(nil)).Return(nil, errors.New("user already exist"))
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "system", (*int)(nil)).Return(nil, errors.New("user already exist"))
 
 	app := fiber.New()
 	app.Post("/api/v1/user", s.userHandler.AddUser)

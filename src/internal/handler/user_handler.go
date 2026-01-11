@@ -61,17 +61,17 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 	var clientId *int
 
 	// Try to get username and clientId from JWT context (for authenticated requests)
-	jwtUsername, jwtErr := utils.GetUsername(c)
-	jwtClientId, jwtClientErr := utils.GetClientId(c)
+	jwtUsername, jwtErr := utils.GetUsername(c.UserContext())
+	jwtClientId, jwtClientErr := utils.GetClientId(c.UserContext())
 
-	// Check if user is super admin
-	isSuperAdmin, _ := utils.IsSuperAdmin(c)
-	if !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
-	}
-
+	// Check if user is super admin (only if we have JWT context)
 	if jwtErr == nil && jwtClientErr == nil {
-		// Authenticated request - use JWT context
+		// Authenticated request - check permissions
+		isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+		if err != nil || !isSuperAdmin {
+			return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+		}
+		// Use JWT context values
 		username = jwtUsername
 		clientId = &jwtClientId
 	} else {
@@ -80,7 +80,7 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 		username = "system"
 	}
 
-	newUser, err := h.userService.Create(addUser, username, clientId)
+	newUser, err := h.userService.Create(c.UserContext(), addUser, username, clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -108,7 +108,7 @@ func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
 	}()
 
 	// get userId
-	id, err := utils.GetUserId(c)
+	id, err := utils.GetUserId(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
 	}
@@ -147,7 +147,7 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 	}
 
 	// get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
 	}
@@ -179,7 +179,7 @@ func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
 	}()
 
 	// get clientId
-	clientId, err := utils.GetClientId(c)
+	clientId, err := utils.GetClientId(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
 	}

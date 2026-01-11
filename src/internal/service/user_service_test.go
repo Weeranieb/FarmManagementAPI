@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 )
 
 func (s *ServiceTestSuite) TestCreate_Success() {
+	ctx := context.Background()
 	req := dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -52,7 +54,7 @@ func (s *ServiceTestSuite) TestCreate_Success() {
 	})
 
 	// Execute
-	result, err := s.userService.Create(req, userIdentity, clientId)
+	result, err := s.userService.Create(ctx, req, userIdentity, clientId)
 
 	// Assert
 	assert.NoError(s.T(), err)
@@ -65,6 +67,7 @@ func (s *ServiceTestSuite) TestCreate_Success() {
 }
 
 func (s *ServiceTestSuite) TestCreate_UsernameExists() {
+	ctx := context.Background()
 	req := dto.CreateUserRequest{
 		Username:      "existinguser",
 		Password:      "password123",
@@ -85,7 +88,7 @@ func (s *ServiceTestSuite) TestCreate_UsernameExists() {
 	s.userRepo.On("GetByUsername", req.Username).Return(existingUser, nil)
 
 	// Execute
-	result, err := s.userService.Create(req, userIdentity, clientId)
+	result, err := s.userService.Create(ctx, req, userIdentity, clientId)
 
 	// Assert
 	assert.Error(s.T(), err)
@@ -96,6 +99,7 @@ func (s *ServiceTestSuite) TestCreate_UsernameExists() {
 }
 
 func (s *ServiceTestSuite) TestCreate_GetByUsernameError() {
+	ctx := context.Background()
 	req := dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -110,7 +114,7 @@ func (s *ServiceTestSuite) TestCreate_GetByUsernameError() {
 	s.userRepo.On("GetByUsername", req.Username).Return(nil, errors.New("database error"))
 
 	// Execute
-	result, err := s.userService.Create(req, userIdentity, clientId)
+	result, err := s.userService.Create(ctx, req, userIdentity, clientId)
 
 	// Assert
 	assert.Error(s.T(), err)
@@ -287,4 +291,3 @@ func (s *ServiceTestSuite) TestGetUserList_Error() {
 	assert.Nil(s.T(), result)
 	s.userRepo.AssertExpectations(s.T())
 }
-

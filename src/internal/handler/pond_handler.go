@@ -61,7 +61,7 @@ func (h *pondHandlerImpl) AddPond(c *fiber.Ctx) error {
 	}
 
 	// Get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -101,7 +101,7 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 	}
 
 	// Get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -210,7 +210,7 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 	}
 
 	// Get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -251,7 +251,7 @@ func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
 	}
 
 	// Get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}

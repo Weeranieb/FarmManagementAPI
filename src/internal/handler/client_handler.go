@@ -55,7 +55,7 @@ func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
 	}()
 
 	// Check if user is super admin (skip check for system setup - no JWT)
-	isSuperAdmin, err := utils.IsSuperAdmin(c)
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
 	if err != nil {
 		// No JWT token - this is system setup, allow it
 		// Use "system" as the creator
@@ -69,7 +69,7 @@ func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
 	}
 
 	// Get username (for system setup, use "system" if no JWT)
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -112,7 +112,7 @@ func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
 	}
 
 	// Check if user can access this client
-	canAccess, err := utils.CanAccessClient(c, id)
+	canAccess, err := utils.CanAccessClient(c.UserContext(), id)
 	if err != nil || !canAccess {
 		return http.Error(c, 403, "Access denied to this client")
 	}
@@ -154,13 +154,13 @@ func (h *clientHandlerImpl) UpdateClient(c *fiber.Ctx) error {
 	}
 
 	// Check if user can access this client
-	canAccess, err := utils.CanAccessClient(c, updateClient.Id)
+	canAccess, err := utils.CanAccessClient(c.UserContext(), updateClient.Id)
 	if err != nil || !canAccess {
 		return http.Error(c, 403, "Access denied to this client")
 	}
 
 	// Get username
-	username, err := utils.GetUsername(c)
+	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
