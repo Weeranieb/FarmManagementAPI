@@ -6,16 +6,43 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
+	"testing"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
+	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/service/mocks"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 )
+
+// HandlerTestSuite is shared with user_handler_test.go
+// This test suite initializes a local UserHandler for testing
+type UserHandlerTestSuite struct {
+	suite.Suite
+	userService *mocks.MockUserService
+
+	userHandler UserHandler
+}
+
+func (s *UserHandlerTestSuite) SetupTest() {
+	s.userService = mocks.NewMockUserService(s.T())
+	s.userHandler = NewUserHandler(s.userService)
+}
+
+func (s *UserHandlerTestSuite) TearDownTest() {
+	if s.userService != nil {
+		s.userService.ExpectedCalls = nil
+	}
+}
+
+func TestHandlerSuite(t *testing.T) {
+	suite.Run(t, new(UserHandlerTestSuite))
+}
 
 // Helper middleware to set context values for testing
 func setLocalsMiddleware(locals map[string]interface{}) fiber.Handler {
@@ -24,7 +51,7 @@ func setLocalsMiddleware(locals map[string]interface{}) fiber.Handler {
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		
+
 		// Map string keys to context keys
 		if userId, ok := locals["userId"]; ok {
 			ctx = context.WithValue(ctx, utils.UserIdKey(), userId)
@@ -38,14 +65,14 @@ func setLocalsMiddleware(locals map[string]interface{}) fiber.Handler {
 		if userLevel, ok := locals["userLevel"]; ok {
 			ctx = context.WithValue(ctx, utils.UserLevelKey(), userLevel)
 		}
-		
+
 		c.SetUserContext(ctx)
 		return c.Next()
 	}
 }
 
 // Test AddUser handler
-func (s *HandlerTestSuite) TestAddUser_Success() {
+func (s *UserHandlerTestSuite) TestAddUser_Success() {
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -79,7 +106,7 @@ func (s *HandlerTestSuite) TestAddUser_Success() {
 	app.Use(setLocalsMiddleware(map[string]interface{}{
 		"username":  username,
 		"clientId":  clientIdInt, // Set as int, handler will convert to *int
-		"userLevel": userLevel,  // Super admin level
+		"userLevel": userLevel,   // Super admin level
 	}))
 	app.Post("/api/v1/user", s.userHandler.AddUser)
 
@@ -94,7 +121,7 @@ func (s *HandlerTestSuite) TestAddUser_Success() {
 	s.userService.AssertExpectations(s.T())
 }
 
-func (s *HandlerTestSuite) TestAddUser_InvalidBody() {
+func (s *UserHandlerTestSuite) TestAddUser_InvalidBody() {
 	// Invalid JSON might still parse to empty struct and call service, so we need a mock
 	emptyReq := dto.CreateUserRequest{}
 	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), emptyReq, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
@@ -113,7 +140,7 @@ func (s *HandlerTestSuite) TestAddUser_InvalidBody() {
 	s.userService.AssertExpectations(s.T())
 }
 
-func (s *HandlerTestSuite) TestAddUser_ValidationError() {
+func (s *UserHandlerTestSuite) TestAddUser_ValidationError() {
 	req := &dto.CreateUserRequest{
 		Username: "ab",  // Too short
 		Password: "123", // Too short
@@ -137,7 +164,7 @@ func (s *HandlerTestSuite) TestAddUser_ValidationError() {
 	s.userService.AssertExpectations(s.T())
 }
 
-func (s *HandlerTestSuite) TestAddUser_MissingUsername() {
+func (s *UserHandlerTestSuite) TestAddUser_MissingUsername() {
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -163,7 +190,7 @@ func (s *HandlerTestSuite) TestAddUser_MissingUsername() {
 	s.userService.AssertExpectations(s.T())
 }
 
-func (s *HandlerTestSuite) TestAddUser_MissingClientId() {
+func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -189,7 +216,7 @@ func (s *HandlerTestSuite) TestAddUser_MissingClientId() {
 	s.userService.AssertExpectations(s.T())
 }
 
-func (s *HandlerTestSuite) TestAddUser_ServiceError() {
+func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -216,7 +243,7 @@ func (s *HandlerTestSuite) TestAddUser_ServiceError() {
 }
 
 // Test GetUser handler
-func (s *HandlerTestSuite) TestGetUser_Success() {
+func (s *UserHandlerTestSuite) TestGetUser_Success() {
 	userID := 1
 	expectedResponse := &dto.UserResponse{
 		Id:            userID,
@@ -249,7 +276,7 @@ func (s *HandlerTestSuite) TestGetUser_Success() {
 	s.userService.AssertExpectations(s.T())
 }
 
-func (s *HandlerTestSuite) TestGetUser_MissingUserId() {
+func (s *UserHandlerTestSuite) TestGetUser_MissingUserId() {
 	app := fiber.New()
 	app.Get("/api/v1/user", s.userHandler.GetUser)
 
@@ -261,7 +288,7 @@ func (s *HandlerTestSuite) TestGetUser_MissingUserId() {
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 }
 
-func (s *HandlerTestSuite) TestGetUser_ServiceError() {
+func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
 	userID := 1
 	s.userService.On("GetUser", userID).Return(nil, errors.New("user not found"))
 
@@ -281,7 +308,7 @@ func (s *HandlerTestSuite) TestGetUser_ServiceError() {
 }
 
 // Test UpdateUser handler
-func (s *HandlerTestSuite) TestUpdateUser_Success() {
+func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
 	updateUser := &model.User{
 		Id:            1,
 		ClientId:      lo.ToPtr(1),
@@ -312,7 +339,7 @@ func (s *HandlerTestSuite) TestUpdateUser_Success() {
 	s.userService.AssertExpectations(s.T())
 }
 
-func (s *HandlerTestSuite) TestUpdateUser_InvalidBody() {
+func (s *UserHandlerTestSuite) TestUpdateUser_InvalidBody() {
 	app := fiber.New()
 	app.Put("/api/v1/user", s.userHandler.UpdateUser)
 
@@ -325,7 +352,7 @@ func (s *HandlerTestSuite) TestUpdateUser_InvalidBody() {
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 }
 
-func (s *HandlerTestSuite) TestUpdateUser_MissingUsername() {
+func (s *UserHandlerTestSuite) TestUpdateUser_MissingUsername() {
 	updateUser := &model.User{
 		Id:        1,
 		Username:  "updateduser",
@@ -345,7 +372,7 @@ func (s *HandlerTestSuite) TestUpdateUser_MissingUsername() {
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 }
 
-func (s *HandlerTestSuite) TestUpdateUser_ServiceError() {
+func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
 	updateUser := &model.User{
 		Id:        1,
 		Username:  "updateduser",
@@ -373,7 +400,7 @@ func (s *HandlerTestSuite) TestUpdateUser_ServiceError() {
 }
 
 // Test GetUserList handler
-func (s *HandlerTestSuite) TestGetUserList_Success() {
+func (s *UserHandlerTestSuite) TestGetUserList_Success() {
 	clientId := 1
 
 	expectedUsers := []*dto.UserResponse{
@@ -405,11 +432,15 @@ func (s *HandlerTestSuite) TestGetUserList_Success() {
 		},
 	}
 
-	s.userService.On("GetUserList", clientId).Return(expectedUsers, nil)
+	// Super admin can pass nil clientId
+	s.userService.On("GetUserList", mock.MatchedBy(func(ctx interface{}) bool {
+		_, ok := ctx.(context.Context)
+		return ok
+	}), (*int)(nil)).Return(expectedUsers, nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]interface{}{
-		"clientId": clientId,
+		"userLevel": 3, // Super admin - doesn't need clientId
 	}))
 	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
 
@@ -422,7 +453,7 @@ func (s *HandlerTestSuite) TestGetUserList_Success() {
 	s.userService.AssertExpectations(s.T())
 }
 
-func (s *HandlerTestSuite) TestGetUserList_MissingClientId() {
+func (s *UserHandlerTestSuite) TestGetUserList_MissingClientId() {
 	app := fiber.New()
 	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
 
@@ -434,14 +465,16 @@ func (s *HandlerTestSuite) TestGetUserList_MissingClientId() {
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 }
 
-func (s *HandlerTestSuite) TestGetUserList_ServiceError() {
-	clientId := 1
-
-	s.userService.On("GetUserList", clientId).Return(nil, errors.New("database error"))
+func (s *UserHandlerTestSuite) TestGetUserList_ServiceError() {
+	// Super admin can pass nil clientId
+	s.userService.On("GetUserList", mock.MatchedBy(func(ctx interface{}) bool {
+		_, ok := ctx.(context.Context)
+		return ok
+	}), (*int)(nil)).Return(nil, errors.New("database error"))
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]interface{}{
-		"clientId": clientId,
+		"userLevel": 3, // Super admin - doesn't need clientId
 	}))
 	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
 
@@ -453,4 +486,3 @@ func (s *HandlerTestSuite) TestGetUserList_ServiceError() {
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }
-

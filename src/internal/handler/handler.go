@@ -49,7 +49,7 @@ func NewHandler(params HandlerParams) *Handler {
 }
 
 // validateAndParse parses the request body and validates the struct
-func validateAndParse(c *fiber.Ctx, target interface{}, errorCode int) error {
+func validateAndParse(c *fiber.Ctx, target interface{}) error {
 	if err := c.BodyParser(target); err != nil {
 		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
 	}

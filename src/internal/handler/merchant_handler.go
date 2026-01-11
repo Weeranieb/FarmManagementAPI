@@ -54,7 +54,7 @@ func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &createMerchantRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &createMerchantRequest); err != nil {
 		return err
 	}
 

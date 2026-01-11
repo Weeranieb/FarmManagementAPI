@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	model "github.com/weeranieb/boonmafarm-backend/src/internal/model"
 )
@@ -108,9 +110,9 @@ func (_m *MockUserRepository) GetByUsername(username string) (*model.User, error
 	return r0, r1
 }
 
-// ListByClientId provides a mock function with given fields: clientId
-func (_m *MockUserRepository) ListByClientId(clientId int) ([]*model.User, error) {
-	ret := _m.Called(clientId)
+// ListByClientId provides a mock function with given fields: ctx, clientId
+func (_m *MockUserRepository) ListByClientId(ctx context.Context, clientId *int) ([]*model.User, error) {
+	ret := _m.Called(ctx, clientId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByClientId")
@@ -118,19 +120,19 @@ func (_m *MockUserRepository) ListByClientId(clientId int) ([]*model.User, error
 
 	var r0 []*model.User
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int) ([]*model.User, error)); ok {
-		return rf(clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, *int) ([]*model.User, error)); ok {
+		return rf(ctx, clientId)
 	}
-	if rf, ok := ret.Get(0).(func(int) []*model.User); ok {
-		r0 = rf(clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, *int) []*model.User); ok {
+		r0 = rf(ctx, clientId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*model.User)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int) error); ok {
-		r1 = rf(clientId)
+	if rf, ok := ret.Get(1).(func(context.Context, *int) error); ok {
+		r1 = rf(ctx, clientId)
 	} else {
 		r1 = ret.Error(1)
 	}

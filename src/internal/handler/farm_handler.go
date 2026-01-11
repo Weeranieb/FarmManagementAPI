@@ -54,7 +54,7 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &createFarmRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &createFarmRequest); err != nil {
 		return err
 	}
 

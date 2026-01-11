@@ -41,7 +41,7 @@ func (h *feedPriceHistoryHandlerImpl) AddFeedPriceHistory(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &createFeedPriceHistoryRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &createFeedPriceHistoryRequest); err != nil {
 		return err
 	}
 

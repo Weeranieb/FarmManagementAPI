@@ -53,7 +53,7 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &addUser, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &addUser); err != nil {
 		return err
 	}
 
@@ -195,7 +195,7 @@ func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
 		}
 	}
 
-	users, err := h.userService.GetUserList(c.Context(), clientId)
+	users, err := h.userService.GetUserList(c.UserContext(), clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

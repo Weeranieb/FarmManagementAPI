@@ -38,7 +38,7 @@ func NewClientHandler(clientService service.ClientService) ClientHandler {
 // @Tags         client
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body dto.CreateClientRequest true "Client data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -54,27 +54,16 @@ func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
 		}
 	}()
 
-	// Check if user is super admin (skip check for system setup - no JWT)
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil {
-		// No JWT token - this is system setup, allow it
-		// Use "system" as the creator
-	} else if !isSuperAdmin {
-		// Has JWT but not super admin - deny
-		return http.Error(c, 403, "Only super admin can create clients")
-	}
-
-	if err := validateAndParse(c, &createClientRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &createClientRequest); err != nil {
 		return err
 	}
 
-	// Get username (for system setup, use "system" if no JWT)
 	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	newClient, err := h.clientService.Create(createClientRequest, username)
+	newClient, err := h.clientService.Create(c.UserContext(), createClientRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -89,7 +78,7 @@ func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
 // @Tags         client
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        id path int true "Client ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel

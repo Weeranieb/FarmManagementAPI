@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"strconv"
 	"testing"
 	"time"
@@ -355,7 +356,9 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 		s.userRepository.Create(user)
 	}
 
-	users, err := s.userRepository.ListByClientId(clientId)
+	ctx := context.Background()
+	clientIdPtr := &clientId
+	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
 
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), users, 5)
@@ -366,7 +369,10 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 }
 
 func (s *UserRepositoryTestSuite) TestListByClientId_Empty() {
-	users, err := s.userRepository.ListByClientId(999)
+	ctx := context.Background()
+	clientId := 999
+	clientIdPtr := &clientId
+	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
 
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), users)
@@ -388,7 +394,9 @@ func (s *UserRepositoryTestSuite) TestListByClientId_ExcludesSoftDeleted() {
 	s.userRepository.Delete(user2.Id)
 
 	// List should only return non-deleted users
-	users, err := s.userRepository.ListByClientId(clientId)
+	ctx := context.Background()
+	clientIdPtr := &clientId
+	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
 
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), users, 2)
@@ -409,7 +417,10 @@ func (s *UserRepositoryTestSuite) TestListByClientId_FiltersByClientId() {
 	s.userRepository.Create(user3)
 
 	// List users for clientId 1
-	users, err := s.userRepository.ListByClientId(1)
+	ctx := context.Background()
+	clientId := 1
+	clientIdPtr := &clientId
+	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
 
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), users, 2)

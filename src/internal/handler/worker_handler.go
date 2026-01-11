@@ -54,7 +54,7 @@ func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &createWorkerRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &createWorkerRequest); err != nil {
 		return err
 	}
 

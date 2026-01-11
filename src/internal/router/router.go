@@ -51,10 +51,6 @@ func (r *Router) setupPublicAPIRoutes(api fiber.Router) {
 	// Setup auth routes (public, no JWT required)
 	r.setupAuthRoutes(api)
 
-	// System setup routes (public, no JWT required)
-	// These endpoints are for initial system setup only
-	api.Post("/user", r.handlers.UserHandler.AddUser)       // Create user for system setup
-	api.Post("/client", r.handlers.ClientHandler.AddClient) // Create client for system setup
 }
 
 func (r *Router) setupProtectedRoutes(api fiber.Router) {

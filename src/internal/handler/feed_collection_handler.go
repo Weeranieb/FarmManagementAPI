@@ -54,7 +54,7 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &createFeedCollectionRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &createFeedCollectionRequest); err != nil {
 		return err
 	}
 

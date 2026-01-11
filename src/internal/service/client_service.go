@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -9,7 +11,7 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=ClientService --output=./mocks --outpkg=service --filename=client_service.go --structname=MockClientService --with-expecter=false
 type ClientService interface {
-	Create(request dto.CreateClientRequest, username string) (*dto.ClientResponse, error)
+	Create(ctx context.Context, request dto.CreateClientRequest, username string) (*dto.ClientResponse, error)
 	Get(id int) (*dto.ClientResponse, error)
 	Update(request *model.Client, username string) error
 	GetList() ([]*dto.ClientResponse, error)
@@ -25,9 +27,9 @@ func NewClientService(clientRepo repository.ClientRepository) ClientService {
 	}
 }
 
-func (s *clientService) Create(request dto.CreateClientRequest, username string) (*dto.ClientResponse, error) {
+func (s *clientService) Create(ctx context.Context, request dto.CreateClientRequest, username string) (*dto.ClientResponse, error) {
 	// Check if client with same name already exists
-	checkClient, err := s.clientRepo.GetByName(request.Name)
+	checkClient, err := s.clientRepo.GetByName(ctx, request.Name)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}

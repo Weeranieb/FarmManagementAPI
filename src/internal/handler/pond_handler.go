@@ -56,7 +56,7 @@ func (h *pondHandlerImpl) AddPond(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &createPondRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &createPondRequest); err != nil {
 		return err
 	}
 
@@ -96,7 +96,7 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &createPondsRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &createPondsRequest); err != nil {
 		return err
 	}
 

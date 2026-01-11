@@ -3,6 +3,8 @@
 package service
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	dto "github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 
@@ -14,9 +16,9 @@ type MockClientService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: request, username
-func (_m *MockClientService) Create(request dto.CreateClientRequest, username string) (*dto.ClientResponse, error) {
-	ret := _m.Called(request, username)
+// Create provides a mock function with given fields: ctx, request, username
+func (_m *MockClientService) Create(ctx context.Context, request dto.CreateClientRequest, username string) (*dto.ClientResponse, error) {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -24,19 +26,19 @@ func (_m *MockClientService) Create(request dto.CreateClientRequest, username st
 
 	var r0 *dto.ClientResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(dto.CreateClientRequest, string) (*dto.ClientResponse, error)); ok {
-		return rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateClientRequest, string) (*dto.ClientResponse, error)); ok {
+		return rf(ctx, request, username)
 	}
-	if rf, ok := ret.Get(0).(func(dto.CreateClientRequest, string) *dto.ClientResponse); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateClientRequest, string) *dto.ClientResponse); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*dto.ClientResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(dto.CreateClientRequest, string) error); ok {
-		r1 = rf(request, username)
+	if rf, ok := ret.Get(1).(func(context.Context, dto.CreateClientRequest, string) error); ok {
+		r1 = rf(ctx, request, username)
 	} else {
 		r1 = ret.Error(1)
 	}

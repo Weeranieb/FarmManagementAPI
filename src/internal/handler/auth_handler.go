@@ -48,7 +48,7 @@ func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &registerRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &registerRequest); err != nil {
 		return err
 	}
 
@@ -82,7 +82,7 @@ func (h *authHandlerImpl) Login(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &loginRequest, errors.ErrValidationFailed.Code); err != nil {
+	if err := validateAndParse(c, &loginRequest); err != nil {
 		return err
 	}
 

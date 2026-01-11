@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -12,7 +13,7 @@ import (
 type ClientRepository interface {
 	Create(client *model.Client) error
 	GetByID(id int) (*model.Client, error)
-	GetByName(name string) (*model.Client, error)
+	GetByName(ctx context.Context, name string) (*model.Client, error)
 	Update(client *model.Client) error
 	List() ([]*model.Client, error)
 }
@@ -41,9 +42,9 @@ func (r *clientRepository) GetByID(id int) (*model.Client, error) {
 	return &client, nil
 }
 
-func (r *clientRepository) GetByName(name string) (*model.Client, error) {
+func (r *clientRepository) GetByName(ctx context.Context, name string) (*model.Client, error) {
 	var client model.Client
-	err := r.db.Where("name = ? AND deleted_at IS NULL", name).First(&client).Error
+	err := r.db.WithContext(ctx).Where("name = ? AND deleted_at IS NULL", name).First(&client).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

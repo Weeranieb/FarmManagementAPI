@@ -76,9 +76,9 @@ func (_m *MockUserService) GetUser(id int) (*dto.UserResponse, error) {
 	return r0, r1
 }
 
-// GetUserList provides a mock function with given fields: clientId
-func (_m *MockUserService) GetUserList(clientId int) ([]*dto.UserResponse, error) {
-	ret := _m.Called(clientId)
+// GetUserList provides a mock function with given fields: ctx, clientId
+func (_m *MockUserService) GetUserList(ctx context.Context, clientId *int) ([]*dto.UserResponse, error) {
+	ret := _m.Called(ctx, clientId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetUserList")
@@ -86,19 +86,19 @@ func (_m *MockUserService) GetUserList(clientId int) ([]*dto.UserResponse, error
 
 	var r0 []*dto.UserResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int) ([]*dto.UserResponse, error)); ok {
-		return rf(clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, *int) ([]*dto.UserResponse, error)); ok {
+		return rf(ctx, clientId)
 	}
-	if rf, ok := ret.Get(0).(func(int) []*dto.UserResponse); ok {
-		r0 = rf(clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, *int) []*dto.UserResponse); ok {
+		r0 = rf(ctx, clientId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*dto.UserResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int) error); ok {
-		r1 = rf(clientId)
+	if rf, ok := ret.Get(1).(func(context.Context, *int) error); ok {
+		r1 = rf(ctx, clientId)
 	} else {
 		r1 = ret.Error(1)
 	}

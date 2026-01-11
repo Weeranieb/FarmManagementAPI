@@ -213,7 +213,9 @@ func (s *ServiceTestSuite) TestUpdate_Error() {
 }
 
 func (s *ServiceTestSuite) TestGetUserList_Success() {
+	ctx := context.Background()
 	clientId := 1
+	clientIdPtr := &clientId
 
 	expectedTime := time.Now()
 	expectedUsers := []*model.User{
@@ -249,10 +251,10 @@ func (s *ServiceTestSuite) TestGetUserList_Success() {
 		},
 	}
 
-	s.userRepo.On("ListByClientId", clientId).Return(expectedUsers, nil)
+	s.userRepo.On("ListByClientId", ctx, clientIdPtr).Return(expectedUsers, nil)
 
 	// Execute
-	result, err := s.userService.GetUserList(clientId)
+	result, err := s.userService.GetUserList(ctx, clientIdPtr)
 
 	// Assert
 	assert.NoError(s.T(), err)
@@ -264,12 +266,14 @@ func (s *ServiceTestSuite) TestGetUserList_Success() {
 }
 
 func (s *ServiceTestSuite) TestGetUserList_Empty() {
+	ctx := context.Background()
 	clientId := 999
+	clientIdPtr := &clientId
 
-	s.userRepo.On("ListByClientId", clientId).Return([]*model.User{}, nil)
+	s.userRepo.On("ListByClientId", ctx, clientIdPtr).Return([]*model.User{}, nil)
 
 	// Execute
-	result, err := s.userService.GetUserList(clientId)
+	result, err := s.userService.GetUserList(ctx, clientIdPtr)
 
 	// Assert
 	assert.NoError(s.T(), err)
@@ -279,12 +283,14 @@ func (s *ServiceTestSuite) TestGetUserList_Empty() {
 }
 
 func (s *ServiceTestSuite) TestGetUserList_Error() {
+	ctx := context.Background()
 	clientId := 1
+	clientIdPtr := &clientId
 
-	s.userRepo.On("ListByClientId", clientId).Return(nil, errors.New("database error"))
+	s.userRepo.On("ListByClientId", ctx, clientIdPtr).Return(nil, errors.New("database error"))
 
 	// Execute
-	result, err := s.userService.GetUserList(clientId)
+	result, err := s.userService.GetUserList(ctx, clientIdPtr)
 
 	// Assert
 	assert.Error(s.T(), err)

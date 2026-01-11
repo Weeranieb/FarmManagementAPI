@@ -178,6 +178,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Add a new client with the provided details. Only super admin can create clients.",
                 "consumes": [
                     "application/json"
@@ -190,13 +195,6 @@ const docTemplate = `{
                 ],
                 "summary": "Add a new client",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Client data",
                         "name": "body",
@@ -237,6 +235,11 @@ const docTemplate = `{
         },
         "/client/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve a client by its ID. Super admin can access any client, others can only access their own client.",
                 "consumes": [
                     "application/json"
@@ -249,13 +252,6 @@ const docTemplate = `{
                 ],
                 "summary": "Get a client by ID",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "integer",
                         "description": "Client ID",

@@ -401,11 +401,6 @@ paths:
       description: Add a new client with the provided details. Only super admin can
         create clients.
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Client data
         in: body
         name: body
@@ -431,6 +426,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Add a new client
       tags:
       - client
@@ -484,11 +481,6 @@ paths:
       description: Retrieve a client by its ID. Super admin can access any client,
         others can only access their own client.
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Client ID
         in: path
         name: id
@@ -517,6 +509,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Get a client by ID
       tags:
       - client
