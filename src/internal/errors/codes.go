@@ -42,6 +42,11 @@ var (
 		Code:    500023,
 		Message: "Token expired",
 	}
+
+	ErrAuthPermissionDenied = &AppError{
+		Code:    500024,
+		Message: "Permission denied",
+	}
 )
 
 // User errors (500030-500039)

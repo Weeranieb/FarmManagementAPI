@@ -64,6 +64,12 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 	jwtUsername, jwtErr := utils.GetUsername(c)
 	jwtClientId, jwtClientErr := utils.GetClientId(c)
 
+	// Check if user is super admin
+	isSuperAdmin, _ := utils.IsSuperAdmin(c)
+	if !isSuperAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
 	if jwtErr == nil && jwtClientErr == nil {
 		// Authenticated request - use JWT context
 		username = jwtUsername
@@ -72,15 +78,6 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 		// System setup - bypass authentication
 		// Use "system" as the creator for setup operations
 		username = "system"
-
-		// For system setup, use ClientId from request if provided, otherwise allow NULL
-		// (Super admin can be created without a client during initial setup)
-		if addUser.ClientId != nil {
-			clientId = addUser.ClientId
-		} else {
-			// Allow NULL clientId for system setup (super admin)
-			clientId = nil
-		}
 	}
 
 	newUser, err := h.userService.Create(addUser, username, clientId)
