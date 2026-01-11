@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -64,7 +65,7 @@ func (s *UserRepositoryTestSuite) TestCreate_Success() {
 		LastName:      nil,
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 
 	err := s.userRepository.Create(user)
@@ -84,7 +85,7 @@ func (s *UserRepositoryTestSuite) TestCreate_DuplicateUsername() {
 		FirstName:     "User",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 	err := s.userRepository.Create(user1)
 	assert.NoError(s.T(), err)
@@ -95,7 +96,7 @@ func (s *UserRepositoryTestSuite) TestCreate_DuplicateUsername() {
 		FirstName:     "User2",
 		UserLevel:     1,
 		ContactNumber: "0987654321",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 
 	err = s.userRepository.Create(user2)
@@ -115,7 +116,7 @@ func (s *UserRepositoryTestSuite) TestGetByID_Success() {
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 	err := s.userRepository.Create(user)
 	assert.NoError(s.T(), err)
@@ -161,7 +162,7 @@ func (s *UserRepositoryTestSuite) TestGetByUsername_Success() {
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 	err := s.userRepository.Create(user)
 	assert.NoError(s.T(), err)
@@ -191,7 +192,7 @@ func (s *UserRepositoryTestSuite) TestUpdate_Success() {
 		FirstName:     "Old",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 	err := s.userRepository.Create(user)
 	assert.NoError(s.T(), err)
@@ -221,7 +222,7 @@ func (s *UserRepositoryTestSuite) TestUpdate_PartialFields() {
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 	err := s.userRepository.Create(user)
 	assert.NoError(s.T(), err)
@@ -247,7 +248,7 @@ func (s *UserRepositoryTestSuite) TestUpdate_NonExistent() {
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 
 	// GORM Save will create if not found, so this might not error
@@ -268,7 +269,7 @@ func (s *UserRepositoryTestSuite) TestDelete_Success() {
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 	err := s.userRepository.Create(user)
 	assert.NoError(s.T(), err)
@@ -299,9 +300,9 @@ func (s *UserRepositoryTestSuite) TestDelete_NotFound() {
 
 func (s *UserRepositoryTestSuite) TestDelete_MultipleUsers() {
 	// Create multiple users
-	user1 := &model.User{Username: "user1", Password: "pass1", FirstName: "User1", UserLevel: 1, ContactNumber: "111", ClientId: 1}
-	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: 1}
-	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: 1}
+	user1 := &model.User{Username: "user1", Password: "pass1", FirstName: "User1", UserLevel: 1, ContactNumber: "111", ClientId: lo.ToPtr(1)}
+	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: lo.ToPtr(1)}
+	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: lo.ToPtr(1)}
 
 	s.userRepository.Create(user1)
 	s.userRepository.Create(user2)
@@ -336,7 +337,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 			FirstName:     "User" + strconv.Itoa(i),
 			UserLevel:     1,
 			ContactNumber: "123456789" + strconv.Itoa(i),
-			ClientId:      clientId,
+			ClientId:      &clientId,
 		}
 		s.userRepository.Create(user)
 	}
@@ -349,7 +350,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 			FirstName:     "Other" + strconv.Itoa(i),
 			UserLevel:     1,
 			ContactNumber: "987654321" + strconv.Itoa(i),
-			ClientId:      2,
+			ClientId:      lo.ToPtr(2),
 		}
 		s.userRepository.Create(user)
 	}
@@ -360,7 +361,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 	assert.Len(s.T(), users, 5)
 	// Verify all users belong to the correct clientId
 	for _, user := range users {
-		assert.Equal(s.T(), clientId, user.ClientId)
+		assert.Equal(s.T(), &clientId, user.ClientId)
 	}
 }
 
@@ -375,9 +376,9 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Empty() {
 func (s *UserRepositoryTestSuite) TestListByClientId_ExcludesSoftDeleted() {
 	clientId := 1
 	// Create users
-	user1 := &model.User{Username: "user1", Password: "pass1", FirstName: "User1", UserLevel: 1, ContactNumber: "111", ClientId: clientId}
-	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: clientId}
-	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: clientId}
+	user1 := &model.User{Username: "user1", Password: "pass1", FirstName: "User1", UserLevel: 1, ContactNumber: "111", ClientId: &clientId}
+	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: &clientId}
+	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: &clientId}
 
 	s.userRepository.Create(user1)
 	s.userRepository.Create(user2)
@@ -399,9 +400,9 @@ func (s *UserRepositoryTestSuite) TestListByClientId_ExcludesSoftDeleted() {
 
 func (s *UserRepositoryTestSuite) TestListByClientId_FiltersByClientId() {
 	// Create users for different clientIds
-	user1 := &model.User{Username: "user1", Password: "pass1", FirstName: "User1", UserLevel: 1, ContactNumber: "111", ClientId: 1}
-	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: 1}
-	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: 2}
+	user1 := &model.User{Username: "user1", Password: "pass1", FirstName: "User1", UserLevel: 1, ContactNumber: "111", ClientId: lo.ToPtr(1)}
+	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: lo.ToPtr(1)}
+	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: lo.ToPtr(2)}
 
 	s.userRepository.Create(user1)
 	s.userRepository.Create(user2)
@@ -414,7 +415,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_FiltersByClientId() {
 	assert.Len(s.T(), users, 2)
 	// Verify all users belong to clientId 1
 	for _, user := range users {
-		assert.Equal(s.T(), 1, user.ClientId)
+		assert.Equal(s.T(), lo.ToPtr(1), user.ClientId)
 		assert.NotEqual(s.T(), user3.Id, user.Id)
 	}
 }
@@ -432,7 +433,7 @@ func (s *UserRepositoryTestSuite) TestCreate_RequiredFields() {
 		FirstName:     "",
 		UserLevel:     0,
 		ContactNumber: "",
-		ClientId:      0,
+		ClientId:      nil,
 	}
 
 	err := s.userRepository.Create(user)
@@ -453,7 +454,7 @@ func (s *UserRepositoryTestSuite) TestGetByID_AfterDelete() {
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 	s.userRepository.Create(user)
 	userID := user.Id
@@ -479,7 +480,7 @@ func (s *UserRepositoryTestSuite) TestMultipleOperations() {
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 	}
 	err := s.userRepository.Create(user)
 	assert.NoError(s.T(), err)
@@ -514,3 +515,4 @@ func (s *UserRepositoryTestSuite) TestMultipleOperations() {
 	assert.NoError(s.T(), err)
 	assert.Nil(s.T(), deletedResult)
 }
+

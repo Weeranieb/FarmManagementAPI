@@ -15,7 +15,7 @@ type MockUserService struct {
 }
 
 // Create provides a mock function with given fields: request, userIdentity, clientId
-func (_m *MockUserService) Create(request dto.CreateUserRequest, userIdentity string, clientId int) (*dto.UserResponse, error) {
+func (_m *MockUserService) Create(request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error) {
 	ret := _m.Called(request, userIdentity, clientId)
 
 	if len(ret) == 0 {
@@ -24,10 +24,10 @@ func (_m *MockUserService) Create(request dto.CreateUserRequest, userIdentity st
 
 	var r0 *dto.UserResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(dto.CreateUserRequest, string, int) (*dto.UserResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(dto.CreateUserRequest, string, *int) (*dto.UserResponse, error)); ok {
 		return rf(request, userIdentity, clientId)
 	}
-	if rf, ok := ret.Get(0).(func(dto.CreateUserRequest, string, int) *dto.UserResponse); ok {
+	if rf, ok := ret.Get(0).(func(dto.CreateUserRequest, string, *int) *dto.UserResponse); ok {
 		r0 = rf(request, userIdentity, clientId)
 	} else {
 		if ret.Get(0) != nil {
@@ -35,7 +35,7 @@ func (_m *MockUserService) Create(request dto.CreateUserRequest, userIdentity st
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(dto.CreateUserRequest, string, int) error); ok {
+	if rf, ok := ret.Get(1).(func(dto.CreateUserRequest, string, *int) error); ok {
 		r1 = rf(request, userIdentity, clientId)
 	} else {
 		r1 = ret.Error(1)

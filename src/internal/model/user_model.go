@@ -3,7 +3,7 @@ package model
 
 type User struct {
 	Id            int     `json:"id" gorm:"column:id;primaryKey;autoIncrement"`
-	ClientId      int     `json:"clientId" gorm:"column:client_id"`
+	ClientId      *int    `json:"clientId" gorm:"column:client_id"`
 	Username      string  `json:"username" gorm:"column:username;uniqueIndex"`
 	Password      string  `json:"-" gorm:"column:password"`
 	FirstName     string  `json:"firstName" gorm:"column:first_name"`

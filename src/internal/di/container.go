@@ -16,6 +16,7 @@ func NewContainer(conf *config.Config) *dig.Container {
 
 	// Repository
 	c.Provide(repository.NewUserRepository)
+	c.Provide(repository.NewClientRepository)
 	c.Provide(repository.NewFarmRepository)
 	c.Provide(repository.NewMerchantRepository)
 	c.Provide(repository.NewPondRepository)
@@ -26,6 +27,7 @@ func NewContainer(conf *config.Config) *dig.Container {
 	// Service
 	c.Provide(service.NewUserService)
 	c.Provide(service.NewAuthService)
+	c.Provide(service.NewClientService)
 	c.Provide(service.NewFarmService)
 	c.Provide(service.NewMerchantService)
 	c.Provide(service.NewPondService)
@@ -36,6 +38,7 @@ func NewContainer(conf *config.Config) *dig.Container {
 	// Handler
 	c.Provide(handler.NewUserHandler)
 	c.Provide(handler.NewAuthHandler)
+	c.Provide(handler.NewClientHandler)
 	c.Provide(handler.NewFarmHandler)
 	c.Provide(handler.NewMerchantHandler)
 	c.Provide(handler.NewPondHandler)

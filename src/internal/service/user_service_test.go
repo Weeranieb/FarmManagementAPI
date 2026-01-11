@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
@@ -15,12 +16,12 @@ func (s *ServiceTestSuite) TestCreate_Success() {
 		Username:      "testuser",
 		Password:      "password123",
 		FirstName:     "Test",
-		LastName:      stringPtr("User"),
+		LastName:      lo.ToPtr("User"),
 		UserLevel:     1,
 		ContactNumber: "1234567890",
 	}
 	userIdentity := "admin"
-	clientId := 1
+	clientId := lo.ToPtr(1)
 
 	// Mock repository calls - GetByUsername returns (nil, nil) when not found
 	s.userRepo.On("GetByUsername", req.Username).Return(nil, nil)
@@ -72,7 +73,7 @@ func (s *ServiceTestSuite) TestCreate_UsernameExists() {
 		ContactNumber: "1234567890",
 	}
 	userIdentity := "admin"
-	clientId := 1
+	clientId := lo.ToPtr(1)
 
 	existingUser := &model.User{
 		Id:        1,
@@ -103,7 +104,7 @@ func (s *ServiceTestSuite) TestCreate_GetByUsernameError() {
 		ContactNumber: "1234567890",
 	}
 	userIdentity := "admin"
-	clientId := 1
+	clientId := lo.ToPtr(1)
 
 	// GetByUsername returns an error (not a not-found case)
 	s.userRepo.On("GetByUsername", req.Username).Return(nil, errors.New("database error"))
@@ -124,10 +125,10 @@ func (s *ServiceTestSuite) TestGetUser_Success() {
 		Id:            userID,
 		Username:      "testuser",
 		FirstName:     "Test",
-		LastName:      stringPtr("User"),
+		LastName:      lo.ToPtr("User"),
 		UserLevel:     1,
 		ContactNumber: "1234567890",
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 		BaseModel: model.BaseModel{
 			CreatedAt: expectedTime,
 			UpdatedAt: expectedTime,
@@ -168,10 +169,10 @@ func (s *ServiceTestSuite) TestUpdate_Success() {
 	userIdentity := "admin"
 	updateUser := &model.User{
 		Id:            1,
-		ClientId:      1,
+		ClientId:      lo.ToPtr(1),
 		Username:      "updateduser",
 		FirstName:     "Updated",
-		LastName:      stringPtr("User"),
+		LastName:      lo.ToPtr("User"),
 		UserLevel:     1,
 		ContactNumber: "0987654321",
 		BaseModel: model.BaseModel{
@@ -214,10 +215,10 @@ func (s *ServiceTestSuite) TestGetUserList_Success() {
 	expectedUsers := []*model.User{
 		{
 			Id:            1,
-			ClientId:      clientId,
+			ClientId:      &clientId,
 			Username:      "user1",
 			FirstName:     "User",
-			LastName:      stringPtr("One"),
+			LastName:      lo.ToPtr("One"),
 			UserLevel:     1,
 			ContactNumber: "1111111111",
 			BaseModel: model.BaseModel{
@@ -229,10 +230,10 @@ func (s *ServiceTestSuite) TestGetUserList_Success() {
 		},
 		{
 			Id:            2,
-			ClientId:      clientId,
+			ClientId:      &clientId,
 			Username:      "user2",
 			FirstName:     "User",
-			LastName:      stringPtr("Two"),
+			LastName:      lo.ToPtr("Two"),
 			UserLevel:     1,
 			ContactNumber: "2222222222",
 			BaseModel: model.BaseModel{
@@ -287,7 +288,3 @@ func (s *ServiceTestSuite) TestGetUserList_Error() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-// Helper function to create string pointer
-func stringPtr(s string) *string {
-	return &s
-}

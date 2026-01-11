@@ -29,7 +29,7 @@ var (
 // @version 1.0
 // @description A Boonma Farm application with Fiber, GORM, and Dependency Injection
 // @host localhost:8080
-// @BasePath /api/v1
+// @BasePath /
 func main() {
 	conf := LoadConfigFunc()
 

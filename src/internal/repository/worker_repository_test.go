@@ -3,6 +3,7 @@ package repository
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -51,7 +52,7 @@ func (s *WorkerRepositoryTestSuite) TestCreate_Success() {
 		ClientId:    1,
 		FarmGroupId: 1,
 		FirstName:   "John",
-		LastName:    stringPtr("Doe"),
+		LastName:    lo.ToPtr("Doe"),
 		Nationality: "Thai",
 		Salary:      50000,
 		IsActive:    true,
@@ -131,7 +132,4 @@ func (s *WorkerRepositoryTestSuite) TestUpdate_Success() {
 	assert.Equal(s.T(), "Johnny", updated.FirstName)
 }
 
-func stringPtr(s string) *string {
-	return &s
-}
 

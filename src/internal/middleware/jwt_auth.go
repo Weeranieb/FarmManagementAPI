@@ -19,6 +19,7 @@ func JWTAuthMiddleware() fiber.Handler {
 		publicPaths := []string{
 			"/api/v1/auth/register",
 			"/api/v1/auth/login",
+			// "/api/v1/user", // System setup user endpoint
 			"/swagger",
 			"/health",
 		}
@@ -79,4 +80,3 @@ func JWTAuthMiddleware() fiber.Handler {
 		return c.Next()
 	}
 }
-

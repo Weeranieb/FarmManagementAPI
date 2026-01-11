@@ -1,5 +1,18 @@
-basePath: /api/v1
+basePath: /
 definitions:
+  dto.CreateClientRequest:
+    properties:
+      contactNumber:
+        type: string
+      name:
+        type: string
+      ownerName:
+        type: string
+    required:
+    - contactNumber
+    - name
+    - ownerName
+    type: object
   dto.CreateFarmRequest:
     properties:
       clientId:
@@ -66,6 +79,8 @@ definitions:
     type: object
   dto.CreateUserRequest:
     properties:
+      clientId:
+        type: integer
       contactNumber:
         type: string
       firstName:
@@ -152,6 +167,27 @@ definitions:
       error: {}
       result:
         type: boolean
+    type: object
+  model.Client:
+    properties:
+      contactNumber:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: integer
+      isActive:
+        type: boolean
+      name:
+        type: string
+      ownerName:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
     type: object
   model.Farm:
     properties:
@@ -358,6 +394,132 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /api/v1/client:
+    post:
+      consumes:
+      - application/json
+      description: Add a new client with the provided details. Only super admin can
+        create clients.
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Client data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateClientRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      summary: Add a new client
+      tags:
+      - client
+    put:
+      consumes:
+      - application/json
+      description: Update details of a client. Super admin can update any client,
+        others can only update their own client.
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Client data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.Client'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      summary: Update client
+      tags:
+      - client
+  /api/v1/client/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a client by its ID. Super admin can access any client,
+        others can only access their own client.
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Client ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      summary: Get a client by ID
+      tags:
+      - client
   /api/v1/farm:
     get:
       consumes:
@@ -986,8 +1148,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new user with the provided details
+      description: Create a new user with the provided details. For system setup,
+        this endpoint is public and allows creating users without authentication.
+        When authenticated, uses JWT context for creator and clientId.
       parameters:
+      - description: Bearer token (optional for system setup)
+        in: header
+        name: Authorization
+        type: string
       - description: User data
         in: body
         name: body

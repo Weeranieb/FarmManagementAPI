@@ -61,6 +61,7 @@ func createTestContainer(conf *config.Config) *dig.Container {
 
 	// Repository
 	c.Provide(repository.NewUserRepository)
+	c.Provide(repository.NewClientRepository)
 	c.Provide(repository.NewFarmRepository)
 	c.Provide(repository.NewMerchantRepository)
 	c.Provide(repository.NewPondRepository)
@@ -71,6 +72,7 @@ func createTestContainer(conf *config.Config) *dig.Container {
 	// Service
 	c.Provide(service.NewUserService)
 	c.Provide(service.NewAuthService)
+	c.Provide(service.NewClientService)
 	c.Provide(service.NewFarmService)
 	c.Provide(service.NewMerchantService)
 	c.Provide(service.NewPondService)
@@ -81,6 +83,7 @@ func createTestContainer(conf *config.Config) *dig.Container {
 	// Handler
 	c.Provide(handler.NewUserHandler)
 	c.Provide(handler.NewAuthHandler)
+	c.Provide(handler.NewClientHandler)
 	c.Provide(handler.NewFarmHandler)
 	c.Provide(handler.NewMerchantHandler)
 	c.Provide(handler.NewPondHandler)
@@ -186,6 +189,7 @@ func (s *ContainerTestSuite) TestNewContainer_ProvidesHandler() {
 	assert.NotNil(s.T(), mainHandler)
 	assert.NotNil(s.T(), mainHandler.UserHandler)
 	assert.NotNil(s.T(), mainHandler.AuthHandler)
+	assert.NotNil(s.T(), mainHandler.ClientHandler)
 	assert.NotNil(s.T(), mainHandler.FarmHandler)
 	assert.NotNil(s.T(), mainHandler.MerchantHandler)
 	assert.NotNil(s.T(), mainHandler.PondHandler)

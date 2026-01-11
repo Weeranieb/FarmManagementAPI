@@ -47,7 +47,7 @@ func (s *authService) Register(request dto.RegisterRequest) (*dto.UserResponse, 
 	}
 
 	newUser := &model.User{
-		ClientId:      request.ClientId,
+		ClientId:      &request.ClientId,
 		Username:      request.Username,
 		Password:      string(hashedPassword),
 		FirstName:     request.FirstName,

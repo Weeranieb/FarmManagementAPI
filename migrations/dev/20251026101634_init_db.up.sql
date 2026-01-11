@@ -1,5 +1,5 @@
 CREATE TABLE clients (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name varchar NOT NULL,
   owner_name varchar NOT NULL,
   contact_number varchar NOT NULL,
@@ -12,8 +12,8 @@ CREATE TABLE clients (
 );
 
 CREATE TABLE users (
-  id bigint PRIMARY KEY,
-  client_id bigint NOT NULL,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  client_id bigint,
   username varchar NOT NULL,
   password varchar NOT NULL,
   first_name varchar NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE farms (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   client_id bigint NOT NULL,
   code varchar NOT NULL,
   name varchar NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE farms (
 );
 
 CREATE TABLE farm_groups (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   client_id bigint NOT NULL,
   code varchar NOT NULL,
   name varchar NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE farm_groups (
 );
 
 CREATE TABLE farm_on_farm_group (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   farm_id bigint NOT NULL,
   farm_group_id bigint NOT NULL,
   deleted_at timestamp,
@@ -63,7 +63,7 @@ CREATE TABLE farm_on_farm_group (
 );
 
 CREATE TABLE ponds (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   farm_id bigint NOT NULL,
   code varchar NOT NULL,
   name varchar NOT NULL,
@@ -75,7 +75,7 @@ CREATE TABLE ponds (
 );
 
 CREATE TABLE active_ponds (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   pond_id bigint NOT NULL,
   start_date date NOT NULL,
   end_date date,
@@ -88,7 +88,7 @@ CREATE TABLE active_ponds (
 );
 
 CREATE TABLE activities (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   active_pond_id bigint NOT NULL,
   to_active_pond_id bigint,
   mode varchar NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE activities (
 );
 
 CREATE TABLE additional_costs (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   activity_id bigint NOT NULL,
   title varchar NOT NULL,
   cost float NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE additional_costs (
 );
 
 CREATE TABLE merchants (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name varchar NOT NULL,
   contact_number varchar NOT NULL,
   location varchar NOT NULL,
@@ -131,7 +131,7 @@ CREATE TABLE merchants (
 );
 
 CREATE TABLE sell_details (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   sell_id bigint NOT NULL,
   size varchar NOT NULL,
   fish_type varchar,
@@ -146,7 +146,7 @@ CREATE TABLE sell_details (
 );
 
 CREATE TABLE bills (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   type varchar NOT NULL,
   other varchar,
   farm_group_id integer NOT NULL,
@@ -160,7 +160,7 @@ CREATE TABLE bills (
 );
 
 CREATE TABLE workers (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   client_id bigint NOT NULL,
   farm_group_id bigint NOT NULL,
   first_name varchar NOT NULL,
@@ -178,7 +178,7 @@ CREATE TABLE workers (
 );
 
 CREATE TABLE feed_collections (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   client_id bigint NOT NULL,
   code varchar NOT NULL,
   name varchar NOT NULL,
@@ -191,7 +191,7 @@ CREATE TABLE feed_collections (
 );
 
 CREATE TABLE daily_feeds (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   active_pond_id bigint,
   pond_id bigint NOT NULL,
   feed_collection_id bigint NOT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE daily_feeds (
 );
 
 CREATE TABLE feed_price_histories (
-  id bigint PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   feed_collection_id bigint NOT NULL,
   price float NOT NULL,
   price_updated_date date NOT NULL,

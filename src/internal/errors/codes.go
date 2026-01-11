@@ -177,3 +177,21 @@ var (
 		Message: "Invalid feed price history input",
 	}
 )
+
+// Client errors (500110-500119)
+var (
+	ErrClientNotFound = &AppError{
+		Code:    500110,
+		Message: "Client not found",
+	}
+
+	ErrClientAlreadyExists = &AppError{
+		Code:    500111,
+		Message: "Client already exists",
+	}
+
+	ErrClientInvalidInput = &AppError{
+		Code:    500112,
+		Message: "Invalid client input",
+	}
+)

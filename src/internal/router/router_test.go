@@ -38,6 +38,7 @@ func (s *RouterTestSuite) SetupTest() {
 	
 	// Create handlers manually with test database
 	userRepo := repository.NewUserRepository(db)
+	clientRepo := repository.NewClientRepository(db)
 	farmRepo := repository.NewFarmRepository(db)
 	merchantRepo := repository.NewMerchantRepository(db)
 	pondRepo := repository.NewPondRepository(db)
@@ -47,6 +48,7 @@ func (s *RouterTestSuite) SetupTest() {
 	
 	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(userRepo)
+	clientService := service.NewClientService(clientRepo)
 	farmService := service.NewFarmService(farmRepo)
 	merchantService := service.NewMerchantService(merchantRepo)
 	pondService := service.NewPondService(pondRepo)
@@ -56,6 +58,7 @@ func (s *RouterTestSuite) SetupTest() {
 	
 	userHandler := handler.NewUserHandler(userService)
 	authHandler := handler.NewAuthHandler(authService)
+	clientHandler := handler.NewClientHandler(clientService)
 	farmHandler := handler.NewFarmHandler(farmService)
 	merchantHandler := handler.NewMerchantHandler(merchantService)
 	pondHandler := handler.NewPondHandler(pondService)
@@ -66,6 +69,7 @@ func (s *RouterTestSuite) SetupTest() {
 	handlers := handler.NewHandler(handler.HandlerParams{
 		UserHandler:             userHandler,
 		AuthHandler:            authHandler,
+		ClientHandler:          clientHandler,
 		FarmHandler:            farmHandler,
 		MerchantHandler:        merchantHandler,
 		PondHandler:            pondHandler,

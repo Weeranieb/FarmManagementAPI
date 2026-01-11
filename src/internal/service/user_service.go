@@ -11,7 +11,7 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=UserService --output=./mocks --outpkg=service --filename=user_service.go --structname=MockUserService --with-expecter=false
 type UserService interface {
-	Create(request dto.CreateUserRequest, userIdentity string, clientId int) (*dto.UserResponse, error)
+	Create(request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error)
 	GetUser(id int) (*dto.UserResponse, error)
 	Update(request *model.User, userIdentity string) error
 	GetUserList(clientId int) ([]*dto.UserResponse, error)
@@ -25,7 +25,7 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 	return &userService{userRepo: userRepo}
 }
 
-func (s *userService) Create(request dto.CreateUserRequest, userIdentity string, clientId int) (*dto.UserResponse, error) {
+func (s *userService) Create(request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error) {
 	// check user if exist
 	checkUser, err := s.userRepo.GetByUsername(request.Username)
 	if err != nil {

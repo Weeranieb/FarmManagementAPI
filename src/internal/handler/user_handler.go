@@ -34,10 +34,11 @@ func NewUserHandler(userService service.UserService) UserHandler {
 // POST /api/v1/user
 // Add a new user.
 // @Summary      Add a new user
-// @Description  Create a new user with the provided details
+// @Description  Create a new user with the provided details. For system setup, this endpoint is public and allows creating users without authentication. When authenticated, uses JWT context for creator and clientId.
 // @Tags         user
 // @Accept       json
 // @Produce      json
+// @Param        Authorization header string false "Bearer token (optional for system setup)"
 // @Param        body body dto.CreateUserRequest true "User data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -56,16 +57,30 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	// username
-	username, err := utils.GetUsername(c)
-	if err != nil {
-		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
-	}
+	var username string
+	var clientId *int
 
-	// get clientId
-	clientId, err := utils.GetClientId(c)
-	if err != nil {
-		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
+	// Try to get username and clientId from JWT context (for authenticated requests)
+	jwtUsername, jwtErr := utils.GetUsername(c)
+	jwtClientId, jwtClientErr := utils.GetClientId(c)
+
+	if jwtErr == nil && jwtClientErr == nil {
+		// Authenticated request - use JWT context
+		username = jwtUsername
+		clientId = &jwtClientId
+	} else {
+		// System setup - bypass authentication
+		// Use "system" as the creator for setup operations
+		username = "system"
+
+		// For system setup, use ClientId from request if provided, otherwise allow NULL
+		// (Super admin can be created without a client during initial setup)
+		if addUser.ClientId != nil {
+			clientId = addUser.ClientId
+		} else {
+			// Allow NULL clientId for system setup (super admin)
+			clientId = nil
+		}
 	}
 
 	newUser, err := h.userService.Create(addUser, username, clientId)

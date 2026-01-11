@@ -11,6 +11,7 @@ import (
 type Handler struct {
 	UserHandler             UserHandler
 	AuthHandler             AuthHandler
+	ClientHandler           ClientHandler
 	FarmHandler             FarmHandler
 	MerchantHandler         MerchantHandler
 	PondHandler             PondHandler
@@ -24,6 +25,7 @@ type HandlerParams struct {
 
 	UserHandler             UserHandler
 	AuthHandler             AuthHandler
+	ClientHandler           ClientHandler
 	FarmHandler             FarmHandler
 	MerchantHandler         MerchantHandler
 	PondHandler             PondHandler
@@ -36,6 +38,7 @@ func NewHandler(params HandlerParams) *Handler {
 	return &Handler{
 		UserHandler:             params.UserHandler,
 		AuthHandler:             params.AuthHandler,
+		ClientHandler:           params.ClientHandler,
 		FarmHandler:             params.FarmHandler,
 		MerchantHandler:         params.MerchantHandler,
 		PondHandler:             params.PondHandler,

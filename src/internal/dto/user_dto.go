@@ -9,6 +9,7 @@ type CreateUserRequest struct {
 	LastName      *string `json:"lastName"`
 	UserLevel     int     `json:"userLevel"`
 	ContactNumber string  `json:"contactNumber"`
+	ClientId      *int    `json:"clientId"`
 }
 
 type UpdateUserRequest struct {
@@ -21,7 +22,7 @@ type UpdateUserRequest struct {
 
 type UserResponse struct {
 	Id            int       `json:"id"`
-	ClientId      int       `json:"clientId"`
+	ClientId      *int      `json:"clientId"`
 	Username      string    `json:"username"`
 	FirstName     string    `json:"firstName"`
 	LastName      *string   `json:"lastName"`
