@@ -39,7 +39,7 @@ func NewMerchantHandler(merchantService service.MerchantService) MerchantHandler
 // @Tags         merchant
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body dto.CreateMerchantRequest true "Merchant data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -140,7 +140,7 @@ func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
 // @Tags         merchant
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body model.Merchant true "Updated merchant data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -155,8 +155,8 @@ func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := c.BodyParser(&updateMerchant); err != nil {
-		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
+	if err := validateAndParse(c, &updateMerchant); err != nil {
+		return err
 	}
 
 	// Get username
@@ -172,4 +172,3 @@ func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 
 	return http.SuccessWithoutData(c)
 }
-

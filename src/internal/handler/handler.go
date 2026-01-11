@@ -60,3 +60,25 @@ func validateAndParse(c *fiber.Ctx, target interface{}) error {
 
 	return nil
 }
+
+// validateClientAccess checks if the user can access the target clientId
+// Super admin (clientId == nil) can access any clientId
+// Regular users can only access their own clientId
+func validateClientAccess(c *fiber.Ctx, targetClientId int) error {
+	clientId, canAccess := utils.GetClientIdForAccess(c.UserContext())
+	if !canAccess {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
+
+	// Super admin can access any clientId
+	if clientId == nil {
+		return nil
+	}
+
+	// Regular users can only access their own clientId
+	if *clientId != targetClientId {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
+	return nil
+}

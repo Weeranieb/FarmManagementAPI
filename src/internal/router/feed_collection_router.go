@@ -6,7 +6,7 @@ import (
 
 func (r *Router) setupFeedCollectionRoutes(group fiber.Router) {
 	// Feed collection routes
-	feedCollection := group.Group("/feedcollection")
+	feedCollection := group.Group("/feed-collection")
 
 	// Feed collection CRUD operations
 	// Note: More specific routes (/:id) must come before less specific routes ("")
@@ -15,4 +15,3 @@ func (r *Router) setupFeedCollectionRoutes(group fiber.Router) {
 	feedCollection.Put("", r.handlers.FeedCollectionHandler.UpdateFeedCollection)
 	feedCollection.Get("", r.handlers.FeedCollectionHandler.ListFeedCollection)
 }
-

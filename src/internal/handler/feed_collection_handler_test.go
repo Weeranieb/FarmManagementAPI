@@ -59,10 +59,10 @@ func (s *FeedCollectionHandlerTestSuite) TestAddFeedCollection_Success() {
 		"username": username,
 		"clientId": clientId,
 	}))
-	app.Post("/api/v1/feedcollection", s.feedCollectionHandler.AddFeedCollection)
+	app.Post("/api/v1/feed-collection", s.feedCollectionHandler.AddFeedCollection)
 
 	body, _ := json.Marshal(createReq)
-	req := httptest.NewRequest("POST", "/api/v1/feedcollection", bytes.NewBuffer(body))
+	req := httptest.NewRequest("POST", "/api/v1/feed-collection", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -85,9 +85,9 @@ func (s *FeedCollectionHandlerTestSuite) TestGetFeedCollection_Success() {
 	s.feedCollectionService.On("Get", feedCollectionId).Return(expectedResponse, nil)
 
 	app := fiber.New()
-	app.Get("/api/v1/feedcollection/:id", s.feedCollectionHandler.GetFeedCollection)
+	app.Get("/api/v1/feed-collection/:id", s.feedCollectionHandler.GetFeedCollection)
 
-	req := httptest.NewRequest("GET", "/api/v1/feedcollection/1", nil)
+	req := httptest.NewRequest("GET", "/api/v1/feed-collection/1", nil)
 
 	resp, err := app.Test(req)
 
@@ -113,9 +113,9 @@ func (s *FeedCollectionHandlerTestSuite) TestListFeedCollection_Success() {
 	app.Use(setLocalsMiddleware(map[string]interface{}{
 		"clientId": clientId,
 	}))
-	app.Get("/api/v1/feedcollection", s.feedCollectionHandler.ListFeedCollection)
+	app.Get("/api/v1/feed-collection", s.feedCollectionHandler.ListFeedCollection)
 
-	req := httptest.NewRequest("GET", "/api/v1/feedcollection?page=0&pageSize=10", nil)
+	req := httptest.NewRequest("GET", "/api/v1/feed-collection?page=0&pageSize=10", nil)
 
 	resp, err := app.Test(req)
 
@@ -123,4 +123,3 @@ func (s *FeedCollectionHandlerTestSuite) TestListFeedCollection_Success() {
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.feedCollectionService.AssertExpectations(s.T())
 }
-

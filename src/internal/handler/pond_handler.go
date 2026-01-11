@@ -41,7 +41,7 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 // @Tags         pond
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body dto.CreatePondRequest true "Pond data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -81,7 +81,7 @@ func (h *pondHandlerImpl) AddPond(c *fiber.Ctx) error {
 // @Tags         pond
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body dto.CreatePondsRequest true "Ponds data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -190,7 +190,7 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 // @Tags         pond
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body model.Pond true "Updated pond data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -205,8 +205,8 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := c.BodyParser(&updatePond); err != nil {
-		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
+	if err := validateAndParse(c, &updatePond); err != nil {
+		return err
 	}
 
 	// Get username
@@ -230,7 +230,7 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 // @Tags         pond
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        id path int true "Pond ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel

@@ -115,6 +115,11 @@ const docTemplate = `{
         },
         "/client": {
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update details of a client. Super admin can update any client, others can only update their own client.",
                 "consumes": [
                     "application/json"
@@ -127,13 +132,6 @@ const docTemplate = `{
                 ],
                 "summary": "Update client",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Client data",
                         "name": "body",
@@ -296,6 +294,11 @@ const docTemplate = `{
         },
         "/farm": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve a list of farms associated with the current client",
                 "consumes": [
                     "application/json"
@@ -309,11 +312,10 @@ const docTemplate = `{
                 "summary": "Get list of farms",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
+                        "type": "integer",
+                        "description": "Client ID",
+                        "name": "clientId",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -338,6 +340,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update details of a farm entry",
                 "consumes": [
                     "application/json"
@@ -350,13 +357,6 @@ const docTemplate = `{
                 ],
                 "summary": "Update farm entry",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Farm data",
                         "name": "body",
@@ -389,6 +389,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Add a new farm entry with the provided details",
                 "consumes": [
                     "application/json"
@@ -401,13 +406,6 @@ const docTemplate = `{
                 ],
                 "summary": "Add a new farm entry",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Farm data",
                         "name": "body",
@@ -442,6 +440,11 @@ const docTemplate = `{
         },
         "/farm/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve details of a specific farm by its ID",
                 "consumes": [
                     "application/json"
@@ -454,13 +457,6 @@ const docTemplate = `{
                 ],
                 "summary": "Get farm by ID",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "integer",
                         "description": "Farm ID",
@@ -554,6 +550,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update an existing feed collection with new details",
                 "consumes": [
                     "application/json"
@@ -566,13 +567,6 @@ const docTemplate = `{
                 ],
                 "summary": "Update a feed collection",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Updated feed collection data",
                         "name": "body",
@@ -605,6 +599,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Add a new feed collection with the provided details",
                 "consumes": [
                     "application/json"
@@ -617,13 +616,6 @@ const docTemplate = `{
                 ],
                 "summary": "Add a new feed collection",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Feed collection data",
                         "name": "body",
@@ -741,6 +733,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update an existing merchant with new details",
                 "consumes": [
                     "application/json"
@@ -753,13 +750,6 @@ const docTemplate = `{
                 ],
                 "summary": "Update a merchant",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Updated merchant data",
                         "name": "body",
@@ -792,6 +782,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new merchant with the provided details",
                 "consumes": [
                     "application/json"
@@ -804,13 +799,6 @@ const docTemplate = `{
                 ],
                 "summary": "Add a new merchant",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Merchant data",
                         "name": "body",
@@ -937,6 +925,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update an existing pond with new details",
                 "consumes": [
                     "application/json"
@@ -949,13 +942,6 @@ const docTemplate = `{
                 ],
                 "summary": "Update a pond",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Updated pond data",
                         "name": "body",
@@ -988,6 +974,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new pond with the provided details",
                 "consumes": [
                     "application/json"
@@ -1000,13 +991,6 @@ const docTemplate = `{
                 ],
                 "summary": "Add a new pond",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Pond data",
                         "name": "body",
@@ -1041,6 +1025,11 @@ const docTemplate = `{
         },
         "/pond/batch": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create multiple ponds with the provided details",
                 "consumes": [
                     "application/json"
@@ -1053,13 +1042,6 @@ const docTemplate = `{
                 ],
                 "summary": "Add multiple ponds",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Ponds data",
                         "name": "body",
@@ -1145,6 +1127,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Delete a pond by its ID",
                 "consumes": [
                     "application/json"
@@ -1157,13 +1144,6 @@ const docTemplate = `{
                 ],
                 "summary": "Delete a pond",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "integer",
                         "description": "Pond ID",
@@ -1442,6 +1422,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update an existing worker with new details",
                 "consumes": [
                     "application/json"
@@ -1454,13 +1439,6 @@ const docTemplate = `{
                 ],
                 "summary": "Update a worker",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Updated worker data",
                         "name": "body",
@@ -1493,6 +1471,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Add a new worker with the provided details",
                 "consumes": [
                     "application/json"
@@ -1505,13 +1488,6 @@ const docTemplate = `{
                 ],
                 "summary": "Add a new worker",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Worker data",
                         "name": "body",

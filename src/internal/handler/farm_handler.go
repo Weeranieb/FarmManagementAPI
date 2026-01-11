@@ -39,7 +39,7 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 // @Tags         farm
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body dto.CreateFarmRequest true "Farm data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -64,16 +64,12 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	// Get clientId
-	clientIdPtr, err := utils.GetClientId(c.UserContext())
-	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-	if clientIdPtr == nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	// Validate client access
+	if err := validateClientAccess(c, createFarmRequest.ClientId); err != nil {
+		return err
 	}
 
-	newFarm, err := h.farmService.Create(createFarmRequest, username, *clientIdPtr)
+	newFarm, err := h.farmService.Create(createFarmRequest, username, createFarmRequest.ClientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -88,7 +84,7 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 // @Tags         farm
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        id path int true "Farm ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -109,15 +105,12 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 	}
 
 	// Get clientId
-	clientIdPtr, err := utils.GetClientId(c.UserContext())
-	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-	if clientIdPtr == nil {
+	clientIdPtr, canAccess := utils.GetClientIdForAccess(c.UserContext())
+	if !canAccess {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
 	}
 
-	farm, err := h.farmService.Get(id, *clientIdPtr)
+	farm, err := h.farmService.Get(id, clientIdPtr)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -132,7 +125,8 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 // @Tags         farm
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
+// @Param        clientId query int false "Client ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
@@ -144,16 +138,35 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 		}
 	}()
 
-	// Get clientId
-	clientIdPtr, err := utils.GetClientId(c.UserContext())
+	var clientId int
+
+	// Check if user is super admin
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
-	if clientIdPtr == nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+
+	if isSuperAdmin {
+		// Super admin can optionally filter by clientId query parameter
+		clientIdStr := c.Query("clientId")
+		if clientIdStr != "" {
+			clientIdVal, err := strconv.Atoi(clientIdStr)
+			if err != nil {
+				return http.Error(c, errors.ErrValidationFailed.Code, "Invalid clientId parameter")
+			}
+			clientId = clientIdVal
+		}
+		// If no clientId provided, clientId remains nil to get all farms
+	} else {
+		// Regular users use clientId from JWT
+		clientIdPtr := utils.GetClientId(c.UserContext())
+		if clientIdPtr == nil {
+			return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+		}
+		clientId = *clientIdPtr
 	}
 
-	farmList, err := h.farmService.GetList(*clientIdPtr)
+	farmList, err := h.farmService.GetList(clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -168,7 +181,7 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 // @Tags         farm
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body model.Farm true "Farm data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -183,8 +196,13 @@ func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := c.BodyParser(&updateFarm); err != nil {
-		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
+	if err := validateAndParse(c, &updateFarm); err != nil {
+		return err
+	}
+
+	// Validate client access
+	if err := validateClientAccess(c, updateFarm.ClientId); err != nil {
+		return err
 	}
 
 	// Get username

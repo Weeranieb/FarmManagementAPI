@@ -38,10 +38,10 @@ func GetUserId(ctx context.Context) (int, error) {
 	}
 }
 
-func GetClientId(ctx context.Context) (*int, error) {
+func GetClientId(ctx context.Context) *int {
 	clientId := ctx.Value(clientIdKey)
 	if clientId == nil {
-		return nil, errors.New("client id not found")
+		return nil
 	}
 
 	var id int
@@ -53,9 +53,25 @@ func GetClientId(ctx context.Context) (*int, error) {
 	case int64:
 		id = int(v)
 	default:
-		return nil, errors.New("invalid client id type")
+		return nil
 	}
-	return &id, nil
+	return &id
+}
+
+func GetClientIdForAccess(ctx context.Context) (*int, bool) {
+	isSuperAdmin, err := IsSuperAdmin(ctx)
+	if err != nil {
+		return nil, false
+	}
+
+	// Super admin doesn't need clientId restriction
+	if isSuperAdmin {
+		return nil, true
+	}
+
+	// Regular users must have clientId
+	clientId := GetClientId(ctx)
+	return clientId, clientId != nil && *clientId != 0
 }
 
 func GetUserLevel(ctx context.Context) (int, error) {
@@ -119,11 +135,7 @@ func CanAccessClient(ctx context.Context, targetClientId int) (bool, error) {
 	}
 
 	// Others can only access their own client
-	userClientId, err := GetClientId(ctx)
-	if err != nil {
-		return false, err
-	}
-
+	userClientId := GetClientId(ctx)
 	if userClientId == nil {
 		return false, nil
 	}

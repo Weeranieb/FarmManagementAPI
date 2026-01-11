@@ -88,8 +88,8 @@ func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c *fiber.Ctx) error
 		}
 	}()
 
-	if err := c.BodyParser(&updateFeedPriceHistory); err != nil {
-		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
+	if err := validateAndParse(c, &updateFeedPriceHistory); err != nil {
+		return err
 	}
 
 	username, err := utils.GetUsername(c.UserContext())

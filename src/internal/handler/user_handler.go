@@ -62,10 +62,10 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 
 	// Try to get username and clientId from JWT context (for authenticated requests)
 	jwtUsername, jwtErr := utils.GetUsername(c.UserContext())
-	jwtClientId, jwtClientErr := utils.GetClientId(c.UserContext())
+	jwtClientId := utils.GetClientId(c.UserContext())
 
 	// Check if user is super admin (only if we have JWT context)
-	if jwtErr == nil && jwtClientErr == nil {
+	if jwtErr == nil {
 		// Authenticated request - check permissions
 		isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
 		if err != nil || !isSuperAdmin {
@@ -144,8 +144,8 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := c.BodyParser(&updateUser); err != nil {
-		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
+	if err := validateAndParse(c, &updateUser); err != nil {
+		return err
 	}
 
 	// get username
@@ -189,10 +189,7 @@ func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
 	}
 
 	if !isSuperAdmin {
-		clientId, err = utils.GetClientId(c.UserContext())
-		if err != nil {
-			return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-		}
+		clientId = utils.GetClientId(c.UserContext())
 	}
 
 	users, err := h.userService.GetUserList(c.UserContext(), clientId)

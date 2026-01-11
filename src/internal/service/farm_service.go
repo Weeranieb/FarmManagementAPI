@@ -10,7 +10,7 @@ import (
 //go:generate go run github.com/vektra/mockery/v2@latest --name=FarmService --output=./mocks --outpkg=service --filename=farm_service.go --structname=MockFarmService --with-expecter=false
 type FarmService interface {
 	Create(request dto.CreateFarmRequest, username string, clientId int) (*dto.FarmResponse, error)
-	Get(id, clientId int) (*dto.FarmResponse, error)
+	Get(id int, clientId *int) (*dto.FarmResponse, error)
 	Update(request *model.Farm, username string) error
 	GetList(clientId int) ([]*dto.FarmResponse, error)
 	GetFarmIdByName(farmName string, clientId int) (int, error)
@@ -56,7 +56,7 @@ func (s *farmService) Create(request dto.CreateFarmRequest, username string, cli
 	return s.toFarmResponse(newFarm), nil
 }
 
-func (s *farmService) Get(id, clientId int) (*dto.FarmResponse, error) {
+func (s *farmService) Get(id int, clientId *int) (*dto.FarmResponse, error) {
 	farm, err := s.farmRepo.GetByID(id)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
@@ -67,7 +67,7 @@ func (s *farmService) Get(id, clientId int) (*dto.FarmResponse, error) {
 	}
 
 	// Verify farm belongs to client
-	if farm.ClientId != clientId {
+	if clientId != nil && farm.ClientId != *clientId {
 		return nil, errors.ErrFarmNotFound
 	}
 
@@ -122,4 +122,3 @@ func (s *farmService) toFarmResponse(farm *model.Farm) *dto.FarmResponse {
 		UpdatedBy: farm.UpdatedBy,
 	}
 }
-

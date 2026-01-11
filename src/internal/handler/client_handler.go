@@ -121,7 +121,7 @@ func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
 // @Tags         client
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body model.Client true "Client data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -138,8 +138,8 @@ func (h *clientHandlerImpl) UpdateClient(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := c.BodyParser(&updateClient); err != nil {
-		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
+	if err := validateAndParse(c, &updateClient); err != nil {
+		return err
 	}
 
 	// Check if user can access this client

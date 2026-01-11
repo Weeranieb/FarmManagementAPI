@@ -437,11 +437,6 @@ paths:
       description: Update details of a client. Super admin can update any client,
         others can only update their own client.
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Client data
         in: body
         name: body
@@ -471,6 +466,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Update client
       tags:
       - client
@@ -520,11 +517,10 @@ paths:
       - application/json
       description: Retrieve a list of farms associated with the current client
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
+      - description: Client ID
+        in: query
+        name: clientId
+        type: integer
       produces:
       - application/json
       responses:
@@ -540,6 +536,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Get list of farms
       tags:
       - farm
@@ -548,11 +546,6 @@ paths:
       - application/json
       description: Add a new farm entry with the provided details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Farm data
         in: body
         name: body
@@ -574,6 +567,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Add a new farm entry
       tags:
       - farm
@@ -582,11 +577,6 @@ paths:
       - application/json
       description: Update details of a farm entry
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Farm data
         in: body
         name: body
@@ -608,6 +598,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Update farm entry
       tags:
       - farm
@@ -617,11 +609,6 @@ paths:
       - application/json
       description: Retrieve details of a specific farm by its ID
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Farm ID
         in: path
         name: id
@@ -642,6 +629,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Get farm by ID
       tags:
       - farm
@@ -692,11 +681,6 @@ paths:
       - application/json
       description: Add a new feed collection with the provided details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Feed collection data
         in: body
         name: body
@@ -718,6 +702,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Add a new feed collection
       tags:
       - feedcollection
@@ -726,11 +712,6 @@ paths:
       - application/json
       description: Update an existing feed collection with new details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Updated feed collection data
         in: body
         name: body
@@ -752,6 +733,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Update a feed collection
       tags:
       - feedcollection
@@ -816,11 +799,6 @@ paths:
       - application/json
       description: Create a new merchant with the provided details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Merchant data
         in: body
         name: body
@@ -842,6 +820,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Add a new merchant
       tags:
       - merchant
@@ -850,11 +830,6 @@ paths:
       - application/json
       description: Update an existing merchant with new details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Updated merchant data
         in: body
         name: body
@@ -876,6 +851,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Update a merchant
       tags:
       - merchant
@@ -946,11 +923,6 @@ paths:
       - application/json
       description: Create a new pond with the provided details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Pond data
         in: body
         name: body
@@ -972,6 +944,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Add a new pond
       tags:
       - pond
@@ -980,11 +954,6 @@ paths:
       - application/json
       description: Update an existing pond with new details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Updated pond data
         in: body
         name: body
@@ -1006,6 +975,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Update a pond
       tags:
       - pond
@@ -1015,11 +986,6 @@ paths:
       - application/json
       description: Delete a pond by its ID
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Pond ID
         in: path
         name: id
@@ -1040,6 +1006,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Delete a pond
       tags:
       - pond
@@ -1081,11 +1049,6 @@ paths:
       - application/json
       description: Create multiple ponds with the provided details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Ponds data
         in: body
         name: body
@@ -1109,6 +1072,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Add multiple ponds
       tags:
       - pond
@@ -1279,11 +1244,6 @@ paths:
       - application/json
       description: Add a new worker with the provided details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Worker data
         in: body
         name: body
@@ -1305,6 +1265,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Add a new worker
       tags:
       - worker
@@ -1313,11 +1275,6 @@ paths:
       - application/json
       description: Update an existing worker with new details
       parameters:
-      - description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Updated worker data
         in: body
         name: body
@@ -1339,6 +1296,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
       summary: Update a worker
       tags:
       - worker

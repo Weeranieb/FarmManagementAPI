@@ -39,7 +39,7 @@ func NewWorkerHandler(workerService service.WorkerService) WorkerHandler {
 // @Tags         worker
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body dto.CreateWorkerRequest true "Worker data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -65,10 +65,7 @@ func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
 	}
 
 	// Get client id
-	clientIdPtr, err := utils.GetClientId(c.UserContext())
-	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
+	clientIdPtr := utils.GetClientId(c.UserContext())
 	if clientIdPtr == nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
 	}
@@ -123,7 +120,7 @@ func (h *workerHandlerImpl) GetWorker(c *fiber.Ctx) error {
 // @Tags         worker
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string true "Bearer token"
+// @Security     BearerAuth
 // @Param        body body model.Worker true "Updated worker data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -138,8 +135,8 @@ func (h *workerHandlerImpl) UpdateWorker(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := c.BodyParser(&updateWorker); err != nil {
-		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
+	if err := validateAndParse(c, &updateWorker); err != nil {
+		return err
 	}
 
 	// Get username
@@ -195,10 +192,7 @@ func (h *workerHandlerImpl) ListWorker(c *fiber.Ctx) error {
 	}
 
 	// Get client id
-	clientIdPtr, err := utils.GetClientId(c.UserContext())
-	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
+	clientIdPtr := utils.GetClientId(c.UserContext())
 	if clientIdPtr == nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
 	}
