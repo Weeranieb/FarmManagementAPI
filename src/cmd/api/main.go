@@ -34,6 +34,10 @@ var (
 // @in header
 // @name Authorization
 // @description Type "Bearer" followed by a space and JWT token.
+// @securityDefinitions.apikey CookieAuth
+// @in cookie
+// @name jwt_token
+// @description JWT token stored in HTTP-only cookie (automatically sent by browser)
 func main() {
 	conf := LoadConfigFunc()
 

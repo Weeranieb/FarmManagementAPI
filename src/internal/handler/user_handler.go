@@ -96,6 +96,7 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
@@ -130,6 +131,7 @@ func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body model.User true "Updated user data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -170,6 +172,7 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel

@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "Login user with provided credentials and return JWT token",
+                "description": "Login user with provided credentials and return JWT token. Token is also set as HTTP-only cookie.",
                 "consumes": [
                     "application/json"
                 ],
@@ -56,6 +56,35 @@ const docTemplate = `{
                         "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "Logout user and clear the authentication cookie",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
                         }
                     },
                     "500": {
@@ -118,6 +147,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Update details of a client. Super admin can update any client, others can only update their own client.",
@@ -179,6 +211,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Add a new client with the provided details. Only super admin can create clients.",
@@ -236,6 +271,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Retrieve a client by its ID. Super admin can access any client, others can only access their own client.",
@@ -297,6 +335,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Retrieve a list of farms associated with the current client",
@@ -343,6 +384,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Update details of a farm entry",
@@ -392,6 +436,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Add a new farm entry with the provided details",
@@ -443,6 +490,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Retrieve details of a specific farm by its ID",
@@ -487,7 +537,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/feedcollection": {
+        "/feed-collection": {
             "get": {
                 "description": "Retrieve a paginated list of feed collections for the current client",
                 "consumes": [
@@ -497,7 +547,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "feedcollection"
+                    "feed-collection"
                 ],
                 "summary": "Get a list of feed collections with pagination",
                 "parameters": [
@@ -553,6 +603,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Update an existing feed collection with new details",
@@ -563,7 +616,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "feedcollection"
+                    "feed-collection"
                 ],
                 "summary": "Update a feed collection",
                 "parameters": [
@@ -602,6 +655,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Add a new feed collection with the provided details",
@@ -612,7 +668,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "feedcollection"
+                    "feed-collection"
                 ],
                 "summary": "Add a new feed collection",
                 "parameters": [
@@ -648,7 +704,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/feedcollection/{id}": {
+        "/feed-collection/{id}": {
             "get": {
                 "description": "Retrieve a feed collection by its ID",
                 "consumes": [
@@ -658,7 +714,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "feedcollection"
+                    "feed-collection"
                 ],
                 "summary": "Get a feed collection by ID",
                 "parameters": [
@@ -736,6 +792,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Update an existing merchant with new details",
@@ -785,6 +844,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Create a new merchant with the provided details",
@@ -928,6 +990,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Update an existing pond with new details",
@@ -977,6 +1042,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Create a new pond with the provided details",
@@ -1028,6 +1096,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Create multiple ponds with the provided details",
@@ -1130,6 +1201,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Delete a pond by its ID",
@@ -1179,6 +1253,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Retrieve the user details of the currently authenticated user",
@@ -1223,6 +1300,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Update the details of the currently authenticated user",
@@ -1324,6 +1404,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Retrieve a list of users associated with the current client ID",
@@ -1425,6 +1508,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Update an existing worker with new details",
@@ -1474,6 +1560,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
                     }
                 ],
                 "description": "Add a new worker with the provided details",
@@ -2062,6 +2151,12 @@ const docTemplate = `{
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
+        },
+        "CookieAuth": {
+            "description": "JWT token stored in HTTP-only cookie (automatically sent by browser)",
+            "type": "apiKey",
+            "name": "jwt_token",
+            "in": "cookie"
         }
     }
 }`

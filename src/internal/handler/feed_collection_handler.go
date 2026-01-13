@@ -40,6 +40,7 @@ func NewFeedCollectionHandler(feedCollectionService service.FeedCollectionServic
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body dto.CreateFeedCollectionRequest true "Feed collection data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -121,6 +122,7 @@ func (h *feedCollectionHandlerImpl) GetFeedCollection(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body model.FeedCollection true "Updated feed collection data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel

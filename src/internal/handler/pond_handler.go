@@ -42,6 +42,7 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body dto.CreatePondRequest true "Pond data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -82,6 +83,7 @@ func (h *pondHandlerImpl) AddPond(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body dto.CreatePondsRequest true "Ponds data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -191,6 +193,7 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body model.Pond true "Updated pond data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -231,6 +234,7 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        id path int true "Pond ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel

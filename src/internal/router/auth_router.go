@@ -11,4 +11,5 @@ func (r *Router) setupAuthRoutes(group fiber.Router) {
 	// Auth operations
 	auth.Post("/register", r.handlers.AuthHandler.Register)
 	auth.Post("/login", r.handlers.AuthHandler.Login)
+	auth.Post("/logout", r.handlers.AuthHandler.Logout)
 }

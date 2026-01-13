@@ -334,7 +334,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Login user with provided credentials and return JWT token
+      description: Login user with provided credentials and return JWT token. Token
+        is also set as HTTP-only cookie.
       parameters:
       - description: Login data
         in: body
@@ -362,6 +363,25 @@ paths:
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Login user
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout user and clear the authentication cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      summary: Logout user
       tags:
       - auth
   /auth/register:
@@ -428,6 +448,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Add a new client
       tags:
       - client
@@ -468,6 +489,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Update client
       tags:
       - client
@@ -508,6 +530,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Get a client by ID
       tags:
       - client
@@ -538,6 +561,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Get list of farms
       tags:
       - farm
@@ -569,6 +593,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Add a new farm entry
       tags:
       - farm
@@ -600,6 +625,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Update farm entry
       tags:
       - farm
@@ -631,10 +657,11 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Get farm by ID
       tags:
       - farm
-  /feedcollection:
+  /feed-collection:
     get:
       consumes:
       - application/json
@@ -675,7 +702,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a list of feed collections with pagination
       tags:
-      - feedcollection
+      - feed-collection
     post:
       consumes:
       - application/json
@@ -704,9 +731,10 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Add a new feed collection
       tags:
-      - feedcollection
+      - feed-collection
     put:
       consumes:
       - application/json
@@ -735,10 +763,11 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Update a feed collection
       tags:
-      - feedcollection
-  /feedcollection/{id}:
+      - feed-collection
+  /feed-collection/{id}:
     get:
       consumes:
       - application/json
@@ -770,7 +799,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a feed collection by ID
       tags:
-      - feedcollection
+      - feed-collection
   /merchant:
     get:
       consumes:
@@ -822,6 +851,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Add a new merchant
       tags:
       - merchant
@@ -853,6 +883,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Update a merchant
       tags:
       - merchant
@@ -946,6 +977,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Add a new pond
       tags:
       - pond
@@ -977,6 +1009,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Update a pond
       tags:
       - pond
@@ -1008,6 +1041,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Delete a pond
       tags:
       - pond
@@ -1074,6 +1108,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Add multiple ponds
       tags:
       - pond
@@ -1103,6 +1138,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Get the current user
       tags:
       - user
@@ -1169,6 +1205,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Update the current user
       tags:
       - user
@@ -1194,6 +1231,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Get a list of users
       tags:
       - user
@@ -1267,6 +1305,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Add a new worker
       tags:
       - worker
@@ -1298,6 +1337,7 @@ paths:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
       - BearerAuth: []
+      - CookieAuth: []
       summary: Update a worker
       tags:
       - worker
@@ -1339,5 +1379,10 @@ securityDefinitions:
     description: Type "Bearer" followed by a space and JWT token.
     in: header
     name: Authorization
+    type: apiKey
+  CookieAuth:
+    description: JWT token stored in HTTP-only cookie (automatically sent by browser)
+    in: cookie
+    name: jwt_token
     type: apiKey
 swagger: "2.0"

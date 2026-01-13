@@ -40,6 +40,7 @@ func NewWorkerHandler(workerService service.WorkerService) WorkerHandler {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body dto.CreateWorkerRequest true "Worker data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -121,6 +122,7 @@ func (h *workerHandlerImpl) GetWorker(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body model.Worker true "Updated worker data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel

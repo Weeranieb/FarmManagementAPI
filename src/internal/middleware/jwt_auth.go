@@ -21,6 +21,7 @@ func JWTAuthMiddleware() fiber.Handler {
 		publicPaths := []string{
 			"/api/v1/auth/register",
 			"/api/v1/auth/login",
+			"/api/v1/auth/logout",
 			// "/api/v1/user", // System setup user endpoint
 			"/swagger",
 			"/health",
@@ -33,16 +34,25 @@ func JWTAuthMiddleware() fiber.Handler {
 			}
 		}
 
-		// Extract token from Authorization header
-		authHeader := c.Get("Authorization")
-		if authHeader == "" {
-			return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-		}
+		// Try to get token from cookie first, then fallback to Authorization header
+		var tokenString string
 
-		// Check if the Authorization header is in the format "Bearer <token>"
-		tokenString := strings.TrimSpace(strings.Replace(authHeader, "Bearer", "", 1))
-		if tokenString == "" {
-			return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+		// Check cookie first
+		cookieToken := c.Cookies("jwt_token")
+		if cookieToken != "" {
+			tokenString = cookieToken
+		} else {
+			// Fallback to Authorization header
+			authHeader := c.Get("Authorization")
+			if authHeader == "" {
+				return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+			}
+
+			// Check if the Authorization header is in the format "Bearer <token>"
+			tokenString = strings.TrimSpace(strings.Replace(authHeader, "Bearer", "", 1))
+			if tokenString == "" {
+				return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+			}
 		}
 
 		// Parse and validate the JWT token

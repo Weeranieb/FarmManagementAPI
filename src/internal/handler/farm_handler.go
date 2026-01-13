@@ -40,6 +40,7 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body dto.CreateFarmRequest true "Farm data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -85,6 +86,7 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        id path int true "Farm ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -126,6 +128,7 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        clientId query int false "Client ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -182,6 +185,7 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body model.Farm true "Farm data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel

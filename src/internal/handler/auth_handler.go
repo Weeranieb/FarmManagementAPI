@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -15,6 +16,7 @@ import (
 type AuthHandler interface {
 	Register(c *fiber.Ctx) error
 	Login(c *fiber.Ctx) error
+	Logout(c *fiber.Ctx) error
 }
 
 type authHandlerImpl struct {
@@ -63,7 +65,7 @@ func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
 // POST /auth/login
 // Login user and return JWT token.
 // @Summary      Login user
-// @Description  Login user with provided credentials and return JWT token
+// @Description  Login user with provided credentials and return JWT token. Token is also set as HTTP-only cookie.
 // @Tags         auth
 // @Accept       json
 // @Produce      json
@@ -91,6 +93,27 @@ func (h *authHandlerImpl) Login(c *fiber.Ctx) error {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
+	// Set JWT token as HTTP-only cookie
+	cookie := &fiber.Cookie{
+		Name:     "jwt_token",
+		Value:    token,
+		Path:     "/",
+		HTTPOnly: true,
+		Secure:   c.Protocol() == "https", // Only send over HTTPS in production
+		SameSite: "Strict",
+	}
+
+	if expDate != nil {
+		cookie.Expires = *expDate
+		cookie.MaxAge = int(time.Until(*expDate).Seconds())
+	} else {
+		// Default to 24 hours if no expiration date
+		cookie.Expires = time.Now().Add(24 * time.Hour)
+		cookie.MaxAge = 86400 // 24 hours in seconds
+	}
+
+	c.Cookie(cookie)
+
 	loginResponse := dto.LoginResponse{
 		AccessToken: token,
 		ExpiredAt:   expDate,
@@ -98,4 +121,32 @@ func (h *authHandlerImpl) Login(c *fiber.Ctx) error {
 	}
 
 	return http.Success(c, loginResponse)
+}
+
+// POST /auth/logout
+// Logout user and clear JWT token cookie.
+// @Summary      Logout user
+// @Description  Logout user and clear the authentication cookie
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  http.ResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /auth/logout [post]
+func (h *authHandlerImpl) Logout(c *fiber.Ctx) error {
+	// Clear the JWT token cookie
+	cookie := &fiber.Cookie{
+		Name:     "jwt_token",
+		Value:    "",
+		Path:     "/",
+		HTTPOnly: true,
+		Secure:   c.Protocol() == "https",
+		SameSite: "Strict",
+		Expires:  time.Now().Add(-1 * time.Hour), // Set to past date to delete
+		MaxAge:   -1,
+	}
+
+	c.Cookie(cookie)
+
+	return http.SuccessWithoutData(c)
 }

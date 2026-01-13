@@ -40,6 +40,7 @@ func NewMerchantHandler(merchantService service.MerchantService) MerchantHandler
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body dto.CreateMerchantRequest true "Merchant data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -141,6 +142,7 @@ func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body model.Merchant true "Updated merchant data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
