@@ -27,3 +27,9 @@ type ClientResponse struct {
 	UpdatedAt     time.Time `json:"updatedAt"`
 	UpdatedBy     string    `json:"updatedBy"`
 }
+
+// ClientDropdownItem is used for dropdown/select options (superadmin only).
+type ClientDropdownItem struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
