@@ -16,7 +16,6 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=PondHandler --output=./mocks --outpkg=handler --filename=pond_handler.go --structname=MockPondHandler --with-expecter=false
 type PondHandler interface {
-	AddPond(c *fiber.Ctx) error
 	AddPonds(c *fiber.Ctx) error
 	GetPond(c *fiber.Ctx) error
 	GetPondList(c *fiber.Ctx) error
@@ -35,60 +34,19 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 }
 
 // POST /pond
-// Add a new pond.
-// @Summary      Add a new pond
-// @Description  Create a new pond with the provided details
+// Create multiple ponds for a farm (farmId, names array). New ponds are created with status maintenance.
+// @Summary      Create multiple ponds
+// @Description  Create multiple ponds for a farm. Request: farmId, array of names. New ponds have status maintenance.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Security     CookieAuth
-// @Param        body body dto.CreatePondRequest true "Pond data"
+// @Param        body body dto.CreatePondsRequest true "farmId, names[]"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond [post]
-func (h *pondHandlerImpl) AddPond(c *fiber.Ctx) error {
-	var createPondRequest dto.CreatePondRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	if err := validateAndParse(c, &createPondRequest); err != nil {
-		return err
-	}
-
-	// Get username
-	username, err := utils.GetUsername(c.UserContext())
-	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
-	newPond, err := h.pondService.Create(createPondRequest, username)
-	if err != nil {
-		return http.NewError(c, errors.ErrGeneric.Code, err)
-	}
-
-	return http.Success(c, newPond)
-}
-
-// POST /pond/batch
-// Add multiple ponds.
-// @Summary      Add multiple ponds
-// @Description  Create multiple ponds with the provided details
-// @Tags         pond
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Security     CookieAuth
-// @Param        body body dto.CreatePondsRequest true "Ponds data"
-// @Success      200  {object}  http.ResponseModel
-// @Failure      400  {object}  http.ErrorResponseModel
-// @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /pond/batch [post]
 func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 	var createPondsRequest dto.CreatePondsRequest
 
@@ -102,18 +60,20 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Get username
 	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	newPonds, err := h.pondService.CreateBatch(createPondsRequest, username)
-	if err != nil {
-		return http.NewError(c, errors.ErrGeneric.Code, err)
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil || !isSuperAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
-	return http.Success(c, newPonds)
+	if err := h.pondService.CreatePonds(createPondsRequest, username); err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return http.Success(c, nil)
 }
 
 // GET /pond/:id
