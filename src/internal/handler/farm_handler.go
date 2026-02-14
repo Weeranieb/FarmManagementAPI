@@ -6,7 +6,6 @@ import (
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -61,12 +60,6 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Get username
-	username, err := utils.GetUsername(c.UserContext())
-	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
 	// Super admin only
 	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
 	if err != nil || !isSuperAdmin {
@@ -78,7 +71,7 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 		return err
 	}
 
-	newFarm, err := h.farmService.Create(c.UserContext(), createFarmRequest, username, createFarmRequest.ClientId)
+	newFarm, err := h.farmService.Create(c.UserContext(), createFarmRequest, createFarmRequest.ClientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -237,21 +230,22 @@ func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
 }
 
 // PUT /farm
-// Update farm entry.
+// Update farm entry. Super admin only.
 // @Summary      Update farm entry
-// @Description  Update details of a farm entry
+// @Description  Update details of a farm entry. Super admin only. ClientId is not accepted; it is preserved from the existing farm.
 // @Tags         farm
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Security     CookieAuth
-// @Param        body body model.Farm true "Farm data"
+// @Param        body body dto.UpdateFarmRequest true "Farm data (id, name)"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm [put]
 func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
-	var updateFarm *model.Farm
+	var updateReq dto.UpdateFarmRequest
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -259,23 +253,17 @@ func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
 		}
 	}()
 
-	if err := validateAndParse(c, &updateFarm); err != nil {
+	if err := validateAndParse(c, &updateReq); err != nil {
 		return err
 	}
 
-	// Validate client access
-	if err := validateClientAccess(c, updateFarm.ClientId); err != nil {
-		return err
+	// Super admin only
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil || !isSuperAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
-	// Get username
-	username, err := utils.GetUsername(c.UserContext())
-	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
-	err = h.farmService.Update(c.UserContext(), updateFarm, username)
-	if err != nil {
+	if err = h.farmService.Update(c.UserContext(), updateReq); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 

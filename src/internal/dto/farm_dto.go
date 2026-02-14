@@ -6,9 +6,8 @@ type CreateFarmRequest struct {
 }
 
 type UpdateFarmRequest struct {
-	Id       int    `json:"id" validate:"required"`
-	ClientId int    `json:"clientId"`
-	Name     string `json:"name"`
+	Id   int    `json:"id" validate:"required"`
+	Name string `json:"name"`
 }
 
 type FarmResponse struct {
