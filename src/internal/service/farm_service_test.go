@@ -15,16 +15,19 @@ import (
 type FarmServiceTestSuite struct {
 	suite.Suite
 	farmRepo    *mocks.MockFarmRepository
+	pondRepo    *mocks.MockPondRepository
 	farmService FarmService
 }
 
 func (s *FarmServiceTestSuite) SetupTest() {
 	s.farmRepo = mocks.NewMockFarmRepository(s.T())
-	s.farmService = NewFarmService(s.farmRepo)
+	s.pondRepo = mocks.NewMockPondRepository(s.T())
+	s.farmService = NewFarmService(s.farmRepo, s.pondRepo)
 }
 
 func (s *FarmServiceTestSuite) TearDownTest() {
 	s.farmRepo.ExpectedCalls = nil
+	s.pondRepo.ExpectedCalls = nil
 }
 
 func TestFarmServiceSuite(t *testing.T) {
@@ -103,15 +106,25 @@ func (s *FarmServiceTestSuite) TestGet_Success() {
 		Name:     "Test Farm",
 		Status:   "active",
 	}
+	ponds := []*model.Pond{
+		{Id: 1, FarmId: farmId, Name: "Pond A1", Status: "active"},
+		{Id: 2, FarmId: farmId, Name: "Pond A2", Status: "active"},
+	}
 
 	s.farmRepo.On("GetByID", farmId).Return(expectedFarm, nil)
+	s.pondRepo.On("ListByFarmId", farmId).Return(ponds, nil)
 
 	result, err := s.farmService.Get(farmId, &clientId)
 
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
 	assert.Equal(s.T(), farmId, result.Id)
+	assert.Equal(s.T(), "Test Farm", result.Name)
+	assert.Equal(s.T(), 2, result.Summary.TotalPonds)
+	assert.Equal(s.T(), 2, result.Summary.ActivePonds)
+	assert.Len(s.T(), result.Ponds, 2)
 	s.farmRepo.AssertExpectations(s.T())
+	s.pondRepo.AssertExpectations(s.T())
 }
 
 func (s *FarmServiceTestSuite) TestGet_NotFound() {
@@ -125,6 +138,7 @@ func (s *FarmServiceTestSuite) TestGet_NotFound() {
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), result)
 	s.farmRepo.AssertExpectations(s.T())
+	// ListByFarmId not called when farm not found
 }
 
 func (s *FarmServiceTestSuite) TestUpdate_Success() {
