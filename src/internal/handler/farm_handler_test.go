@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/service/mocks"
 )
 
@@ -51,7 +50,7 @@ func (s *FarmHandlerTestSuite) TestAddFarm_Success() {
 
 	username := "admin"
 	clientId := 1
-	s.farmService.On("Create", mock.Anything, *createReq, username, clientId).Return(expectedResponse, nil)
+	s.farmService.On("Create", mock.Anything, *createReq, clientId).Return(expectedResponse, nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
@@ -220,21 +219,19 @@ func (s *FarmHandlerTestSuite) TestGetFarmHierarchy_ClientIdNotFound() {
 }
 
 func (s *FarmHandlerTestSuite) TestUpdateFarm_Success() {
-	updateReq := &model.Farm{
-		Id:       1,
-		ClientId: 1,
-		Name:     "Updated Farm",
-		Status:   "active",
+	updateReq := &dto.UpdateFarmRequest{
+		Id:   1,
+		Name: "Updated Farm",
 	}
 	username := "admin"
-	clientId := 1
 
-	s.farmService.On("Update", mock.Anything, updateReq, username).Return(nil)
+	s.farmService.On("Update", mock.Anything, *updateReq).Return(nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
-		"username": username,
-		"clientId": clientId,
+		"username":  username,
+		"clientId":  1,
+		"userLevel": 3, // super admin only
 	}))
 	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
 
@@ -257,7 +254,7 @@ func (s *FarmHandlerTestSuite) TestAddFarm_ServiceError() {
 	username := "admin"
 	clientId := 1
 	svcErr := errors.New("farm already exists")
-	s.farmService.On("Create", mock.Anything, *createReq, username, clientId).Return((*dto.FarmResponse)(nil), svcErr)
+	s.farmService.On("Create", mock.Anything, *createReq, clientId).Return((*dto.FarmResponse)(nil), svcErr)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
@@ -329,7 +326,7 @@ func (s *FarmHandlerTestSuite) TestGetFarmList_ServiceError() {
 // --- AddFarm error paths ---
 
 func (s *FarmHandlerTestSuite) TestAddFarm_InvalidBody() {
-	s.farmService.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return((*dto.FarmResponse)(nil), errors.New("")).Maybe()
+	s.farmService.On("Create", mock.Anything, mock.Anything, mock.Anything).Return((*dto.FarmResponse)(nil), errors.New("")).Maybe()
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
@@ -357,7 +354,7 @@ func (s *FarmHandlerTestSuite) TestAddFarm_InvalidBody() {
 }
 
 func (s *FarmHandlerTestSuite) TestAddFarm_ValidationFailed() {
-	s.farmService.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return((*dto.FarmResponse)(nil), errors.New("")).Maybe()
+	s.farmService.On("Create", mock.Anything, mock.Anything, mock.Anything).Return((*dto.FarmResponse)(nil), errors.New("")).Maybe()
 
 	createReq := map[string]any{
 		"clientId": 1,
@@ -445,7 +442,7 @@ func (s *FarmHandlerTestSuite) TestAddFarm_MissingUsername() {
 }
 
 func (s *FarmHandlerTestSuite) TestAddFarm_ClientAccessDenied() {
-	s.farmService.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return((*dto.FarmResponse)(nil), errors.New("")).Maybe()
+	s.farmService.On("Create", mock.Anything, mock.Anything, mock.Anything).Return((*dto.FarmResponse)(nil), errors.New("")).Maybe()
 
 	createReq := &dto.CreateFarmRequest{
 		ClientId: 2, // request for client 2
@@ -476,7 +473,7 @@ func (s *FarmHandlerTestSuite) TestAddFarm_ClientAccessDenied() {
 }
 
 func (s *FarmHandlerTestSuite) TestAddFarm_ClientIdNotFound() {
-	s.farmService.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return((*dto.FarmResponse)(nil), errors.New("")).Maybe()
+	s.farmService.On("Create", mock.Anything, mock.Anything, mock.Anything).Return((*dto.FarmResponse)(nil), errors.New("")).Maybe()
 
 	createReq := &dto.CreateFarmRequest{
 		ClientId: 1,
@@ -489,8 +486,8 @@ func (s *FarmHandlerTestSuite) TestAddFarm_ClientIdNotFound() {
 	body, _ := json.Marshal(createReq)
 	req := httptest.NewRequest("POST", "/api/v1/farm", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	// super admin but no clientId -> canAccess false
-	req = req.WithContext(withUserContext("user", 0, 3))
+	// Not super admin and no clientId -> permission denied (500024) before client access check
+	req = req.WithContext(withUserContext("user", 0, 1))
 
 	resp, err := app.Test(req)
 
@@ -500,7 +497,7 @@ func (s *FarmHandlerTestSuite) TestAddFarm_ClientIdNotFound() {
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"], "expected error response")
 	if errObj, ok := result["error"].(map[string]any); ok && errObj["code"] != nil {
-		assert.Equal(s.T(), "500022", errObj["code"]) // ErrAuthTokenInvalid
+		assert.Equal(s.T(), "500024", errObj["code"]) // ErrAuthPermissionDenied (AddFarm requires super admin)
 	}
 }
 
@@ -635,10 +632,12 @@ func (s *FarmHandlerTestSuite) TestGetFarmList_IsSuperAdminError() {
 // --- UpdateFarm error paths ---
 
 func (s *FarmHandlerTestSuite) TestUpdateFarm_InvalidBody() {
+	s.farmService.On("Update", mock.Anything, mock.Anything).Return(errors.New("")).Maybe()
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
-		"username": "admin",
-		"clientId": 1,
+		"username":  "admin",
+		"clientId":  1,
+		"userLevel": 3, // super admin only
 	}))
 	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
 
@@ -651,51 +650,20 @@ func (s *FarmHandlerTestSuite) TestUpdateFarm_InvalidBody() {
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.NotNil(s.T(), result["error"])
+	// Error can be in result["error"] (http.Error) or result["code"] (http.NewError)
+	assert.True(s.T(), result["error"] != nil || result["code"] != nil, "expected error response")
 }
 
-func (s *FarmHandlerTestSuite) TestUpdateFarm_ClientAccessDenied() {
-	s.farmService.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("")).Maybe()
-
-	updateReq := &model.Farm{
-		Id:       1,
-		ClientId: 2,
-		Name:     "Updated",
-		Status:   "active",
-	}
-	app := fiber.New()
-	app.Use(userContextFromRequest)
-	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
-
-	body, _ := json.Marshal(updateReq)
-	req := httptest.NewRequest("PUT", "/api/v1/farm", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	req = req.WithContext(withUserContext("user", 1, 1)) // user client 1, update targets client 2
-
-	resp, err := app.Test(req)
-
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]any
-	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.True(s.T(), result["error"] != nil || result["result"] != true, "expected error or non-success response")
-	// 500022 = client id not found, 500024 = permission denied
-	if errObj, ok := result["error"].(map[string]any); ok && errObj["code"] != nil {
-		code := errObj["code"]
-		assert.True(s.T(), code == "500022" || code == "500024", "expected auth or permission error, got %v", code)
-	}
-}
-
-func (s *FarmHandlerTestSuite) TestUpdateFarm_MissingUsername() {
-	updateReq := &model.Farm{
-		Id:       1,
-		ClientId: 1,
-		Name:     "Updated",
-		Status:   "active",
+func (s *FarmHandlerTestSuite) TestUpdateFarm_NotSuperAdmin() {
+	updateReq := &dto.UpdateFarmRequest{
+		Id:   1,
+		Name: "Updated",
 	}
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
-		"clientId": 1,
+		"username":  "admin",
+		"clientId":  1,
+		"userLevel": 1, // not super admin
 	}))
 	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
 
@@ -709,24 +677,55 @@ func (s *FarmHandlerTestSuite) TestUpdateFarm_MissingUsername() {
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.NotNil(s.T(), result["error"])
+	require.NotNil(s.T(), result["error"], "expected error when not super admin")
+	errObj, ok := result["error"].(map[string]any)
+	require.True(s.T(), ok && errObj["code"] != nil)
+	assert.Equal(s.T(), "500024", errObj["code"]) // ErrAuthPermissionDenied
 }
 
-func (s *FarmHandlerTestSuite) TestUpdateFarm_ServiceError() {
-	updateReq := &model.Farm{
-		Id:       1,
-		ClientId: 1,
-		Name:     "Updated",
-		Status:   "active",
+func (s *FarmHandlerTestSuite) TestUpdateFarm_NoUsernameInContext() {
+	// Update no longer requires username param; UpdatedBy is set from ctx in repo. Test that Update is called and succeeds.
+	updateReq := &dto.UpdateFarmRequest{
+		Id:   1,
+		Name: "Updated",
 	}
-	username := "admin"
-	svcErr := errors.New("update failed")
-	s.farmService.On("Update", mock.Anything, updateReq, username).Return(svcErr)
+	s.farmService.On("Update", mock.Anything, *updateReq).Return(nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
-		"username": username,
-		"clientId": 1,
+		"clientId":  1,
+		"userLevel": 3, // super admin; no username in context
+	}))
+	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
+
+	body, _ := json.Marshal(updateReq)
+	req := httptest.NewRequest("PUT", "/api/v1/farm", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	assert.True(s.T(), result["result"] == true, "expected success when Update returns nil")
+	s.farmService.AssertExpectations(s.T())
+}
+
+func (s *FarmHandlerTestSuite) TestUpdateFarm_ServiceError() {
+	updateReq := &dto.UpdateFarmRequest{
+		Id:   1,
+		Name: "Updated",
+	}
+	username := "admin"
+	svcErr := errors.New("update failed")
+	s.farmService.On("Update", mock.Anything, *updateReq).Return(svcErr)
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  username,
+		"clientId":  1,
+		"userLevel": 3, // super admin only
 	}))
 	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
 

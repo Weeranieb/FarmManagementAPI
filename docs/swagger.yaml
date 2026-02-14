@@ -58,20 +58,18 @@ definitions:
     required:
     - name
     type: object
-  dto.CreatePondRequest:
+  dto.CreatePondsRequest:
     properties:
       farmId:
         type: integer
-      name:
-        type: string
-      status:
-        enum:
-        - active
-        - maintenance
-        type: string
+      names:
+        items:
+          type: string
+        minItems: 1
+        type: array
     required:
     - farmId
-    - name
+    - names
     type: object
   dto.CreateUserRequest:
     properties:
@@ -148,6 +146,15 @@ definitions:
     - password
     - username
     type: object
+  dto.UpdateFarmRequest:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    required:
+    - id
+    type: object
   http.ErrorResponseModel:
     properties:
       code:
@@ -179,25 +186,6 @@ definitions:
       name:
         type: string
       ownerName:
-        type: string
-      updated_at:
-        type: string
-      updated_by:
-        type: string
-    type: object
-  model.Farm:
-    properties:
-      clientId:
-        type: integer
-      created_at:
-        type: string
-      created_by:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      status:
         type: string
       updated_at:
         type: string
@@ -589,7 +577,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Add a new farm entry with the provided details
+      description: Add a new farm entry with the provided details. Super admin only.
       parameters:
       - description: Farm data
         in: body
@@ -608,6 +596,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
         "500":
           description: Internal Server Error
           schema:
@@ -621,14 +613,15 @@ paths:
     put:
       consumes:
       - application/json
-      description: Update details of a farm entry
+      description: Update details of a farm entry. Super admin only. ClientId is not
+        accepted; it is preserved from the existing farm.
       parameters:
-      - description: Farm data
+      - description: Farm data (id, name)
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/model.Farm'
+          $ref: '#/definitions/dto.UpdateFarmRequest'
       produces:
       - application/json
       responses:
@@ -638,6 +631,10 @@ paths:
             $ref: '#/definitions/http.ResponseModel'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
         "500":
@@ -1005,14 +1002,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new pond with the provided details
+      description: 'Create multiple ponds for a farm. Request: farmId, array of names.
+        New ponds have status maintenance.'
       parameters:
-      - description: Pond data
+      - description: farmId, names[]
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/dto.CreatePondRequest'
+          $ref: '#/definitions/dto.CreatePondsRequest'
       produces:
       - application/json
       responses:
@@ -1031,7 +1029,7 @@ paths:
       security:
       - BearerAuth: []
       - CookieAuth: []
-      summary: Add a new pond
+      summary: Create multiple ponds
       tags:
       - pond
     put:
@@ -1128,41 +1126,6 @@ paths:
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a pond by ID
-      tags:
-      - pond
-  /pond/batch:
-    post:
-      consumes:
-      - application/json
-      description: Create multiple ponds with the provided details
-      parameters:
-      - description: Ponds data
-        in: body
-        name: body
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/dto.CreatePondRequest'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.ResponseModel'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/http.ErrorResponseModel'
-      security:
-      - BearerAuth: []
-      - CookieAuth: []
-      summary: Add multiple ponds
       tags:
       - pond
   /user:

@@ -41,7 +41,6 @@ func (s *FarmServiceTestSuite) TestCreate_Success() {
 		ClientId: 1,
 		Name:     "Test Farm",
 	}
-	username := "admin"
 	clientId := 1
 
 	s.farmRepo.On("GetByNameAndClientId", req.Name, clientId).Return(nil, nil)
@@ -55,8 +54,6 @@ func (s *FarmServiceTestSuite) TestCreate_Success() {
 		BaseModel: model.BaseModel{
 			CreatedAt: expectedTime,
 			UpdatedAt: expectedTime,
-			CreatedBy: username,
-			UpdatedBy: username,
 		},
 	}
 
@@ -67,7 +64,7 @@ func (s *FarmServiceTestSuite) TestCreate_Success() {
 		farm.UpdatedAt = expectedFarm.UpdatedAt
 	})
 
-	result, err := s.farmService.Create(context.Background(), req, username, clientId)
+	result, err := s.farmService.Create(context.Background(), req, clientId)
 
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
@@ -81,7 +78,6 @@ func (s *FarmServiceTestSuite) TestCreate_FarmExists() {
 		ClientId: 1,
 		Name:     "Test Farm",
 	}
-	username := "admin"
 	clientId := 1
 
 	existingFarm := &model.Farm{
@@ -92,7 +88,7 @@ func (s *FarmServiceTestSuite) TestCreate_FarmExists() {
 
 	s.farmRepo.On("GetByNameAndClientId", req.Name, clientId).Return(existingFarm, nil)
 
-	result, err := s.farmService.Create(context.Background(), req, username, clientId)
+	result, err := s.farmService.Create(context.Background(), req, clientId)
 
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), result)
@@ -144,22 +140,30 @@ func (s *FarmServiceTestSuite) TestGet_NotFound() {
 }
 
 func (s *FarmServiceTestSuite) TestUpdate_Success() {
-	username := "admin"
-	farm := &model.Farm{
+	updateReq := dto.UpdateFarmRequest{
+		Id:   1,
+		Name: "Updated Farm",
+	}
+	existingFarm := &model.Farm{
+		Id:       1,
+		ClientId: 1,
+		Name:     "Old Farm",
+		Status:   "active",
+	}
+	expectedUpdateFarm := &model.Farm{
 		Id:       1,
 		ClientId: 1,
 		Name:     "Updated Farm",
 		Status:   "active",
 	}
 
-	// Unique name check: no other farm has this name for client
+	s.farmRepo.On("GetByID", 1).Return(existingFarm, nil)
 	s.farmRepo.On("GetByNameAndClientId", "Updated Farm", 1).Return(nil, nil)
-	s.farmRepo.On("Update", mock.Anything, farm).Return(nil)
+	s.farmRepo.On("Update", mock.Anything, expectedUpdateFarm).Return(nil)
 
-	err := s.farmService.Update(context.Background(), farm, username)
+	err := s.farmService.Update(context.Background(), updateReq)
 
 	assert.NoError(s.T(), err)
-	// UpdatedBy is set in GORM BeforeUpdate from context (not applied when repo is mocked)
 	s.farmRepo.AssertExpectations(s.T())
 }
 

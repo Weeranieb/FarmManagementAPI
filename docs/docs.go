@@ -432,7 +432,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Update details of a farm entry",
+                "description": "Update details of a farm entry. Super admin only. ClientId is not accepted; it is preserved from the existing farm.",
                 "consumes": [
                     "application/json"
                 ],
@@ -445,12 +445,12 @@ const docTemplate = `{
                 "summary": "Update farm entry",
                 "parameters": [
                     {
-                        "description": "Farm data",
+                        "description": "Farm data (id, name)",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Farm"
+                            "$ref": "#/definitions/dto.UpdateFarmRequest"
                         }
                     }
                 ],
@@ -463,6 +463,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -484,7 +490,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Add a new farm entry with the provided details",
+                "description": "Add a new farm entry with the provided details. Super admin only.",
                 "consumes": [
                     "application/json"
                 ],
@@ -515,6 +521,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -1141,7 +1153,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Create a new pond with the provided details",
+                "description": "Create multiple ponds for a farm. Request: farmId, array of names. New ponds have status maintenance.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1151,72 +1163,15 @@ const docTemplate = `{
                 "tags": [
                     "pond"
                 ],
-                "summary": "Add a new pond",
+                "summary": "Create multiple ponds",
                 "parameters": [
                     {
-                        "description": "Pond data",
+                        "description": "farmId, names[]",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.CreatePondRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/pond/batch": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Create multiple ponds with the provided details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "pond"
-                ],
-                "summary": "Add multiple ponds",
-                "parameters": [
-                    {
-                        "description": "Ponds data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.CreatePondRequest"
-                            }
+                            "$ref": "#/definitions/dto.CreatePondsRequest"
                         }
                     }
                 ],
@@ -1842,25 +1797,22 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.CreatePondRequest": {
+        "dto.CreatePondsRequest": {
             "type": "object",
             "required": [
                 "farmId",
-                "name"
+                "names"
             ],
             "properties": {
                 "farmId": {
                     "type": "integer"
                 },
-                "name": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "active",
-                        "maintenance"
-                    ]
+                "names": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -1974,6 +1926,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.UpdateFarmRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "http.ErrorResponseModel": {
             "type": "object",
             "properties": {
@@ -2019,35 +1985,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "ownerName": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.Farm": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 },
                 "updated_at": {
