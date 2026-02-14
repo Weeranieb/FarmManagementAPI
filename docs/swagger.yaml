@@ -17,19 +17,14 @@ definitions:
     properties:
       clientId:
         type: integer
-      code:
-        type: string
       name:
         type: string
     required:
     - clientId
-    - code
     - name
     type: object
   dto.CreateFeedCollectionRequest:
     properties:
-      code:
-        type: string
       feedPriceHistories:
         items:
           $ref: '#/definitions/dto.CreateFeedPriceHistoryItemRequest'
@@ -39,7 +34,6 @@ definitions:
       unit:
         type: string
     required:
-    - code
     - name
     - unit
     type: object
@@ -66,14 +60,16 @@ definitions:
     type: object
   dto.CreatePondRequest:
     properties:
-      code:
-        type: string
       farmId:
         type: integer
       name:
         type: string
+      status:
+        enum:
+        - active
+        - maintenance
+        type: string
     required:
-    - code
     - farmId
     - name
     type: object
@@ -193,8 +189,6 @@ definitions:
     properties:
       clientId:
         type: integer
-      code:
-        type: string
       created_at:
         type: string
       created_by:
@@ -202,6 +196,8 @@ definitions:
       id:
         type: integer
       name:
+        type: string
+      status:
         type: string
       updated_at:
         type: string
@@ -212,8 +208,6 @@ definitions:
     properties:
       clientId:
         type: integer
-      code:
-        type: string
       created_at:
         type: string
       created_by:
@@ -250,8 +244,6 @@ definitions:
     type: object
   model.Pond:
     properties:
-      code:
-        type: string
       created_at:
         type: string
       created_by:
@@ -261,6 +253,8 @@ definitions:
       id:
         type: integer
       name:
+        type: string
+      status:
         type: string
       updated_at:
         type: string

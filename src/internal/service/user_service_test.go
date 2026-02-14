@@ -3,16 +3,38 @@ package service
 import (
 	"context"
 	"errors"
+	"testing"
 	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
+	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/repository/mocks"
 )
 
-func (s *ServiceTestSuite) TestCreate_Success() {
+type UserServiceTestSuite struct {
+	suite.Suite
+	userRepo    *mocks.MockUserRepository
+	userService UserService
+}
+
+func (s *UserServiceTestSuite) SetupTest() {
+	s.userRepo = mocks.NewMockUserRepository(s.T())
+	s.userService = NewUserService(s.userRepo)
+}
+
+func (s *UserServiceTestSuite) TearDownTest() {
+	s.userRepo.ExpectedCalls = nil
+}
+
+func TestUserServiceSuite(t *testing.T) {
+	suite.Run(t, new(UserServiceTestSuite))
+}
+
+func (s *UserServiceTestSuite) TestCreate_Success() {
 	ctx := context.Background()
 	req := dto.CreateUserRequest{
 		Username:      "testuser",
@@ -66,7 +88,7 @@ func (s *ServiceTestSuite) TestCreate_Success() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *ServiceTestSuite) TestCreate_UsernameExists() {
+func (s *UserServiceTestSuite) TestCreate_UsernameExists() {
 	ctx := context.Background()
 	req := dto.CreateUserRequest{
 		Username:      "existinguser",
@@ -98,7 +120,7 @@ func (s *ServiceTestSuite) TestCreate_UsernameExists() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *ServiceTestSuite) TestCreate_GetByUsernameError() {
+func (s *UserServiceTestSuite) TestCreate_GetByUsernameError() {
 	ctx := context.Background()
 	req := dto.CreateUserRequest{
 		Username:      "testuser",
@@ -122,7 +144,7 @@ func (s *ServiceTestSuite) TestCreate_GetByUsernameError() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *ServiceTestSuite) TestGetUser_Success() {
+func (s *UserServiceTestSuite) TestGetUser_Success() {
 	userID := 1
 	expectedTime := time.Now()
 	expectedUser := &model.User{
@@ -155,7 +177,7 @@ func (s *ServiceTestSuite) TestGetUser_Success() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *ServiceTestSuite) TestGetUser_NotFound() {
+func (s *UserServiceTestSuite) TestGetUser_NotFound() {
 	userID := 999
 
 	s.userRepo.On("GetByID", userID).Return(nil, errors.New("user not found"))
@@ -169,7 +191,7 @@ func (s *ServiceTestSuite) TestGetUser_NotFound() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *ServiceTestSuite) TestUpdate_Success() {
+func (s *UserServiceTestSuite) TestUpdate_Success() {
 	userIdentity := "admin"
 	updateUser := &model.User{
 		Id:            1,
@@ -194,7 +216,7 @@ func (s *ServiceTestSuite) TestUpdate_Success() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *ServiceTestSuite) TestUpdate_Error() {
+func (s *UserServiceTestSuite) TestUpdate_Error() {
 	userIdentity := "admin"
 	updateUser := &model.User{
 		Id:        1,
@@ -212,7 +234,7 @@ func (s *ServiceTestSuite) TestUpdate_Error() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *ServiceTestSuite) TestGetUserList_Success() {
+func (s *UserServiceTestSuite) TestGetUserList_Success() {
 	ctx := context.Background()
 	clientId := 1
 	clientIdPtr := &clientId
@@ -265,7 +287,7 @@ func (s *ServiceTestSuite) TestGetUserList_Success() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *ServiceTestSuite) TestGetUserList_Empty() {
+func (s *UserServiceTestSuite) TestGetUserList_Empty() {
 	ctx := context.Background()
 	clientId := 999
 	clientIdPtr := &clientId
@@ -282,7 +304,7 @@ func (s *ServiceTestSuite) TestGetUserList_Empty() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *ServiceTestSuite) TestGetUserList_Error() {
+func (s *UserServiceTestSuite) TestGetUserList_Error() {
 	ctx := context.Background()
 	clientId := 1
 	clientIdPtr := &clientId

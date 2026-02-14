@@ -15,4 +15,3 @@ type Worker struct {
 	IsActive      bool       `json:"isActive" gorm:"column:is_active"`
 	BaseModel
 }
-

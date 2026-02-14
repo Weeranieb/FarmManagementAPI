@@ -37,7 +37,7 @@ func NewFeedCollectionService(
 
 func (s *feedCollectionService) Create(request dto.CreateFeedCollectionRequest, username string, clientId int) (*dto.CreateFeedCollectionResponse, error) {
 	// Check if feed collection already exists
-	checkFeedCollection, err := s.feedCollectionRepo.GetByClientIdAndCode(clientId, request.Code)
+	checkFeedCollection, err := s.feedCollectionRepo.GetByClientIdAndName(clientId, request.Name)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -57,7 +57,6 @@ func (s *feedCollectionService) Create(request dto.CreateFeedCollectionRequest, 
 	// Create feed collection
 	newFeedCollection := &model.FeedCollection{
 		ClientId: clientId,
-		Code:     request.Code,
 		Name:     request.Name,
 		Unit:     request.Unit,
 		BaseModel: model.BaseModel{
@@ -167,7 +166,6 @@ func (s *feedCollectionService) toFeedCollectionResponse(feedCollection *model.F
 	return &dto.FeedCollectionResponse{
 		Id:        feedCollection.Id,
 		ClientId:  feedCollection.ClientId,
-		Code:      feedCollection.Code,
 		Name:      feedCollection.Name,
 		Unit:      feedCollection.Unit,
 		CreatedAt: feedCollection.CreatedAt,

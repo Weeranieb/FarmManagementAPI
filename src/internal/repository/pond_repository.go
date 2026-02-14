@@ -13,7 +13,7 @@ type PondRepository interface {
 	Create(pond *model.Pond) error
 	CreateBatch(ponds []*model.Pond) error
 	GetByID(id int) (*model.Pond, error)
-	GetByFarmIdAndCode(farmId int, code string) (*model.Pond, error)
+	GetByFarmIdAndName(farmId int, name string) (*model.Pond, error)
 	Update(pond *model.Pond) error
 	ListByFarmId(farmId int) ([]*model.Pond, error)
 	Delete(id int) error
@@ -47,9 +47,9 @@ func (r *pondRepository) GetByID(id int) (*model.Pond, error) {
 	return &pond, nil
 }
 
-func (r *pondRepository) GetByFarmIdAndCode(farmId int, code string) (*model.Pond, error) {
+func (r *pondRepository) GetByFarmIdAndName(farmId int, name string) (*model.Pond, error) {
 	var pond model.Pond
-	err := r.db.Where("farm_id = ? AND code = ? AND deleted_at IS NULL", farmId, code).First(&pond).Error
+	err := r.db.Where("farm_id = ? AND name = ? AND deleted_at IS NULL", farmId, name).First(&pond).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

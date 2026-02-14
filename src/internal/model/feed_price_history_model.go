@@ -9,4 +9,3 @@ type FeedPriceHistory struct {
 	PriceUpdatedDate time.Time `json:"priceUpdatedDate" gorm:"column:price_updated_date"`
 	BaseModel
 }
-

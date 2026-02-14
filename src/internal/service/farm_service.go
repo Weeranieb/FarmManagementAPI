@@ -1,8 +1,10 @@
 package service
 
 import (
+	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/mapper"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
 )
@@ -12,7 +14,7 @@ type FarmService interface {
 	Create(request dto.CreateFarmRequest, username string, clientId int) (*dto.FarmResponse, error)
 	Get(id int, clientId *int) (*dto.FarmResponse, error)
 	Update(request *model.Farm, username string) error
-	GetList(clientId int) ([]*dto.FarmResponse, error)
+	GetList(clientId int) (*dto.FarmListResponse, error)
 	GetFarmIdByName(farmName string, clientId int) (int, error)
 }
 
@@ -28,7 +30,7 @@ func NewFarmService(farmRepo repository.FarmRepository) FarmService {
 
 func (s *farmService) Create(request dto.CreateFarmRequest, username string, clientId int) (*dto.FarmResponse, error) {
 	// Check if farm already exists
-	checkFarm, err := s.farmRepo.GetByCodeAndClientId(request.Code, clientId)
+	checkFarm, err := s.farmRepo.GetByNameAndClientId(request.Name, clientId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -37,10 +39,13 @@ func (s *farmService) Create(request dto.CreateFarmRequest, username string, cli
 		return nil, errors.ErrFarmAlreadyExists
 	}
 
+	// Set default status if not provided
+	status := constants.FarmStatusActive
+
 	newFarm := &model.Farm{
 		ClientId: clientId,
-		Code:     request.Code,
 		Name:     request.Name,
+		Status:   status,
 		BaseModel: model.BaseModel{
 			CreatedBy: username,
 			UpdatedBy: username,
@@ -53,7 +58,7 @@ func (s *farmService) Create(request dto.CreateFarmRequest, username string, cli
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
-	return s.toFarmResponse(newFarm), nil
+	return mapper.ToFarmResponse(newFarm), nil
 }
 
 func (s *farmService) Get(id int, clientId *int) (*dto.FarmResponse, error) {
@@ -71,7 +76,7 @@ func (s *farmService) Get(id int, clientId *int) (*dto.FarmResponse, error) {
 		return nil, errors.ErrFarmNotFound
 	}
 
-	return s.toFarmResponse(farm), nil
+	return mapper.ToFarmResponse(farm), nil
 }
 
 func (s *farmService) Update(request *model.Farm, username string) error {
@@ -83,18 +88,24 @@ func (s *farmService) Update(request *model.Farm, username string) error {
 	return nil
 }
 
-func (s *farmService) GetList(clientId int) ([]*dto.FarmResponse, error) {
+func (s *farmService) GetList(clientId int) (*dto.FarmListResponse, error) {
 	farms, err := s.farmRepo.ListByClientId(clientId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
-	responses := make([]*dto.FarmResponse, 0, len(farms))
-	for _, farm := range farms {
-		responses = append(responses, s.toFarmResponse(farm))
+	countByClientId, err := s.farmRepo.CountByClientId(clientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
-	return responses, nil
+	responses := mapper.ToFarmResponseList(farms)
+
+	return &dto.FarmListResponse{
+		Farms:       responses,
+		Total:       int(countByClientId.Total),
+		TotalActive: int(countByClientId.ActiveCount),
+	}, nil
 }
 
 func (s *farmService) GetFarmIdByName(farmName string, clientId int) (int, error) {
@@ -108,17 +119,4 @@ func (s *farmService) GetFarmIdByName(farmName string, clientId int) (int, error
 	}
 
 	return farm.Id, nil
-}
-
-func (s *farmService) toFarmResponse(farm *model.Farm) *dto.FarmResponse {
-	return &dto.FarmResponse{
-		Id:        farm.Id,
-		ClientId:  farm.ClientId,
-		Code:      farm.Code,
-		Name:      farm.Name,
-		CreatedAt: farm.CreatedAt,
-		CreatedBy: farm.CreatedBy,
-		UpdatedAt: farm.UpdatedAt,
-		UpdatedBy: farm.UpdatedBy,
-	}
 }

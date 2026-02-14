@@ -12,7 +12,7 @@ import (
 type FeedCollectionRepository interface {
 	Create(feedCollection *model.FeedCollection) error
 	GetByID(id int) (*model.FeedCollection, error)
-	GetByClientIdAndCode(clientId int, code string) (*model.FeedCollection, error)
+	GetByClientIdAndName(clientId int, name string) (*model.FeedCollection, error)
 	Update(feedCollection *model.FeedCollection) error
 	GetPage(clientId, page, pageSize int, orderBy, keyword string) ([]*model.FeedCollectionPage, int64, error)
 }
@@ -41,9 +41,9 @@ func (r *feedCollectionRepository) GetByID(id int) (*model.FeedCollection, error
 	return &feedCollection, nil
 }
 
-func (r *feedCollectionRepository) GetByClientIdAndCode(clientId int, code string) (*model.FeedCollection, error) {
+func (r *feedCollectionRepository) GetByClientIdAndName(clientId int, name string) (*model.FeedCollection, error) {
 	var feedCollection model.FeedCollection
-	err := r.db.Where("client_id = ? AND code = ? AND deleted_at IS NULL", clientId, code).First(&feedCollection).Error
+	err := r.db.Where("client_id = ? AND name = ? AND deleted_at IS NULL", clientId, name).First(&feedCollection).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -76,7 +76,7 @@ func (r *feedCollectionRepository) GetPage(clientId, page, pageSize int, orderBy
 		Where("feed_collections.client_id = ? AND feed_collections.deleted_at IS NULL", clientId)
 
 	if keyword != "" {
-		query = query.Where("(feed_collections.code LIKE ? OR feed_collections.name LIKE ? OR feed_collections.unit LIKE ?)", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
+		query = query.Where("(feed_collections.name LIKE ? OR feed_collections.unit LIKE ?)", "%"+keyword+"%", "%"+keyword+"%")
 	}
 
 	// Count total
