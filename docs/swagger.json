@@ -522,6 +522,57 @@
                 }
             }
         },
+        "/farm/hierarchy": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Retrieve all farms for the client with their nested ponds (for Existing Data view). Super admin may pass clientId query param.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm"
+                ],
+                "summary": "Get farm hierarchy with ponds",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Client ID (optional for super admin)",
+                        "name": "clientId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/farm/{id}": {
             "get": {
                 "security": [

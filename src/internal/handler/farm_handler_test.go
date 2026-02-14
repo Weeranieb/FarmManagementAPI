@@ -130,6 +130,94 @@ func (s *FarmHandlerTestSuite) TestGetFarmList_Success() {
 	s.farmService.AssertExpectations(s.T())
 }
 
+func (s *FarmHandlerTestSuite) TestGetFarmHierarchy_Success() {
+	clientId := 1
+	expectedList := []*dto.FarmHierarchyItem{
+		{Id: 1, ClientId: clientId, Name: "River Farm", Status: "active", Ponds: []dto.FarmDetailPondItem{{Id: 1, Name: "Pond A1", Status: "active"}}},
+		{Id: 2, ClientId: clientId, Name: "Delta Farm", Status: "active", Ponds: []dto.FarmDetailPondItem{}},
+	}
+	s.farmService.On("GetHierarchy", clientId).Return(expectedList, nil)
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"clientId":  clientId,
+		"userLevel": 1,
+	}))
+	app.Get("/api/v1/farm/hierarchy", s.farmHandler.GetFarmHierarchy)
+
+	req := httptest.NewRequest("GET", "/api/v1/farm/hierarchy", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	assert.True(s.T(), result["result"].(bool))
+	assert.NotNil(s.T(), result["data"])
+	s.farmService.AssertExpectations(s.T())
+}
+
+func (s *FarmHandlerTestSuite) TestGetFarmHierarchy_Success_SuperAdminWithClientId() {
+	clientId := 2
+	expectedList := []*dto.FarmHierarchyItem{
+		{Id: 1, ClientId: clientId, Name: "Farm X", Status: "active", Ponds: []dto.FarmDetailPondItem{}},
+	}
+	s.farmService.On("GetHierarchy", clientId).Return(expectedList, nil)
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{"userLevel": 3}))
+	app.Get("/api/v1/farm/hierarchy", s.farmHandler.GetFarmHierarchy)
+
+	req := httptest.NewRequest("GET", "/api/v1/farm/hierarchy?clientId=2", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.farmService.AssertExpectations(s.T())
+}
+
+func (s *FarmHandlerTestSuite) TestGetFarmHierarchy_ServiceError() {
+	clientId := 1
+	svcErr := errors.New("db error")
+	s.farmService.On("GetHierarchy", clientId).Return(([]*dto.FarmHierarchyItem)(nil), svcErr)
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"clientId":  clientId,
+		"userLevel": 1,
+	}))
+	app.Get("/api/v1/farm/hierarchy", s.farmHandler.GetFarmHierarchy)
+
+	req := httptest.NewRequest("GET", "/api/v1/farm/hierarchy", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	assert.NotEmpty(s.T(), result["message"])
+	s.farmService.AssertExpectations(s.T())
+}
+
+func (s *FarmHandlerTestSuite) TestGetFarmHierarchy_ClientIdNotFound() {
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{"userLevel": 1})) // no clientId
+	app.Get("/api/v1/farm/hierarchy", s.farmHandler.GetFarmHierarchy)
+
+	req := httptest.NewRequest("GET", "/api/v1/farm/hierarchy", nil)
+
+	resp, err := app.Test(req)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	assert.NotNil(s.T(), result["error"])
+}
+
 func (s *FarmHandlerTestSuite) TestUpdateFarm_Success() {
 	updateReq := &model.Farm{
 		Id:       1,

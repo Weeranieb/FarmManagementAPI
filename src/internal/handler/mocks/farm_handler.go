@@ -49,6 +49,24 @@ func (_m *MockFarmHandler) GetFarm(c *fiber.Ctx) error {
 	return r0
 }
 
+// GetFarmHierarchy provides a mock function with given fields: c
+func (_m *MockFarmHandler) GetFarmHierarchy(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFarmHierarchy")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetFarmList provides a mock function with given fields: c
 func (_m *MockFarmHandler) GetFarmList(c *fiber.Ctx) error {
 	ret := _m.Called(c)

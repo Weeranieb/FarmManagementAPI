@@ -102,6 +102,36 @@ func (_m *MockFarmService) GetFarmIdByName(farmName string, clientId int) (int, 
 	return r0, r1
 }
 
+// GetHierarchy provides a mock function with given fields: clientId
+func (_m *MockFarmService) GetHierarchy(clientId int) ([]*dto.FarmHierarchyItem, error) {
+	ret := _m.Called(clientId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetHierarchy")
+	}
+
+	var r0 []*dto.FarmHierarchyItem
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) ([]*dto.FarmHierarchyItem, error)); ok {
+		return rf(clientId)
+	}
+	if rf, ok := ret.Get(0).(func(int) []*dto.FarmHierarchyItem); ok {
+		r0 = rf(clientId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*dto.FarmHierarchyItem)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(clientId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetList provides a mock function with given fields: clientId
 func (_m *MockFarmService) GetList(clientId int) (*dto.FarmListResponse, error) {
 	ret := _m.Called(clientId)

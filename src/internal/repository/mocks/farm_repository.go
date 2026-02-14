@@ -150,6 +150,36 @@ func (_m *MockFarmRepository) ListByClientId(clientId int) ([]*model.Farm, error
 	return r0, r1
 }
 
+// ListByClientIdWithPonds provides a mock function with given fields: clientId
+func (_m *MockFarmRepository) ListByClientIdWithPonds(clientId int) ([]*model.FarmWithPonds, error) {
+	ret := _m.Called(clientId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByClientIdWithPonds")
+	}
+
+	var r0 []*model.FarmWithPonds
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) ([]*model.FarmWithPonds, error)); ok {
+		return rf(clientId)
+	}
+	if rf, ok := ret.Get(0).(func(int) []*model.FarmWithPonds); ok {
+		r0 = rf(clientId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.FarmWithPonds)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(clientId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: farm
 func (_m *MockFarmRepository) Update(farm *model.Farm) error {
 	ret := _m.Called(farm)

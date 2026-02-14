@@ -68,3 +68,29 @@ func ToFarmDetailResponse(farm *model.Farm, ponds []*model.Pond) *dto.FarmDetail
 		Ponds: pondItems,
 	}
 }
+
+// ToFarmHierarchyItem maps model.Farm and its ponds to dto.FarmHierarchyItem
+func ToFarmHierarchyItem(farm *model.Farm, ponds []*model.Pond) *dto.FarmHierarchyItem {
+	if farm == nil {
+		return nil
+	}
+	pondItems := make([]dto.FarmDetailPondItem, 0, len(ponds))
+	for _, p := range ponds {
+		pondItems = append(pondItems, dto.FarmDetailPondItem{Id: p.Id, Name: p.Name, Status: p.Status})
+	}
+	return &dto.FarmHierarchyItem{
+		Id:       farm.Id,
+		ClientId: farm.ClientId,
+		Name:     farm.Name,
+		Status:   farm.Status,
+		Ponds:    pondItems,
+	}
+}
+
+// ToFarmHierarchyItemFromFarmWithPonds maps model.FarmWithPonds to dto.FarmHierarchyItem
+func ToFarmHierarchyItemFromFarmWithPonds(f *model.FarmWithPonds) *dto.FarmHierarchyItem {
+	if f == nil {
+		return nil
+	}
+	return ToFarmHierarchyItem(&f.Farm, f.Ponds)
+}

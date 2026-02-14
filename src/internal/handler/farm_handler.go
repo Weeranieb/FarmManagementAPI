@@ -19,6 +19,7 @@ type FarmHandler interface {
 	AddFarm(c *fiber.Ctx) error
 	GetFarm(c *fiber.Ctx) error
 	GetFarmList(c *fiber.Ctx) error
+	GetFarmHierarchy(c *fiber.Ctx) error
 	UpdateFarm(c *fiber.Ctx) error
 }
 
@@ -173,6 +174,59 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 	}
 
 	return http.Success(c, farmList)
+}
+
+// GET /farm/hierarchy
+// Get farms with nested ponds for the current client (Existing Data view).
+// @Summary      Get farm hierarchy with ponds
+// @Description  Retrieve all farms for the client with their nested ponds (for Existing Data view). Super admin may pass clientId query param.
+// @Tags         farm
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        clientId query int false "Client ID (optional for super admin)"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /farm/hierarchy [get]
+func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	var clientId int
+
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	if isSuperAdmin {
+		clientIdStr := c.Query("clientId")
+		if clientIdStr != "" {
+			clientIdVal, err := strconv.Atoi(clientIdStr)
+			if err != nil {
+				return http.Error(c, errors.ErrValidationFailed.Code, "Invalid clientId parameter")
+			}
+			clientId = clientIdVal
+		}
+	} else {
+		clientIdPtr := utils.GetClientId(c.UserContext())
+		if clientIdPtr == nil {
+			return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+		}
+		clientId = *clientIdPtr
+	}
+
+	list, err := h.farmService.GetHierarchy(clientId)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, list)
 }
 
 // PUT /farm
