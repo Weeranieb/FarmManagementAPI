@@ -45,23 +45,23 @@ func (_m *MockFarmService) Create(request dto.CreateFarmRequest, username string
 }
 
 // Get provides a mock function with given fields: id, clientId
-func (_m *MockFarmService) Get(id int, clientId *int) (*dto.FarmResponse, error) {
+func (_m *MockFarmService) Get(id int, clientId *int) (*dto.FarmDetailResponse, error) {
 	ret := _m.Called(id, clientId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
 	}
 
-	var r0 *dto.FarmResponse
+	var r0 *dto.FarmDetailResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int, *int) (*dto.FarmResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(int, *int) (*dto.FarmDetailResponse, error)); ok {
 		return rf(id, clientId)
 	}
-	if rf, ok := ret.Get(0).(func(int, *int) *dto.FarmResponse); ok {
+	if rf, ok := ret.Get(0).(func(int, *int) *dto.FarmDetailResponse); ok {
 		r0 = rf(id, clientId)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*dto.FarmResponse)
+			r0 = ret.Get(0).(*dto.FarmDetailResponse)
 		}
 	}
 

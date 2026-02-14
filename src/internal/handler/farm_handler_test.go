@@ -74,11 +74,13 @@ func (s *FarmHandlerTestSuite) TestAddFarm_Success() {
 func (s *FarmHandlerTestSuite) TestGetFarm_Success() {
 	farmId := 1
 	clientId := 1
-	expectedResponse := &dto.FarmResponse{
+	expectedResponse := &dto.FarmDetailResponse{
 		Id:       farmId,
 		ClientId: clientId,
 		Name:     "Test Farm",
 		Status:   "active",
+		Summary:  dto.FarmDetailSummary{TotalPonds: 0, ActivePonds: 0},
+		Ponds:    []dto.FarmDetailPondItem{},
 	}
 
 	s.farmService.On("Get", farmId, mock.AnythingOfType("*int")).Return(expectedResponse, nil)
@@ -406,7 +408,7 @@ func (s *FarmHandlerTestSuite) TestGetFarm_ServiceError() {
 	farmId := 1
 	clientId := 1
 	svcErr := errors.New("not found")
-	s.farmService.On("Get", farmId, mock.AnythingOfType("*int")).Return((*dto.FarmResponse)(nil), svcErr)
+	s.farmService.On("Get", farmId, mock.AnythingOfType("*int")).Return((*dto.FarmDetailResponse)(nil), svcErr)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{

@@ -24,3 +24,29 @@ type FarmListResponse struct {
 	Total       int             `json:"total"`
 	TotalActive int             `json:"totalActive"`
 }
+
+// FarmDetailSummary holds summary stats for the farm detail page cards
+type FarmDetailSummary struct {
+	TotalStock       int `json:"totalStock"`
+	ActivePonds      int `json:"activePonds"`
+	TotalPonds       int `json:"totalPonds"`
+	MaintenancePonds int `json:"maintenancePonds"`
+}
+
+// FarmDetailPondItem is a pond entry in the farm detail response
+type FarmDetailPondItem struct {
+	Id     int    `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+// FarmDetailResponse is the full payload for GET /farm/:id (farm detail page)
+type FarmDetailResponse struct {
+	Id        int                  `json:"id"`
+	ClientId  int                  `json:"clientId"`
+	Name      string               `json:"name"`
+	Status    string               `json:"status"`
+	CreatedAt string               `json:"createdAt"`
+	Summary   FarmDetailSummary    `json:"summary"`
+	Ponds     []FarmDetailPondItem `json:"ponds"`
+}

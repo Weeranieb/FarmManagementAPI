@@ -12,7 +12,7 @@ import (
 //go:generate go run github.com/vektra/mockery/v2@latest --name=FarmService --output=./mocks --outpkg=service --filename=farm_service.go --structname=MockFarmService --with-expecter=false
 type FarmService interface {
 	Create(request dto.CreateFarmRequest, username string, clientId int) (*dto.FarmResponse, error)
-	Get(id int, clientId *int) (*dto.FarmResponse, error)
+	Get(id int, clientId *int) (*dto.FarmDetailResponse, error)
 	Update(request *model.Farm, username string) error
 	GetList(clientId int) (*dto.FarmListResponse, error)
 	GetFarmIdByName(farmName string, clientId int) (int, error)
@@ -20,11 +20,13 @@ type FarmService interface {
 
 type farmService struct {
 	farmRepo repository.FarmRepository
+	pondRepo repository.PondRepository
 }
 
-func NewFarmService(farmRepo repository.FarmRepository) FarmService {
+func NewFarmService(farmRepo repository.FarmRepository, pondRepo repository.PondRepository) FarmService {
 	return &farmService{
 		farmRepo: farmRepo,
+		pondRepo: pondRepo,
 	}
 }
 
@@ -61,7 +63,7 @@ func (s *farmService) Create(request dto.CreateFarmRequest, username string, cli
 	return mapper.ToFarmResponse(newFarm), nil
 }
 
-func (s *farmService) Get(id int, clientId *int) (*dto.FarmResponse, error) {
+func (s *farmService) Get(id int, clientId *int) (*dto.FarmDetailResponse, error) {
 	farm, err := s.farmRepo.GetByID(id)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
@@ -76,7 +78,15 @@ func (s *farmService) Get(id int, clientId *int) (*dto.FarmResponse, error) {
 		return nil, errors.ErrFarmNotFound
 	}
 
-	return mapper.ToFarmResponse(farm), nil
+	ponds, err := s.pondRepo.ListByFarmId(id)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if ponds == nil {
+		ponds = []*model.Pond{}
+	}
+
+	return mapper.ToFarmDetailResponse(farm, ponds), nil
 }
 
 func (s *farmService) Update(request *model.Farm, username string) error {
