@@ -76,6 +76,36 @@ func (_m *MockClientService) Get(id int) (*dto.ClientResponse, error) {
 	return r0, r1
 }
 
+// GetClientDropdown provides a mock function with no fields
+func (_m *MockClientService) GetClientDropdown() ([]*dto.DropdownItem, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetClientDropdown")
+	}
+
+	var r0 []*dto.DropdownItem
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]*dto.DropdownItem, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []*dto.DropdownItem); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*dto.DropdownItem)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetList provides a mock function with no fields
 func (_m *MockClientService) GetList() ([]*dto.ClientResponse, error) {
 	ret := _m.Called()

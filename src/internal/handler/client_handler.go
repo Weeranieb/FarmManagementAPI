@@ -18,6 +18,7 @@ import (
 type ClientHandler interface {
 	AddClient(c *fiber.Ctx) error
 	GetClient(c *fiber.Ctx) error
+	GetClientList(c *fiber.Ctx) error
 	UpdateClient(c *fiber.Ctx) error
 }
 
@@ -114,6 +115,39 @@ func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
 	}
 
 	return http.Success(c, client)
+}
+
+// GET /client/list
+// Get list of clients for dropdown (id + name). Super admin only.
+// @Summary      Get client list for dropdown
+// @Description  Returns a list of clients with id and name for dropdown/select. Only super admin can access.
+// @Tags         client
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {object}  http.ResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /client/list [get]
+func (h *clientHandlerImpl) GetClientList(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil || !isSuperAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
+	dropdown, err := h.clientService.GetClientDropdown()
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, dropdown)
 }
 
 // PUT /client

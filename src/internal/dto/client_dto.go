@@ -27,3 +27,4 @@ type ClientResponse struct {
 	UpdatedAt     time.Time `json:"updatedAt"`
 	UpdatedBy     string    `json:"updatedBy"`
 }
+
