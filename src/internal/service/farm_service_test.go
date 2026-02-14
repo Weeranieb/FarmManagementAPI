@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -177,5 +178,59 @@ func (s *FarmServiceTestSuite) TestGetList_Success() {
 	assert.Len(s.T(), result.Farms, 2)
 	assert.Equal(s.T(), 2, result.Total)
 	assert.Equal(s.T(), 2, result.TotalActive)
+	s.farmRepo.AssertExpectations(s.T())
+}
+
+func (s *FarmServiceTestSuite) TestGetHierarchy_Success() {
+	clientId := 1
+	list := []*model.FarmWithPonds{
+		{
+			Farm:  model.Farm{Id: 1, ClientId: clientId, Name: "River Farm", Status: "active"},
+			Ponds: []*model.Pond{{Id: 1, FarmId: 1, Name: "Pond A1", Status: "active"}, {Id: 2, FarmId: 1, Name: "Pond A2", Status: "maintenance"}},
+		},
+		{
+			Farm:  model.Farm{Id: 2, ClientId: clientId, Name: "Delta Farm", Status: "active"},
+			Ponds: []*model.Pond{},
+		},
+	}
+
+	s.farmRepo.On("ListByClientIdWithPonds", clientId).Return(list, nil)
+
+	result, err := s.farmService.GetHierarchy(clientId)
+
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), result)
+	assert.Len(s.T(), result, 2)
+	assert.Equal(s.T(), 1, result[0].Id)
+	assert.Equal(s.T(), "River Farm", result[0].Name)
+	assert.Len(s.T(), result[0].Ponds, 2)
+	assert.Equal(s.T(), "Pond A1", result[0].Ponds[0].Name)
+	assert.Equal(s.T(), "maintenance", result[0].Ponds[1].Status)
+	assert.Equal(s.T(), 2, result[1].Id)
+	assert.Equal(s.T(), "Delta Farm", result[1].Name)
+	assert.Len(s.T(), result[1].Ponds, 0)
+	s.farmRepo.AssertExpectations(s.T())
+}
+
+func (s *FarmServiceTestSuite) TestGetHierarchy_Empty() {
+	clientId := 1
+	s.farmRepo.On("ListByClientIdWithPonds", clientId).Return([]*model.FarmWithPonds{}, nil)
+
+	result, err := s.farmService.GetHierarchy(clientId)
+
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), result)
+	assert.Len(s.T(), result, 0)
+	s.farmRepo.AssertExpectations(s.T())
+}
+
+func (s *FarmServiceTestSuite) TestGetHierarchy_RepoError() {
+	clientId := 1
+	s.farmRepo.On("ListByClientIdWithPonds", clientId).Return(([]*model.FarmWithPonds)(nil), errors.New("db error"))
+
+	result, err := s.farmService.GetHierarchy(clientId)
+
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), result)
 	s.farmRepo.AssertExpectations(s.T())
 }

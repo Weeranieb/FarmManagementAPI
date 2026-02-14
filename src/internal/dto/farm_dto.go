@@ -50,3 +50,12 @@ type FarmDetailResponse struct {
 	Summary   FarmDetailSummary    `json:"summary"`
 	Ponds     []FarmDetailPondItem `json:"ponds"`
 }
+
+// FarmHierarchyItem is a farm with its ponds for GET /farm/hierarchy
+type FarmHierarchyItem struct {
+	Id       int                  `json:"id"`
+	ClientId int                  `json:"clientId"`
+	Name     string               `json:"name"`
+	Status   string               `json:"status"`
+	Ponds    []FarmDetailPondItem `json:"ponds"`
+}

@@ -682,6 +682,38 @@ paths:
       summary: Get farm by ID
       tags:
       - farm
+  /farm/hierarchy:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all farms for the client with their nested ponds (for
+        Existing Data view). Super admin may pass clientId query param.
+      parameters:
+      - description: Client ID (optional for super admin)
+        in: query
+        name: clientId
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Get farm hierarchy with ponds
+      tags:
+      - farm
   /feed-collection:
     get:
       consumes:

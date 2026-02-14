@@ -16,6 +16,7 @@ type FarmRepository interface {
 	GetByNameAndClientId(name string, clientId int) (*model.Farm, error)
 	Update(farm *model.Farm) error
 	ListByClientId(clientId int) ([]*model.Farm, error)
+	ListByClientIdWithPonds(clientId int) ([]*model.FarmWithPonds, error)
 	CountByClientId(clientId int) (*model.FarmCountByClientId, error)
 }
 
@@ -63,6 +64,37 @@ func (r *farmRepository) ListByClientId(clientId int) ([]*model.Farm, error) {
 	var farms []*model.Farm
 	err := r.db.Where("client_id = ? AND deleted_at IS NULL", clientId).Find(&farms).Error
 	return farms, err
+}
+
+// ListByClientIdWithPonds returns all farms for the client with their ponds using Preload (2 queries).
+func (r *farmRepository) ListByClientIdWithPonds(clientId int) ([]*model.FarmWithPonds, error) {
+	var load []*model.FarmWithPondsLoad
+	err := r.db.Where("client_id = ? AND deleted_at IS NULL", clientId).
+		Preload("Ponds", "deleted_at IS NULL").
+		Find(&load).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(load) == 0 {
+		return []*model.FarmWithPonds{}, nil
+	}
+	result := make([]*model.FarmWithPonds, 0, len(load))
+	for _, row := range load {
+		ponds := row.Ponds
+		if ponds == nil {
+			ponds = []*model.Pond{}
+		}
+		result = append(result, &model.FarmWithPonds{
+			Farm: model.Farm{
+				Id:       row.Id,
+				ClientId: row.ClientId,
+				Name:     row.Name,
+				Status:   row.Status,
+			},
+			Ponds: ponds,
+		})
+	}
+	return result, nil
 }
 
 func (r *farmRepository) CountByClientId(clientId int) (*model.FarmCountByClientId, error) {

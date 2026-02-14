@@ -15,6 +15,7 @@ type FarmService interface {
 	Get(id int, clientId *int) (*dto.FarmDetailResponse, error)
 	Update(request *model.Farm, username string) error
 	GetList(clientId int) (*dto.FarmListResponse, error)
+	GetHierarchy(clientId int) ([]*dto.FarmHierarchyItem, error)
 	GetFarmIdByName(farmName string, clientId int) (int, error)
 }
 
@@ -116,6 +117,24 @@ func (s *farmService) GetList(clientId int) (*dto.FarmListResponse, error) {
 		Total:       int(countByClientId.Total),
 		TotalActive: int(countByClientId.ActiveCount),
 	}, nil
+}
+
+func (s *farmService) GetHierarchy(clientId int) ([]*dto.FarmHierarchyItem, error) {
+	list, err := s.farmRepo.ListByClientIdWithPonds(clientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+
+	if len(list) == 0 {
+		return []*dto.FarmHierarchyItem{}, nil
+	}
+
+	result := make([]*dto.FarmHierarchyItem, 0, len(list))
+	for _, f := range list {
+		result = append(result, mapper.ToFarmHierarchyItemFromFarmWithPonds(f))
+	}
+
+	return result, nil
 }
 
 func (s *farmService) GetFarmIdByName(farmName string, clientId int) (int, error) {
