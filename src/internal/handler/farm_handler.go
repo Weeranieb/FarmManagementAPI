@@ -34,9 +34,9 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 }
 
 // POST /farm
-// Add a new farm entry.
+// Add a new farm entry. Super admin only.
 // @Summary      Add a new farm entry
-// @Description  Add a new farm entry with the provided details
+// @Description  Add a new farm entry with the provided details. Super admin only.
 // @Tags         farm
 // @Accept       json
 // @Produce      json
@@ -45,6 +45,7 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 // @Param        body body dto.CreateFarmRequest true "Farm data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm [post]
 func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
@@ -66,12 +67,18 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
+	// Super admin only
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil || !isSuperAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
 	// Validate client access
 	if err := validateClientAccess(c, createFarmRequest.ClientId); err != nil {
 		return err
 	}
 
-	newFarm, err := h.farmService.Create(createFarmRequest, username, createFarmRequest.ClientId)
+	newFarm, err := h.farmService.Create(c.UserContext(), createFarmRequest, username, createFarmRequest.ClientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -267,7 +274,7 @@ func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.farmService.Update(updateFarm, username)
+	err = h.farmService.Update(c.UserContext(), updateFarm, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

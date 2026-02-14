@@ -14,17 +14,17 @@ type MockUserRepository struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: user
-func (_m *MockUserRepository) Create(user *model.User) error {
-	ret := _m.Called(user)
+// Create provides a mock function with given fields: ctx, user
+func (_m *MockUserRepository) Create(ctx context.Context, user *model.User) error {
+	ret := _m.Called(ctx, user)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.User) error); ok {
-		r0 = rf(user)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.User) error); ok {
+		r0 = rf(ctx, user)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -140,17 +140,17 @@ func (_m *MockUserRepository) ListByClientId(ctx context.Context, clientId *int)
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: user
-func (_m *MockUserRepository) Update(user *model.User) error {
-	ret := _m.Called(user)
+// Update provides a mock function with given fields: ctx, user
+func (_m *MockUserRepository) Update(ctx context.Context, user *model.User) error {
+	ret := _m.Called(ctx, user)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.User) error); ok {
-		r0 = rf(user)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.User) error); ok {
+		r0 = rf(ctx, user)
 	} else {
 		r0 = ret.Error(0)
 	}

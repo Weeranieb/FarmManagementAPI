@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	model "github.com/weeranieb/boonmafarm-backend/src/internal/model"
 )
@@ -12,17 +14,17 @@ type MockMerchantRepository struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: merchant
-func (_m *MockMerchantRepository) Create(merchant *model.Merchant) error {
-	ret := _m.Called(merchant)
+// Create provides a mock function with given fields: ctx, merchant
+func (_m *MockMerchantRepository) Create(ctx context.Context, merchant *model.Merchant) error {
+	ret := _m.Called(ctx, merchant)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Merchant) error); ok {
-		r0 = rf(merchant)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Merchant) error); ok {
+		r0 = rf(ctx, merchant)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -120,17 +122,17 @@ func (_m *MockMerchantRepository) List() ([]*model.Merchant, error) {
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: merchant
-func (_m *MockMerchantRepository) Update(merchant *model.Merchant) error {
-	ret := _m.Called(merchant)
+// Update provides a mock function with given fields: ctx, merchant
+func (_m *MockMerchantRepository) Update(ctx context.Context, merchant *model.Merchant) error {
+	ret := _m.Called(ctx, merchant)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Merchant) error); ok {
-		r0 = rf(merchant)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Merchant) error); ok {
+		r0 = rf(ctx, merchant)
 	} else {
 		r0 = ret.Error(0)
 	}

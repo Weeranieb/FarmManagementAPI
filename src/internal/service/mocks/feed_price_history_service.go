@@ -3,6 +3,8 @@
 package service
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	dto "github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 
@@ -14,9 +16,9 @@ type MockFeedPriceHistoryService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: request, username
-func (_m *MockFeedPriceHistoryService) Create(request dto.CreateFeedPriceHistoryRequest, username string) (*dto.FeedPriceHistoryResponse, error) {
-	ret := _m.Called(request, username)
+// Create provides a mock function with given fields: ctx, request, username
+func (_m *MockFeedPriceHistoryService) Create(ctx context.Context, request dto.CreateFeedPriceHistoryRequest, username string) (*dto.FeedPriceHistoryResponse, error) {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -24,19 +26,19 @@ func (_m *MockFeedPriceHistoryService) Create(request dto.CreateFeedPriceHistory
 
 	var r0 *dto.FeedPriceHistoryResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(dto.CreateFeedPriceHistoryRequest, string) (*dto.FeedPriceHistoryResponse, error)); ok {
-		return rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateFeedPriceHistoryRequest, string) (*dto.FeedPriceHistoryResponse, error)); ok {
+		return rf(ctx, request, username)
 	}
-	if rf, ok := ret.Get(0).(func(dto.CreateFeedPriceHistoryRequest, string) *dto.FeedPriceHistoryResponse); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateFeedPriceHistoryRequest, string) *dto.FeedPriceHistoryResponse); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*dto.FeedPriceHistoryResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(dto.CreateFeedPriceHistoryRequest, string) error); ok {
-		r1 = rf(request, username)
+	if rf, ok := ret.Get(1).(func(context.Context, dto.CreateFeedPriceHistoryRequest, string) error); ok {
+		r1 = rf(ctx, request, username)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -104,17 +106,17 @@ func (_m *MockFeedPriceHistoryService) GetAll(feedCollectionId int) ([]*dto.Feed
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: request, username
-func (_m *MockFeedPriceHistoryService) Update(request *model.FeedPriceHistory, username string) error {
-	ret := _m.Called(request, username)
+// Update provides a mock function with given fields: ctx, request, username
+func (_m *MockFeedPriceHistoryService) Update(ctx context.Context, request *model.FeedPriceHistory, username string) error {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.FeedPriceHistory, string) error); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.FeedPriceHistory, string) error); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		r0 = ret.Error(0)
 	}

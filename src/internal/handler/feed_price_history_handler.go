@@ -50,7 +50,7 @@ func (h *feedPriceHistoryHandlerImpl) AddFeedPriceHistory(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	result, err := h.feedPriceHistoryService.Create(createFeedPriceHistoryRequest, username)
+	result, err := h.feedPriceHistoryService.Create(c.UserContext(), createFeedPriceHistoryRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -97,7 +97,7 @@ func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c *fiber.Ctx) error
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.feedPriceHistoryService.Update(updateFeedPriceHistory, username)
+	err = h.feedPriceHistoryService.Update(c.UserContext(), updateFeedPriceHistory, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

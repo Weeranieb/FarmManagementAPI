@@ -17,7 +17,7 @@ import (
 type UserService interface {
 	Create(ctx context.Context, request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error)
 	GetUser(id int) (*dto.UserResponse, error)
-	Update(request *model.User, userIdentity string) error
+	Update(ctx context.Context, request *model.User, userIdentity string) error
 	GetUserList(ctx context.Context, clientId *int) ([]*dto.UserResponse, error)
 }
 
@@ -62,14 +62,10 @@ func (s *userService) Create(ctx context.Context, request dto.CreateUserRequest,
 		UserLevel:     request.UserLevel,
 		ContactNumber: request.ContactNumber,
 		ClientId:      clientId,
-		BaseModel: model.BaseModel{
-			CreatedBy: userIdentity,
-			UpdatedBy: userIdentity,
-		},
 	}
 
-	// create user
-	err = s.userRepo.Create(newUser)
+	// create user (CreatedBy/UpdatedBy set via BaseModel hook from ctx)
+	err = s.userRepo.Create(ctx, newUser)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -88,10 +84,9 @@ func (s *userService) GetUser(id int) (*dto.UserResponse, error) {
 	return s.toUserResponse(user), nil
 }
 
-func (s *userService) Update(request *model.User, userIdentity string) error {
-	// update user
-	request.UpdatedBy = userIdentity
-	if err := s.userRepo.Update(request); err != nil {
+func (s *userService) Update(ctx context.Context, request *model.User, userIdentity string) error {
+	// update user (UpdatedBy set via BaseModel hook from ctx)
+	if err := s.userRepo.Update(ctx, request); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

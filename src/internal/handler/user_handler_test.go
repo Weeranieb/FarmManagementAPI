@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/service/mocks"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 )
 
 // HandlerTestSuite is shared with user_handler_test.go
@@ -54,16 +54,16 @@ func setLocalsMiddleware(locals map[string]interface{}) fiber.Handler {
 
 		// Map string keys to context keys
 		if userId, ok := locals["userId"]; ok {
-			ctx = context.WithValue(ctx, utils.UserIdKey(), userId)
+			ctx = context.WithValue(ctx, constants.UserIDKey, userId)
 		}
 		if username, ok := locals["username"]; ok {
-			ctx = context.WithValue(ctx, utils.UsernameKey(), username)
+			ctx = context.WithValue(ctx, constants.UsernameKey, username)
 		}
 		if clientId, ok := locals["clientId"]; ok {
-			ctx = context.WithValue(ctx, utils.ClientIdKey(), clientId)
+			ctx = context.WithValue(ctx, constants.ClientIDKey, clientId)
 		}
 		if userLevel, ok := locals["userLevel"]; ok {
-			ctx = context.WithValue(ctx, utils.UserLevelKey(), userLevel)
+			ctx = context.WithValue(ctx, constants.UserLevelKey, userLevel)
 		}
 
 		c.SetUserContext(ctx)
@@ -320,7 +320,7 @@ func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
 	}
 
 	username := "admin"
-	s.userService.On("Update", updateUser, username).Return(nil)
+	s.userService.On("Update", mock.Anything, updateUser, username).Return(nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]interface{}{
@@ -380,7 +380,7 @@ func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
 	}
 
 	username := "admin"
-	s.userService.On("Update", updateUser, username).Return(errors.New("update failed"))
+	s.userService.On("Update", mock.Anything, updateUser, username).Return(errors.New("update failed"))
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]interface{}{

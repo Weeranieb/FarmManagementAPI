@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	model "github.com/weeranieb/boonmafarm-backend/src/internal/model"
 )
@@ -12,17 +14,17 @@ type MockPondRepository struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: pond
-func (_m *MockPondRepository) Create(pond *model.Pond) error {
-	ret := _m.Called(pond)
+// Create provides a mock function with given fields: ctx, pond
+func (_m *MockPondRepository) Create(ctx context.Context, pond *model.Pond) error {
+	ret := _m.Called(ctx, pond)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Pond) error); ok {
-		r0 = rf(pond)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Pond) error); ok {
+		r0 = rf(ctx, pond)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -30,17 +32,17 @@ func (_m *MockPondRepository) Create(pond *model.Pond) error {
 	return r0
 }
 
-// CreateBatch provides a mock function with given fields: ponds
-func (_m *MockPondRepository) CreateBatch(ponds []*model.Pond) error {
-	ret := _m.Called(ponds)
+// CreateBatch provides a mock function with given fields: ctx, ponds
+func (_m *MockPondRepository) CreateBatch(ctx context.Context, ponds []*model.Pond) error {
+	ret := _m.Called(ctx, ponds)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]*model.Pond) error); ok {
-		r0 = rf(ponds)
+	if rf, ok := ret.Get(0).(func(context.Context, []*model.Pond) error); ok {
+		r0 = rf(ctx, ponds)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -156,17 +158,17 @@ func (_m *MockPondRepository) ListByFarmId(farmId int) ([]*model.Pond, error) {
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: pond
-func (_m *MockPondRepository) Update(pond *model.Pond) error {
-	ret := _m.Called(pond)
+// Update provides a mock function with given fields: ctx, pond
+func (_m *MockPondRepository) Update(ctx context.Context, pond *model.Pond) error {
+	ret := _m.Called(ctx, pond)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Pond) error); ok {
-		r0 = rf(pond)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Pond) error); ok {
+		r0 = rf(ctx, pond)
 	} else {
 		r0 = ret.Error(0)
 	}

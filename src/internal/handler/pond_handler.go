@@ -70,7 +70,7 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
-	if err := h.pondService.CreatePonds(createPondsRequest, username); err != nil {
+	if err := h.pondService.CreatePonds(c.UserContext(), createPondsRequest, username); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return http.Success(c, nil)
@@ -178,7 +178,7 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.pondService.Update(updatePond, username)
+	err = h.pondService.Update(c.UserContext(), updatePond, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

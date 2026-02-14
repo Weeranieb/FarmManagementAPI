@@ -71,7 +71,7 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
 	}
 
-	result, err := h.feedCollectionService.Create(createFeedCollectionRequest, username, *clientIdPtr)
+	result, err := h.feedCollectionService.Create(c.UserContext(), createFeedCollectionRequest, username, *clientIdPtr)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -147,7 +147,7 @@ func (h *feedCollectionHandlerImpl) UpdateFeedCollection(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.feedCollectionService.Update(updateFeedCollection, username)
+	err = h.feedCollectionService.Update(c.UserContext(), updateFeedCollection, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

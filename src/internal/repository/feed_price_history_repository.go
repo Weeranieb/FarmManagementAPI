@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -10,12 +11,12 @@ import (
 )
 
 type FeedPriceHistoryRepository interface {
-	Create(feedPriceHistory *model.FeedPriceHistory) error
-	CreateBatch(feedPriceHistories []*model.FeedPriceHistory) error
+	Create(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error
+	CreateBatch(ctx context.Context, feedPriceHistories []*model.FeedPriceHistory) error
 	GetByID(id int) (*model.FeedPriceHistory, error)
 	GetByFeedCollectionIdAndDate(feedCollectionId int, priceUpdatedDate time.Time) (*model.FeedPriceHistory, error)
 	ListByFeedCollectionId(feedCollectionId int) ([]*model.FeedPriceHistory, error)
-	Update(feedPriceHistory *model.FeedPriceHistory) error
+	Update(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error
 }
 
 type feedPriceHistoryRepository struct {
@@ -26,15 +27,15 @@ func NewFeedPriceHistoryRepository(db *gorm.DB) FeedPriceHistoryRepository {
 	return &feedPriceHistoryRepository{db: db}
 }
 
-func (r *feedPriceHistoryRepository) Create(feedPriceHistory *model.FeedPriceHistory) error {
-	return r.db.Create(feedPriceHistory).Error
+func (r *feedPriceHistoryRepository) Create(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error {
+	return r.db.WithContext(ctx).Create(feedPriceHistory).Error
 }
 
-func (r *feedPriceHistoryRepository) CreateBatch(feedPriceHistories []*model.FeedPriceHistory) error {
+func (r *feedPriceHistoryRepository) CreateBatch(ctx context.Context, feedPriceHistories []*model.FeedPriceHistory) error {
 	if len(feedPriceHistories) == 0 {
 		return nil
 	}
-	return r.db.Create(feedPriceHistories).Error
+	return r.db.WithContext(ctx).Create(feedPriceHistories).Error
 }
 
 func (r *feedPriceHistoryRepository) GetByID(id int) (*model.FeedPriceHistory, error) {
@@ -69,6 +70,6 @@ func (r *feedPriceHistoryRepository) ListByFeedCollectionId(feedCollectionId int
 	return feedPriceHistories, err
 }
 
-func (r *feedPriceHistoryRepository) Update(feedPriceHistory *model.FeedPriceHistory) error {
-	return r.db.Save(feedPriceHistory).Error
+func (r *feedPriceHistoryRepository) Update(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error {
+	return r.db.WithContext(ctx).Save(feedPriceHistory).Error
 }

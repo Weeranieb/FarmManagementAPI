@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -42,8 +43,8 @@ func (s *PondServiceTestSuite) TestCreatePonds_Success() {
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 1").Return(nil, nil)
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 2").Return(nil, nil)
 
-	s.pondRepo.On("CreateBatch", mock.AnythingOfType("[]*model.Pond")).Return(nil).Run(func(args mock.Arguments) {
-		ponds := args.Get(0).([]*model.Pond)
+	s.pondRepo.On("CreateBatch", mock.Anything, mock.AnythingOfType("[]*model.Pond")).Return(nil).Run(func(args mock.Arguments) {
+		ponds := args.Get(1).([]*model.Pond)
 		for i := range ponds {
 			ponds[i].Id = i + 1
 			ponds[i].CreatedAt = time.Now()
@@ -51,7 +52,7 @@ func (s *PondServiceTestSuite) TestCreatePonds_Success() {
 		}
 	})
 
-	err := s.pondService.CreatePonds(req, username)
+	err := s.pondService.CreatePonds(context.Background(), req, username)
 
 	assert.NoError(s.T(), err)
 	s.pondRepo.AssertExpectations(s.T())
@@ -69,7 +70,7 @@ func (s *PondServiceTestSuite) TestCreatePonds_PondAlreadyExists() {
 	existingPond := &model.Pond{Id: 99, FarmId: 1, Name: "Pond 2", Status: "active"}
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 2").Return(existingPond, nil)
 
-	err := s.pondService.CreatePonds(req, username)
+	err := s.pondService.CreatePonds(context.Background(), req, username)
 
 	assert.Error(s.T(), err)
 	assert.ErrorIs(s.T(), err, errors.ErrPondAlreadyExists)

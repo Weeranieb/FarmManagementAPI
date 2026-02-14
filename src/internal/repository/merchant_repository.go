@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -10,10 +11,10 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=MerchantRepository --output=./mocks --outpkg=mocks --filename=merchant_repository.go --structname=MockMerchantRepository --with-expecter=false
 type MerchantRepository interface {
-	Create(merchant *model.Merchant) error
+	Create(ctx context.Context, merchant *model.Merchant) error
 	GetByID(id int) (*model.Merchant, error)
 	GetByContactNumberAndName(contactNumber, name string) (*model.Merchant, error)
-	Update(merchant *model.Merchant) error
+	Update(ctx context.Context, merchant *model.Merchant) error
 	List() ([]*model.Merchant, error)
 }
 
@@ -25,8 +26,8 @@ func NewMerchantRepository(db *gorm.DB) MerchantRepository {
 	return &merchantRepository{db: db}
 }
 
-func (r *merchantRepository) Create(merchant *model.Merchant) error {
-	return r.db.Create(merchant).Error
+func (r *merchantRepository) Create(ctx context.Context, merchant *model.Merchant) error {
+	return r.db.WithContext(ctx).Create(merchant).Error
 }
 
 func (r *merchantRepository) GetByID(id int) (*model.Merchant, error) {
@@ -53,8 +54,8 @@ func (r *merchantRepository) GetByContactNumberAndName(contactNumber, name strin
 	return &merchant, nil
 }
 
-func (r *merchantRepository) Update(merchant *model.Merchant) error {
-	return r.db.Save(merchant).Error
+func (r *merchantRepository) Update(ctx context.Context, merchant *model.Merchant) error {
+	return r.db.WithContext(ctx).Save(merchant).Error
 }
 
 func (r *merchantRepository) List() ([]*model.Merchant, error) {

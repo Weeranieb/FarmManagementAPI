@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	model "github.com/weeranieb/boonmafarm-backend/src/internal/model"
 )
@@ -12,17 +14,17 @@ type MockWorkerRepository struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: worker
-func (_m *MockWorkerRepository) Create(worker *model.Worker) error {
-	ret := _m.Called(worker)
+// Create provides a mock function with given fields: ctx, worker
+func (_m *MockWorkerRepository) Create(ctx context.Context, worker *model.Worker) error {
+	ret := _m.Called(ctx, worker)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Worker) error); ok {
-		r0 = rf(worker)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Worker) error); ok {
+		r0 = rf(ctx, worker)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -127,17 +129,17 @@ func (_m *MockWorkerRepository) GetPage(clientId int, page int, pageSize int, or
 	return r0, r1, r2
 }
 
-// Update provides a mock function with given fields: worker
-func (_m *MockWorkerRepository) Update(worker *model.Worker) error {
-	ret := _m.Called(worker)
+// Update provides a mock function with given fields: ctx, worker
+func (_m *MockWorkerRepository) Update(ctx context.Context, worker *model.Worker) error {
+	ret := _m.Called(ctx, worker)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Worker) error); ok {
-		r0 = rf(worker)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Worker) error); ok {
+		r0 = rf(ctx, worker)
 	} else {
 		r0 = ret.Error(0)
 	}

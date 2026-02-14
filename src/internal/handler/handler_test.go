@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 )
 
 // userContextFromRequest sets UserContext from the request context so req.WithContext() is honored
@@ -17,13 +17,13 @@ func userContextFromRequest(c *fiber.Ctx) error {
 func withUserContext(username string, clientId, userLevel int) context.Context {
 	ctx := context.Background()
 	if username != "" {
-		ctx = context.WithValue(ctx, utils.UsernameKey(), username)
+		ctx = context.WithValue(ctx, constants.UsernameKey, username)
 	}
 	if clientId != 0 {
-		ctx = context.WithValue(ctx, utils.ClientIdKey(), clientId)
+		ctx = context.WithValue(ctx, constants.ClientIDKey, clientId)
 	}
 	if userLevel != 0 {
-		ctx = context.WithValue(ctx, utils.UserLevelKey(), userLevel)
+		ctx = context.WithValue(ctx, constants.UserLevelKey, userLevel)
 	}
 	return ctx
 }

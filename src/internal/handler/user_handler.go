@@ -156,7 +156,7 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
 	}
 
-	err = h.userService.Update(updateUser, username)
+	err = h.userService.Update(c.UserContext(), updateUser, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

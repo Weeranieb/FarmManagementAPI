@@ -3,6 +3,8 @@
 package service
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	dto "github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 
@@ -14,9 +16,9 @@ type MockWorkerService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: request, username, clientId
-func (_m *MockWorkerService) Create(request dto.CreateWorkerRequest, username string, clientId int) (*dto.WorkerResponse, error) {
-	ret := _m.Called(request, username, clientId)
+// Create provides a mock function with given fields: ctx, request, username, clientId
+func (_m *MockWorkerService) Create(ctx context.Context, request dto.CreateWorkerRequest, username string, clientId int) (*dto.WorkerResponse, error) {
+	ret := _m.Called(ctx, request, username, clientId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -24,19 +26,19 @@ func (_m *MockWorkerService) Create(request dto.CreateWorkerRequest, username st
 
 	var r0 *dto.WorkerResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(dto.CreateWorkerRequest, string, int) (*dto.WorkerResponse, error)); ok {
-		return rf(request, username, clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateWorkerRequest, string, int) (*dto.WorkerResponse, error)); ok {
+		return rf(ctx, request, username, clientId)
 	}
-	if rf, ok := ret.Get(0).(func(dto.CreateWorkerRequest, string, int) *dto.WorkerResponse); ok {
-		r0 = rf(request, username, clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateWorkerRequest, string, int) *dto.WorkerResponse); ok {
+		r0 = rf(ctx, request, username, clientId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*dto.WorkerResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(dto.CreateWorkerRequest, string, int) error); ok {
-		r1 = rf(request, username, clientId)
+	if rf, ok := ret.Get(1).(func(context.Context, dto.CreateWorkerRequest, string, int) error); ok {
+		r1 = rf(ctx, request, username, clientId)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -104,17 +106,17 @@ func (_m *MockWorkerService) GetPage(clientId int, page int, pageSize int, order
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: request, username
-func (_m *MockWorkerService) Update(request *model.Worker, username string) error {
-	ret := _m.Called(request, username)
+// Update provides a mock function with given fields: ctx, request, username
+func (_m *MockWorkerService) Update(ctx context.Context, request *model.Worker, username string) error {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Worker, string) error); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Worker, string) error); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		r0 = ret.Error(0)
 	}

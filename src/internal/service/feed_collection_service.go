@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -11,9 +13,9 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=FeedCollectionService --output=./mocks --outpkg=service --filename=feed_collection_service.go --structname=MockFeedCollectionService --with-expecter=false
 type FeedCollectionService interface {
-	Create(request dto.CreateFeedCollectionRequest, username string, clientId int) (*dto.CreateFeedCollectionResponse, error)
+	Create(ctx context.Context, request dto.CreateFeedCollectionRequest, username string, clientId int) (*dto.CreateFeedCollectionResponse, error)
 	Get(id int) (*dto.FeedCollectionResponse, error)
-	Update(request *model.FeedCollection, username string) error
+	Update(ctx context.Context, request *model.FeedCollection, username string) error
 	GetPage(clientId, page, pageSize int, orderBy, keyword string) (*dto.PageResponse, error)
 }
 
@@ -35,7 +37,7 @@ func NewFeedCollectionService(
 	}
 }
 
-func (s *feedCollectionService) Create(request dto.CreateFeedCollectionRequest, username string, clientId int) (*dto.CreateFeedCollectionResponse, error) {
+func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFeedCollectionRequest, username string, clientId int) (*dto.CreateFeedCollectionResponse, error) {
 	// Check if feed collection already exists
 	checkFeedCollection, err := s.feedCollectionRepo.GetByClientIdAndName(clientId, request.Name)
 	if err != nil {
@@ -46,8 +48,8 @@ func (s *feedCollectionService) Create(request dto.CreateFeedCollectionRequest, 
 		return nil, errors.ErrFeedCollectionAlreadyExists
 	}
 
-	// Start transaction
-	tx := s.db.Begin()
+	// Start transaction (ctx used so BaseModel hooks can set CreatedBy/UpdatedBy)
+	tx := s.db.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -59,10 +61,6 @@ func (s *feedCollectionService) Create(request dto.CreateFeedCollectionRequest, 
 		ClientId: clientId,
 		Name:     request.Name,
 		Unit:     request.Unit,
-		BaseModel: model.BaseModel{
-			CreatedBy: username,
-			UpdatedBy: username,
-		},
 	}
 
 	if err := tx.Create(newFeedCollection).Error; err != nil {
@@ -79,10 +77,6 @@ func (s *feedCollectionService) Create(request dto.CreateFeedCollectionRequest, 
 				FeedCollectionId: newFeedCollection.Id,
 				Price:            priceHistoryReq.Price,
 				PriceUpdatedDate: priceHistoryReq.PriceUpdatedDate,
-				BaseModel: model.BaseModel{
-					CreatedBy: username,
-					UpdatedBy: username,
-				},
 			}
 			priceHistories = append(priceHistories, priceHistory)
 		}
@@ -127,10 +121,9 @@ func (s *feedCollectionService) Get(id int) (*dto.FeedCollectionResponse, error)
 	return s.toFeedCollectionResponse(feedCollection), nil
 }
 
-func (s *feedCollectionService) Update(request *model.FeedCollection, username string) error {
-	// Update feed collection
-	request.UpdatedBy = username
-	if err := s.feedCollectionRepo.Update(request); err != nil {
+func (s *feedCollectionService) Update(ctx context.Context, request *model.FeedCollection, username string) error {
+	// Update feed collection (UpdatedBy set via BaseModel hook from ctx)
+	if err := s.feedCollectionRepo.Update(ctx, request); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

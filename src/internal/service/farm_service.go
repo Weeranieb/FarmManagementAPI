@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -11,9 +13,9 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=FarmService --output=./mocks --outpkg=service --filename=farm_service.go --structname=MockFarmService --with-expecter=false
 type FarmService interface {
-	Create(request dto.CreateFarmRequest, username string, clientId int) (*dto.FarmResponse, error)
+	Create(ctx context.Context, request dto.CreateFarmRequest, username string, clientId int) (*dto.FarmResponse, error)
 	Get(id int, clientId *int) (*dto.FarmDetailResponse, error)
-	Update(request *model.Farm, username string) error
+	Update(ctx context.Context, request *model.Farm, username string) error
 	GetList(clientId int) (*dto.FarmListResponse, error)
 	GetHierarchy(clientId int) ([]*dto.FarmHierarchyItem, error)
 	GetFarmIdByName(farmName string, clientId int) (int, error)
@@ -31,7 +33,7 @@ func NewFarmService(farmRepo repository.FarmRepository, pondRepo repository.Pond
 	}
 }
 
-func (s *farmService) Create(request dto.CreateFarmRequest, username string, clientId int) (*dto.FarmResponse, error) {
+func (s *farmService) Create(ctx context.Context, request dto.CreateFarmRequest, username string, clientId int) (*dto.FarmResponse, error) {
 	// Check if farm already exists
 	checkFarm, err := s.farmRepo.GetByNameAndClientId(request.Name, clientId)
 	if err != nil {
@@ -49,15 +51,10 @@ func (s *farmService) Create(request dto.CreateFarmRequest, username string, cli
 		ClientId: clientId,
 		Name:     request.Name,
 		Status:   status,
-		BaseModel: model.BaseModel{
-			CreatedBy: username,
-			UpdatedBy: username,
-		},
 	}
 
-	// Create farm
-	err = s.farmRepo.Create(newFarm)
-	if err != nil {
+	// Create farm (CreatedBy/UpdatedBy set via BaseModel hook from ctx)
+	if err = s.farmRepo.Create(ctx, newFarm); err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
@@ -90,7 +87,7 @@ func (s *farmService) Get(id int, clientId *int) (*dto.FarmDetailResponse, error
 	return mapper.ToFarmDetailResponse(farm, ponds), nil
 }
 
-func (s *farmService) Update(request *model.Farm, username string) error {
+func (s *farmService) Update(ctx context.Context, request *model.Farm, username string) error {
 	// Enforce unique farm name per client
 	if request.Name != "" {
 		existing, err := s.farmRepo.GetByNameAndClientId(request.Name, request.ClientId)
@@ -102,8 +99,8 @@ func (s *farmService) Update(request *model.Farm, username string) error {
 		}
 	}
 
-	request.UpdatedBy = username
-	if err := s.farmRepo.Update(request); err != nil {
+	// UpdatedBy set via BaseModel hook from ctx
+	if err := s.farmRepo.Update(ctx, request); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

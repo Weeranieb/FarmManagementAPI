@@ -3,6 +3,8 @@
 package service
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	dto "github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 
@@ -14,9 +16,9 @@ type MockFeedCollectionService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: request, username, clientId
-func (_m *MockFeedCollectionService) Create(request dto.CreateFeedCollectionRequest, username string, clientId int) (*dto.CreateFeedCollectionResponse, error) {
-	ret := _m.Called(request, username, clientId)
+// Create provides a mock function with given fields: ctx, request, username, clientId
+func (_m *MockFeedCollectionService) Create(ctx context.Context, request dto.CreateFeedCollectionRequest, username string, clientId int) (*dto.CreateFeedCollectionResponse, error) {
+	ret := _m.Called(ctx, request, username, clientId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -24,19 +26,19 @@ func (_m *MockFeedCollectionService) Create(request dto.CreateFeedCollectionRequ
 
 	var r0 *dto.CreateFeedCollectionResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(dto.CreateFeedCollectionRequest, string, int) (*dto.CreateFeedCollectionResponse, error)); ok {
-		return rf(request, username, clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateFeedCollectionRequest, string, int) (*dto.CreateFeedCollectionResponse, error)); ok {
+		return rf(ctx, request, username, clientId)
 	}
-	if rf, ok := ret.Get(0).(func(dto.CreateFeedCollectionRequest, string, int) *dto.CreateFeedCollectionResponse); ok {
-		r0 = rf(request, username, clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateFeedCollectionRequest, string, int) *dto.CreateFeedCollectionResponse); ok {
+		r0 = rf(ctx, request, username, clientId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*dto.CreateFeedCollectionResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(dto.CreateFeedCollectionRequest, string, int) error); ok {
-		r1 = rf(request, username, clientId)
+	if rf, ok := ret.Get(1).(func(context.Context, dto.CreateFeedCollectionRequest, string, int) error); ok {
+		r1 = rf(ctx, request, username, clientId)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -104,17 +106,17 @@ func (_m *MockFeedCollectionService) GetPage(clientId int, page int, pageSize in
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: request, username
-func (_m *MockFeedCollectionService) Update(request *model.FeedCollection, username string) error {
-	ret := _m.Called(request, username)
+// Update provides a mock function with given fields: ctx, request, username
+func (_m *MockFeedCollectionService) Update(ctx context.Context, request *model.FeedCollection, username string) error {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.FeedCollection, string) error); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.FeedCollection, string) error); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		r0 = ret.Error(0)
 	}

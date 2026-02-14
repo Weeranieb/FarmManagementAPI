@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
@@ -11,10 +12,10 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=FarmRepository --output=./mocks --outpkg=mocks --filename=farm_repository.go --structname=MockFarmRepository --with-expecter=false
 type FarmRepository interface {
-	Create(farm *model.Farm) error
+	Create(ctx context.Context, farm *model.Farm) error
 	GetByID(id int) (*model.Farm, error)
 	GetByNameAndClientId(name string, clientId int) (*model.Farm, error)
-	Update(farm *model.Farm) error
+	Update(ctx context.Context, farm *model.Farm) error
 	ListByClientId(clientId int) ([]*model.Farm, error)
 	ListByClientIdWithPonds(clientId int) ([]*model.FarmWithPonds, error)
 	CountByClientId(clientId int) (*model.FarmCountByClientId, error)
@@ -28,8 +29,8 @@ func NewFarmRepository(db *gorm.DB) FarmRepository {
 	return &farmRepository{db: db}
 }
 
-func (r *farmRepository) Create(farm *model.Farm) error {
-	return r.db.Create(farm).Error
+func (r *farmRepository) Create(ctx context.Context, farm *model.Farm) error {
+	return r.db.WithContext(ctx).Create(farm).Error
 }
 
 func (r *farmRepository) GetByID(id int) (*model.Farm, error) {
@@ -56,8 +57,8 @@ func (r *farmRepository) GetByNameAndClientId(name string, clientId int) (*model
 	return &farm, nil
 }
 
-func (r *farmRepository) Update(farm *model.Farm) error {
-	return r.db.Save(farm).Error
+func (r *farmRepository) Update(ctx context.Context, farm *model.Farm) error {
+	return r.db.WithContext(ctx).Save(farm).Error
 }
 
 func (r *farmRepository) ListByClientId(clientId int) ([]*model.Farm, error) {

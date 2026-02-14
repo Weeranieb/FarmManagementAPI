@@ -3,6 +3,8 @@
 package service
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	dto "github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 
@@ -14,9 +16,9 @@ type MockMerchantService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: request, username
-func (_m *MockMerchantService) Create(request dto.CreateMerchantRequest, username string) (*dto.MerchantResponse, error) {
-	ret := _m.Called(request, username)
+// Create provides a mock function with given fields: ctx, request, username
+func (_m *MockMerchantService) Create(ctx context.Context, request dto.CreateMerchantRequest, username string) (*dto.MerchantResponse, error) {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -24,19 +26,19 @@ func (_m *MockMerchantService) Create(request dto.CreateMerchantRequest, usernam
 
 	var r0 *dto.MerchantResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(dto.CreateMerchantRequest, string) (*dto.MerchantResponse, error)); ok {
-		return rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateMerchantRequest, string) (*dto.MerchantResponse, error)); ok {
+		return rf(ctx, request, username)
 	}
-	if rf, ok := ret.Get(0).(func(dto.CreateMerchantRequest, string) *dto.MerchantResponse); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateMerchantRequest, string) *dto.MerchantResponse); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*dto.MerchantResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(dto.CreateMerchantRequest, string) error); ok {
-		r1 = rf(request, username)
+	if rf, ok := ret.Get(1).(func(context.Context, dto.CreateMerchantRequest, string) error); ok {
+		r1 = rf(ctx, request, username)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -104,17 +106,17 @@ func (_m *MockMerchantService) GetList() ([]*dto.MerchantResponse, error) {
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: request, username
-func (_m *MockMerchantService) Update(request *model.Merchant, username string) error {
-	ret := _m.Called(request, username)
+// Update provides a mock function with given fields: ctx, request, username
+func (_m *MockMerchantService) Update(ctx context.Context, request *model.Merchant, username string) error {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Merchant, string) error); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Merchant, string) error); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		r0 = ret.Error(0)
 	}

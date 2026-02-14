@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,8 +13,8 @@ import (
 
 type PondRepositoryTestSuite struct {
 	suite.Suite
-	db        *gorm.DB
-	pondRepo  PondRepository
+	db       *gorm.DB
+	pondRepo PondRepository
 }
 
 func (s *PondRepositoryTestSuite) SetupSuite() {
@@ -53,7 +54,7 @@ func (s *PondRepositoryTestSuite) TestCreate_Success() {
 		Status: "active",
 	}
 
-	err := s.pondRepo.Create(pond)
+	err := s.pondRepo.Create(context.Background(), pond)
 
 	assert.NoError(s.T(), err)
 	assert.NotZero(s.T(), pond.Id)
@@ -66,7 +67,7 @@ func (s *PondRepositoryTestSuite) TestCreateBatch_Success() {
 		{FarmId: 1, Name: "Pond 2", Status: "active"},
 	}
 
-	err := s.pondRepo.CreateBatch(ponds)
+	err := s.pondRepo.CreateBatch(context.Background(), ponds)
 
 	assert.NoError(s.T(), err)
 	assert.NotZero(s.T(), ponds[0].Id)
@@ -79,7 +80,7 @@ func (s *PondRepositoryTestSuite) TestGetByID_Success() {
 		Name:   "Test Pond",
 		Status: "active",
 	}
-	s.pondRepo.Create(pond)
+	s.pondRepo.Create(context.Background(), pond)
 
 	result, err := s.pondRepo.GetByID(pond.Id)
 
@@ -94,7 +95,7 @@ func (s *PondRepositoryTestSuite) TestGetByFarmIdAndName_Success() {
 		Name:   "Test Pond",
 		Status: "active",
 	}
-	s.pondRepo.Create(pond)
+	s.pondRepo.Create(context.Background(), pond)
 
 	result, err := s.pondRepo.GetByFarmIdAndName(1, "Test Pond")
 
@@ -107,9 +108,9 @@ func (s *PondRepositoryTestSuite) TestListByFarmId_Success() {
 	pond1 := &model.Pond{FarmId: 1, Name: "Pond 1", Status: "active"}
 	pond2 := &model.Pond{FarmId: 1, Name: "Pond 2", Status: "active"}
 	pond3 := &model.Pond{FarmId: 2, Name: "Pond 3", Status: "active"}
-	s.pondRepo.Create(pond1)
-	s.pondRepo.Create(pond2)
-	s.pondRepo.Create(pond3)
+	s.pondRepo.Create(context.Background(), pond1)
+	s.pondRepo.Create(context.Background(), pond2)
+	s.pondRepo.Create(context.Background(), pond3)
 
 	results, err := s.pondRepo.ListByFarmId(1)
 
@@ -123,13 +124,13 @@ func (s *PondRepositoryTestSuite) TestUpdate_Success() {
 		Name:   "Test Pond",
 		Status: "active",
 	}
-	s.pondRepo.Create(pond)
+	s.pondRepo.Create(context.Background(), pond)
 
 	pond.Name = "Updated Pond"
-	err := s.pondRepo.Update(pond)
+	err := s.pondRepo.Update(context.Background(), pond)
 
 	assert.NoError(s.T(), err)
-	
+
 	updated, _ := s.pondRepo.GetByID(pond.Id)
 	assert.Equal(s.T(), "Updated Pond", updated.Name)
 }
@@ -140,13 +141,12 @@ func (s *PondRepositoryTestSuite) TestDelete_Success() {
 		Name:   "Test Pond",
 		Status: "active",
 	}
-	s.pondRepo.Create(pond)
+	s.pondRepo.Create(context.Background(), pond)
 
 	err := s.pondRepo.Delete(pond.Id)
 
 	assert.NoError(s.T(), err)
-	
+
 	deleted, _ := s.pondRepo.GetByID(pond.Id)
 	assert.Nil(s.T(), deleted)
 }
-

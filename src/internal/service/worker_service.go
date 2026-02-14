@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -9,9 +11,9 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=WorkerService --output=./mocks --outpkg=service --filename=worker_service.go --structname=MockWorkerService --with-expecter=false
 type WorkerService interface {
-	Create(request dto.CreateWorkerRequest, username string, clientId int) (*dto.WorkerResponse, error)
+	Create(ctx context.Context, request dto.CreateWorkerRequest, username string, clientId int) (*dto.WorkerResponse, error)
 	Get(id int) (*dto.WorkerResponse, error)
-	Update(request *model.Worker, username string) error
+	Update(ctx context.Context, request *model.Worker, username string) error
 	GetPage(clientId, page, pageSize int, orderBy, keyword string) (*dto.PageResponse, error)
 }
 
@@ -25,7 +27,7 @@ func NewWorkerService(workerRepo repository.WorkerRepository) WorkerService {
 	}
 }
 
-func (s *workerService) Create(request dto.CreateWorkerRequest, username string, clientId int) (*dto.WorkerResponse, error) {
+func (s *workerService) Create(ctx context.Context, request dto.CreateWorkerRequest, username string, clientId int) (*dto.WorkerResponse, error) {
 	// Check if worker already exists (by FarmGroupId - this seems odd but matches old logic)
 	checkWorker, err := s.workerRepo.GetByFarmGroupId(request.FarmGroupId)
 	if err != nil {
@@ -46,14 +48,10 @@ func (s *workerService) Create(request dto.CreateWorkerRequest, username string,
 		Salary:        request.Salary,
 		HireDate:      request.HireDate,
 		IsActive:      true,
-		BaseModel: model.BaseModel{
-			CreatedBy: username,
-			UpdatedBy: username,
-		},
 	}
 
-	// Create worker
-	err = s.workerRepo.Create(newWorker)
+	// Create worker (CreatedBy/UpdatedBy set via BaseModel hook from ctx)
+	err = s.workerRepo.Create(ctx, newWorker)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -74,10 +72,9 @@ func (s *workerService) Get(id int) (*dto.WorkerResponse, error) {
 	return s.toWorkerResponse(worker), nil
 }
 
-func (s *workerService) Update(request *model.Worker, username string) error {
-	// Update worker
-	request.UpdatedBy = username
-	if err := s.workerRepo.Update(request); err != nil {
+func (s *workerService) Update(ctx context.Context, request *model.Worker, username string) error {
+	// Update worker (UpdatedBy set via BaseModel hook from ctx)
+	if err := s.workerRepo.Update(ctx, request); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

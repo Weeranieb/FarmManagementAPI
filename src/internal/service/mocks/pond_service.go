@@ -3,6 +3,8 @@
 package service
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	dto "github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 
@@ -14,17 +16,17 @@ type MockPondService struct {
 	mock.Mock
 }
 
-// CreatePonds provides a mock function with given fields: request, username
-func (_m *MockPondService) CreatePonds(request dto.CreatePondsRequest, username string) error {
-	ret := _m.Called(request, username)
+// CreatePonds provides a mock function with given fields: ctx, request, username
+func (_m *MockPondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest, username string) error {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreatePonds")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(dto.CreatePondsRequest, string) error); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreatePondsRequest, string) error); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -110,17 +112,17 @@ func (_m *MockPondService) GetList(farmId int) ([]*dto.PondResponse, error) {
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: request, username
-func (_m *MockPondService) Update(request *model.Pond, username string) error {
-	ret := _m.Called(request, username)
+// Update provides a mock function with given fields: ctx, request, username
+func (_m *MockPondService) Update(ctx context.Context, request *model.Pond, username string) error {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Pond, string) error); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Pond, string) error); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		r0 = ret.Error(0)
 	}

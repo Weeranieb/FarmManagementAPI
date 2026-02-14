@@ -11,10 +11,10 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=ClientRepository --output=./mocks --outpkg=mocks --filename=client_repository.go --structname=MockClientRepository --with-expecter=false
 type ClientRepository interface {
-	Create(client *model.Client) error
+	Create(ctx context.Context, client *model.Client) error
 	GetByID(id int) (*model.Client, error)
 	GetByName(ctx context.Context, name string) (*model.Client, error)
-	Update(client *model.Client) error
+	Update(ctx context.Context, client *model.Client) error
 	List() ([]*model.Client, error)
 }
 
@@ -26,8 +26,8 @@ func NewClientRepository(db *gorm.DB) ClientRepository {
 	return &clientRepository{db: db}
 }
 
-func (r *clientRepository) Create(client *model.Client) error {
-	return r.db.Create(client).Error
+func (r *clientRepository) Create(ctx context.Context, client *model.Client) error {
+	return r.db.WithContext(ctx).Create(client).Error
 }
 
 func (r *clientRepository) GetByID(id int) (*model.Client, error) {
@@ -54,8 +54,8 @@ func (r *clientRepository) GetByName(ctx context.Context, name string) (*model.C
 	return &client, nil
 }
 
-func (r *clientRepository) Update(client *model.Client) error {
-	return r.db.Save(client).Error
+func (r *clientRepository) Update(ctx context.Context, client *model.Client) error {
+	return r.db.WithContext(ctx).Save(client).Error
 }
 
 func (r *clientRepository) List() ([]*model.Client, error) {

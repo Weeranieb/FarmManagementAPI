@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	model "github.com/weeranieb/boonmafarm-backend/src/internal/model"
 )
@@ -12,17 +14,17 @@ type MockFeedCollectionRepository struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: feedCollection
-func (_m *MockFeedCollectionRepository) Create(feedCollection *model.FeedCollection) error {
-	ret := _m.Called(feedCollection)
+// Create provides a mock function with given fields: ctx, feedCollection
+func (_m *MockFeedCollectionRepository) Create(ctx context.Context, feedCollection *model.FeedCollection) error {
+	ret := _m.Called(ctx, feedCollection)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.FeedCollection) error); ok {
-		r0 = rf(feedCollection)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.FeedCollection) error); ok {
+		r0 = rf(ctx, feedCollection)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -127,17 +129,17 @@ func (_m *MockFeedCollectionRepository) GetPage(clientId int, page int, pageSize
 	return r0, r1, r2
 }
 
-// Update provides a mock function with given fields: feedCollection
-func (_m *MockFeedCollectionRepository) Update(feedCollection *model.FeedCollection) error {
-	ret := _m.Called(feedCollection)
+// Update provides a mock function with given fields: ctx, feedCollection
+func (_m *MockFeedCollectionRepository) Update(ctx context.Context, feedCollection *model.FeedCollection) error {
+	ret := _m.Called(ctx, feedCollection)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.FeedCollection) error); ok {
-		r0 = rf(feedCollection)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.FeedCollection) error); ok {
+		r0 = rf(ctx, feedCollection)
 	} else {
 		r0 = ret.Error(0)
 	}

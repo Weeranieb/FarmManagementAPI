@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -10,10 +11,10 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=FeedCollectionRepository --output=./mocks --outpkg=mocks --filename=feed_collection_repository.go --structname=MockFeedCollectionRepository --with-expecter=false
 type FeedCollectionRepository interface {
-	Create(feedCollection *model.FeedCollection) error
+	Create(ctx context.Context, feedCollection *model.FeedCollection) error
 	GetByID(id int) (*model.FeedCollection, error)
 	GetByClientIdAndName(clientId int, name string) (*model.FeedCollection, error)
-	Update(feedCollection *model.FeedCollection) error
+	Update(ctx context.Context, feedCollection *model.FeedCollection) error
 	GetPage(clientId, page, pageSize int, orderBy, keyword string) ([]*model.FeedCollectionPage, int64, error)
 }
 
@@ -25,8 +26,8 @@ func NewFeedCollectionRepository(db *gorm.DB) FeedCollectionRepository {
 	return &feedCollectionRepository{db: db}
 }
 
-func (r *feedCollectionRepository) Create(feedCollection *model.FeedCollection) error {
-	return r.db.Create(feedCollection).Error
+func (r *feedCollectionRepository) Create(ctx context.Context, feedCollection *model.FeedCollection) error {
+	return r.db.WithContext(ctx).Create(feedCollection).Error
 }
 
 func (r *feedCollectionRepository) GetByID(id int) (*model.FeedCollection, error) {
@@ -53,8 +54,8 @@ func (r *feedCollectionRepository) GetByClientIdAndName(clientId int, name strin
 	return &feedCollection, nil
 }
 
-func (r *feedCollectionRepository) Update(feedCollection *model.FeedCollection) error {
-	return r.db.Save(feedCollection).Error
+func (r *feedCollectionRepository) Update(ctx context.Context, feedCollection *model.FeedCollection) error {
+	return r.db.WithContext(ctx).Save(feedCollection).Error
 }
 
 func (r *feedCollectionRepository) GetPage(clientId, page, pageSize int, orderBy, keyword string) ([]*model.FeedCollectionPage, int64, error) {

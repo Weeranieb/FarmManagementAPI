@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/service/mocks"
@@ -39,7 +40,7 @@ func (s *PondHandlerTestSuite) TestAddPonds_Success() {
 	}
 
 	username := "admin"
-	s.pondService.On("CreatePonds", *createReq, username).Return(nil)
+	s.pondService.On("CreatePonds", mock.Anything, *createReq, username).Return(nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]interface{}{

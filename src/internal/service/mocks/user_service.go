@@ -106,17 +106,17 @@ func (_m *MockUserService) GetUserList(ctx context.Context, clientId *int) ([]*d
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: request, userIdentity
-func (_m *MockUserService) Update(request *model.User, userIdentity string) error {
-	ret := _m.Called(request, userIdentity)
+// Update provides a mock function with given fields: ctx, request, userIdentity
+func (_m *MockUserService) Update(ctx context.Context, request *model.User, userIdentity string) error {
+	ret := _m.Called(ctx, request, userIdentity)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.User, string) error); ok {
-		r0 = rf(request, userIdentity)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.User, string) error); ok {
+		r0 = rf(ctx, request, userIdentity)
 	} else {
 		r0 = ret.Error(0)
 	}

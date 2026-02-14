@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -10,9 +12,9 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=PondService --output=./mocks --outpkg=service --filename=pond_service.go --structname=MockPondService --with-expecter=false
 type PondService interface {
-	CreatePonds(request dto.CreatePondsRequest, username string) error
+	CreatePonds(ctx context.Context, request dto.CreatePondsRequest, username string) error
 	Get(id int) (*dto.PondResponse, error)
-	Update(request *model.Pond, username string) error
+	Update(ctx context.Context, request *model.Pond, username string) error
 	GetList(farmId int) ([]*dto.PondResponse, error)
 	Delete(id int, username string) error
 }
@@ -27,7 +29,7 @@ func NewPondService(pondRepo repository.PondRepository) PondService {
 	}
 }
 
-func (s *pondService) CreatePonds(request dto.CreatePondsRequest, username string) error {
+func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest, username string) error {
 	for _, name := range request.Names {
 		checkPond, err := s.pondRepo.GetByFarmIdAndName(request.FarmId, name)
 		if err != nil {
@@ -44,14 +46,11 @@ func (s *pondService) CreatePonds(request dto.CreatePondsRequest, username strin
 			FarmId: request.FarmId,
 			Name:   name,
 			Status: constants.FarmStatusMaintenance,
-			BaseModel: model.BaseModel{
-				CreatedBy: username,
-				UpdatedBy: username,
-			},
 		})
 	}
 
-	return s.pondRepo.CreateBatch(newPonds)
+	// CreatedBy/UpdatedBy set via BaseModel hook from ctx
+	return s.pondRepo.CreateBatch(ctx, newPonds)
 }
 
 func (s *pondService) Get(id int) (*dto.PondResponse, error) {
@@ -67,7 +66,7 @@ func (s *pondService) Get(id int) (*dto.PondResponse, error) {
 	return s.toPondResponse(pond), nil
 }
 
-func (s *pondService) Update(request *model.Pond, username string) error {
+func (s *pondService) Update(ctx context.Context, request *model.Pond, username string) error {
 	// Enforce unique pond name per farm
 	if request.Name != "" {
 		existing, err := s.pondRepo.GetByFarmIdAndName(request.FarmId, request.Name)
@@ -79,8 +78,8 @@ func (s *pondService) Update(request *model.Pond, username string) error {
 		}
 	}
 
-	request.UpdatedBy = username
-	if err := s.pondRepo.Update(request); err != nil {
+	// UpdatedBy set via BaseModel hook from ctx
+	if err := s.pondRepo.Update(ctx, request); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -60,8 +61,8 @@ func (s *authService) Register(request dto.RegisterRequest) (*dto.UserResponse, 
 		},
 	}
 
-	// Create user
-	err = s.userRepo.Create(newUser)
+	// Create user (no request user context for registration; CreatedBy set on model)
+	err = s.userRepo.Create(context.Background(), newUser)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}

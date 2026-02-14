@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -9,9 +11,9 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=MerchantService --output=./mocks --outpkg=service --filename=merchant_service.go --structname=MockMerchantService --with-expecter=false
 type MerchantService interface {
-	Create(request dto.CreateMerchantRequest, username string) (*dto.MerchantResponse, error)
+	Create(ctx context.Context, request dto.CreateMerchantRequest, username string) (*dto.MerchantResponse, error)
 	Get(id int) (*dto.MerchantResponse, error)
-	Update(request *model.Merchant, username string) error
+	Update(ctx context.Context, request *model.Merchant, username string) error
 	GetList() ([]*dto.MerchantResponse, error)
 }
 
@@ -25,7 +27,7 @@ func NewMerchantService(merchantRepo repository.MerchantRepository) MerchantServ
 	}
 }
 
-func (s *merchantService) Create(request dto.CreateMerchantRequest, username string) (*dto.MerchantResponse, error) {
+func (s *merchantService) Create(ctx context.Context, request dto.CreateMerchantRequest, username string) (*dto.MerchantResponse, error) {
 	// Check if merchant already exists
 	checkMerchant, err := s.merchantRepo.GetByContactNumberAndName(request.ContactNumber, request.Name)
 	if err != nil {
@@ -40,14 +42,10 @@ func (s *merchantService) Create(request dto.CreateMerchantRequest, username str
 		Name:          request.Name,
 		ContactNumber: request.ContactNumber,
 		Location:      request.Location,
-		BaseModel: model.BaseModel{
-			CreatedBy: username,
-			UpdatedBy: username,
-		},
 	}
 
-	// Create merchant
-	err = s.merchantRepo.Create(newMerchant)
+	// Create merchant (CreatedBy/UpdatedBy set via BaseModel hook from ctx)
+	err = s.merchantRepo.Create(ctx, newMerchant)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -68,10 +66,9 @@ func (s *merchantService) Get(id int) (*dto.MerchantResponse, error) {
 	return s.toMerchantResponse(merchant), nil
 }
 
-func (s *merchantService) Update(request *model.Merchant, username string) error {
-	// Update merchant
-	request.UpdatedBy = username
-	if err := s.merchantRepo.Update(request); err != nil {
+func (s *merchantService) Update(ctx context.Context, request *model.Merchant, username string) error {
+	// Update merchant (UpdatedBy set via BaseModel hook from ctx)
+	if err := s.merchantRepo.Update(ctx, request); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

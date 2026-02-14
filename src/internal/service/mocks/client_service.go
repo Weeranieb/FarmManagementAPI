@@ -136,17 +136,17 @@ func (_m *MockClientService) GetList() ([]*dto.ClientResponse, error) {
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: request, username
-func (_m *MockClientService) Update(request *model.Client, username string) error {
-	ret := _m.Called(request, username)
+// Update provides a mock function with given fields: ctx, request, username
+func (_m *MockClientService) Update(ctx context.Context, request *model.Client, username string) error {
+	ret := _m.Called(ctx, request, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Client, string) error); ok {
-		r0 = rf(request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Client, string) error); ok {
+		r0 = rf(ctx, request, username)
 	} else {
 		r0 = ret.Error(0)
 	}

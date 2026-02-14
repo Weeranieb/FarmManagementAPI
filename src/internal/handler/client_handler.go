@@ -191,7 +191,7 @@ func (h *clientHandlerImpl) UpdateClient(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.clientService.Update(updateClient, username)
+	err = h.clientService.Update(c.UserContext(), updateClient, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

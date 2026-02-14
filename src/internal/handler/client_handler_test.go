@@ -367,7 +367,7 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_Success() {
 		IsActive:      true,
 	}
 	username := "admin"
-	s.clientService.On("Update", updateReq, username).Return(nil)
+	s.clientService.On("Update", mock.Anything, updateReq, username).Return(nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
@@ -467,7 +467,7 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_ServiceError() {
 	}
 	username := "admin"
 	svcErr := errors.New("client not found")
-	s.clientService.On("Update", updateReq, username).Return(svcErr)
+	s.clientService.On("Update", mock.Anything, updateReq, username).Return(svcErr)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{

@@ -68,8 +68,8 @@ func (s *UserServiceTestSuite) TestCreate_Success() {
 		},
 	}
 
-	s.userRepo.On("Create", mock.AnythingOfType("*model.User")).Return(nil).Run(func(args mock.Arguments) {
-		user := args.Get(0).(*model.User)
+	s.userRepo.On("Create", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil).Run(func(args mock.Arguments) {
+		user := args.Get(1).(*model.User)
 		user.Id = expectedUser.Id
 		user.CreatedAt = expectedUser.CreatedAt
 		user.UpdatedAt = expectedUser.UpdatedAt
@@ -206,10 +206,10 @@ func (s *UserServiceTestSuite) TestUpdate_Success() {
 		},
 	}
 
-	s.userRepo.On("Update", updateUser).Return(nil)
+	s.userRepo.On("Update", mock.Anything, updateUser).Return(nil)
 
 	// Execute
-	err := s.userService.Update(updateUser, userIdentity)
+	err := s.userService.Update(context.Background(), updateUser, userIdentity)
 
 	// Assert
 	assert.NoError(s.T(), err)
@@ -224,10 +224,10 @@ func (s *UserServiceTestSuite) TestUpdate_Error() {
 		FirstName: "Updated",
 	}
 
-	s.userRepo.On("Update", updateUser).Return(errors.New("update failed"))
+	s.userRepo.On("Update", mock.Anything, updateUser).Return(errors.New("update failed"))
 
 	// Execute
-	err := s.userService.Update(updateUser, userIdentity)
+	err := s.userService.Update(context.Background(), updateUser, userIdentity)
 
 	// Assert
 	assert.Error(s.T(), err)

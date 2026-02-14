@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -9,9 +11,9 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=FeedPriceHistoryService --output=./mocks --outpkg=service --filename=feed_price_history_service.go --structname=MockFeedPriceHistoryService --with-expecter=false
 type FeedPriceHistoryService interface {
-	Create(request dto.CreateFeedPriceHistoryRequest, username string) (*dto.FeedPriceHistoryResponse, error)
+	Create(ctx context.Context, request dto.CreateFeedPriceHistoryRequest, username string) (*dto.FeedPriceHistoryResponse, error)
 	Get(id int) (*dto.FeedPriceHistoryResponse, error)
-	Update(request *model.FeedPriceHistory, username string) error
+	Update(ctx context.Context, request *model.FeedPriceHistory, username string) error
 	GetAll(feedCollectionId int) ([]*dto.FeedPriceHistoryResponse, error)
 }
 
@@ -25,7 +27,7 @@ func NewFeedPriceHistoryService(feedPriceHistoryRepo repository.FeedPriceHistory
 	}
 }
 
-func (s *feedPriceHistoryService) Create(request dto.CreateFeedPriceHistoryRequest, username string) (*dto.FeedPriceHistoryResponse, error) {
+func (s *feedPriceHistoryService) Create(ctx context.Context, request dto.CreateFeedPriceHistoryRequest, username string) (*dto.FeedPriceHistoryResponse, error) {
 	// Check if feed price history already exists
 	checkFeedPriceHistory, err := s.feedPriceHistoryRepo.GetByFeedCollectionIdAndDate(request.FeedCollectionId, request.PriceUpdatedDate)
 	if err != nil {
@@ -40,13 +42,10 @@ func (s *feedPriceHistoryService) Create(request dto.CreateFeedPriceHistoryReque
 		FeedCollectionId: request.FeedCollectionId,
 		Price:            request.Price,
 		PriceUpdatedDate: request.PriceUpdatedDate,
-		BaseModel: model.BaseModel{
-			CreatedBy: username,
-			UpdatedBy: username,
-		},
 	}
 
-	err = s.feedPriceHistoryRepo.Create(newFeedPriceHistory)
+	// CreatedBy/UpdatedBy set via BaseModel hook from ctx
+	err = s.feedPriceHistoryRepo.Create(ctx, newFeedPriceHistory)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -67,9 +66,9 @@ func (s *feedPriceHistoryService) Get(id int) (*dto.FeedPriceHistoryResponse, er
 	return s.toFeedPriceHistoryResponse(feedPriceHistory), nil
 }
 
-func (s *feedPriceHistoryService) Update(request *model.FeedPriceHistory, username string) error {
-	request.UpdatedBy = username
-	if err := s.feedPriceHistoryRepo.Update(request); err != nil {
+func (s *feedPriceHistoryService) Update(ctx context.Context, request *model.FeedPriceHistory, username string) error {
+	// UpdatedBy set via BaseModel hook from ctx
+	if err := s.feedPriceHistoryRepo.Update(ctx, request); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

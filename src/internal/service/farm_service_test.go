@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -59,14 +60,14 @@ func (s *FarmServiceTestSuite) TestCreate_Success() {
 		},
 	}
 
-	s.farmRepo.On("Create", mock.AnythingOfType("*model.Farm")).Return(nil).Run(func(args mock.Arguments) {
-		farm := args.Get(0).(*model.Farm)
+	s.farmRepo.On("Create", mock.Anything, mock.AnythingOfType("*model.Farm")).Return(nil).Run(func(args mock.Arguments) {
+		farm := args.Get(1).(*model.Farm)
 		farm.Id = expectedFarm.Id
 		farm.CreatedAt = expectedFarm.CreatedAt
 		farm.UpdatedAt = expectedFarm.UpdatedAt
 	})
 
-	result, err := s.farmService.Create(req, username, clientId)
+	result, err := s.farmService.Create(context.Background(), req, username, clientId)
 
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
@@ -91,7 +92,7 @@ func (s *FarmServiceTestSuite) TestCreate_FarmExists() {
 
 	s.farmRepo.On("GetByNameAndClientId", req.Name, clientId).Return(existingFarm, nil)
 
-	result, err := s.farmService.Create(req, username, clientId)
+	result, err := s.farmService.Create(context.Background(), req, username, clientId)
 
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), result)
@@ -153,12 +154,12 @@ func (s *FarmServiceTestSuite) TestUpdate_Success() {
 
 	// Unique name check: no other farm has this name for client
 	s.farmRepo.On("GetByNameAndClientId", "Updated Farm", 1).Return(nil, nil)
-	s.farmRepo.On("Update", farm).Return(nil)
+	s.farmRepo.On("Update", mock.Anything, farm).Return(nil)
 
-	err := s.farmService.Update(farm, username)
+	err := s.farmService.Update(context.Background(), farm, username)
 
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), username, farm.UpdatedBy)
+	// UpdatedBy is set in GORM BeforeUpdate from context (not applied when repo is mocked)
 	s.farmRepo.AssertExpectations(s.T())
 }
 

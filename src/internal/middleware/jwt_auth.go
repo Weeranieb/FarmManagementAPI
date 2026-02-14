@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/spf13/viper"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -80,16 +80,16 @@ func JWTAuthMiddleware() fiber.Handler {
 			ctx = context.Background()
 		}
 		if userId, ok := claims["userId"].(float64); ok {
-			ctx = context.WithValue(ctx, utils.UserIdKey(), int(userId))
+			ctx = context.WithValue(ctx, constants.UserIDKey, int(userId))
 		}
 		if username, ok := claims["username"].(string); ok {
-			ctx = context.WithValue(ctx, utils.UsernameKey(), username)
+			ctx = context.WithValue(ctx, constants.UsernameKey, username)
 		}
 		if userLevel, ok := claims["userLevel"].(float64); ok {
-			ctx = context.WithValue(ctx, utils.UserLevelKey(), int(userLevel))
+			ctx = context.WithValue(ctx, constants.UserLevelKey, int(userLevel))
 		}
 		if clientId, ok := claims["clientId"].(float64); ok {
-			ctx = context.WithValue(ctx, utils.ClientIdKey(), int(clientId))
+			ctx = context.WithValue(ctx, constants.ClientIDKey, int(clientId))
 		}
 
 		// Update the context in the fiber context

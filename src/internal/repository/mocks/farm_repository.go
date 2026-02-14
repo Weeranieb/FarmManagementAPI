@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 	model "github.com/weeranieb/boonmafarm-backend/src/internal/model"
 )
@@ -42,17 +44,17 @@ func (_m *MockFarmRepository) CountByClientId(clientId int) (*model.FarmCountByC
 	return r0, r1
 }
 
-// Create provides a mock function with given fields: farm
-func (_m *MockFarmRepository) Create(farm *model.Farm) error {
-	ret := _m.Called(farm)
+// Create provides a mock function with given fields: ctx, farm
+func (_m *MockFarmRepository) Create(ctx context.Context, farm *model.Farm) error {
+	ret := _m.Called(ctx, farm)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Farm) error); ok {
-		r0 = rf(farm)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Farm) error); ok {
+		r0 = rf(ctx, farm)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -180,17 +182,17 @@ func (_m *MockFarmRepository) ListByClientIdWithPonds(clientId int) ([]*model.Fa
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: farm
-func (_m *MockFarmRepository) Update(farm *model.Farm) error {
-	ret := _m.Called(farm)
+// Update provides a mock function with given fields: ctx, farm
+func (_m *MockFarmRepository) Update(ctx context.Context, farm *model.Farm) error {
+	ret := _m.Called(ctx, farm)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Farm) error); ok {
-		r0 = rf(farm)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Farm) error); ok {
+		r0 = rf(ctx, farm)
 	} else {
 		r0 = ret.Error(0)
 	}

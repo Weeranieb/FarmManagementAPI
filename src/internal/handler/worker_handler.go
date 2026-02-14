@@ -71,7 +71,7 @@ func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
 	}
 
-	newWorker, err := h.workerService.Create(createWorkerRequest, username, *clientIdPtr)
+	newWorker, err := h.workerService.Create(c.UserContext(), createWorkerRequest, username, *clientIdPtr)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -147,7 +147,7 @@ func (h *workerHandlerImpl) UpdateWorker(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.workerService.Update(updateWorker, username)
+	err = h.workerService.Update(c.UserContext(), updateWorker, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

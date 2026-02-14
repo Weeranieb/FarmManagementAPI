@@ -11,10 +11,10 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=UserRepository --output=./mocks --outpkg=mocks --filename=user_repository.go --structname=MockUserRepository --with-expecter=false
 type UserRepository interface {
-	Create(user *model.User) error
+	Create(ctx context.Context, user *model.User) error
 	GetByID(id int) (*model.User, error)
 	GetByUsername(username string) (*model.User, error)
-	Update(user *model.User) error
+	Update(ctx context.Context, user *model.User) error
 	Delete(id int) error
 	ListByClientId(ctx context.Context, clientId *int) ([]*model.User, error)
 }
@@ -27,8 +27,8 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) Create(user *model.User) error {
-	return r.db.Create(user).Error
+func (r *userRepository) Create(ctx context.Context, user *model.User) error {
+	return r.db.WithContext(ctx).Create(user).Error
 }
 
 func (r *userRepository) GetByID(id int) (*model.User, error) {
@@ -55,8 +55,8 @@ func (r *userRepository) GetByUsername(username string) (*model.User, error) {
 	return &user, nil
 }
 
-func (r *userRepository) Update(user *model.User) error {
-	return r.db.Save(user).Error
+func (r *userRepository) Update(ctx context.Context, user *model.User) error {
+	return r.db.WithContext(ctx).Save(user).Error
 }
 
 func (r *userRepository) Delete(id int) error {

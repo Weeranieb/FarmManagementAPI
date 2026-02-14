@@ -65,7 +65,7 @@ func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	newMerchant, err := h.merchantService.Create(createMerchantRequest, username)
+	newMerchant, err := h.merchantService.Create(c.UserContext(), createMerchantRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -167,7 +167,7 @@ func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.merchantService.Update(updateMerchant, username)
+	err = h.merchantService.Update(c.UserContext(), updateMerchant, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

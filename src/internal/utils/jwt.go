@@ -3,25 +3,12 @@ package utils
 import (
 	"context"
 	"errors"
+
+	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 )
-
-type contextKey string
-
-const (
-	userIdKey    contextKey = "userId"
-	clientIdKey  contextKey = "clientId"
-	userLevelKey contextKey = "userLevel"
-	usernameKey  contextKey = "username"
-)
-
-// Context key getters for use in middleware
-func UserIdKey() contextKey    { return userIdKey }
-func ClientIdKey() contextKey  { return clientIdKey }
-func UserLevelKey() contextKey { return userLevelKey }
-func UsernameKey() contextKey  { return usernameKey }
 
 func GetUserId(ctx context.Context) (int, error) {
-	userId := ctx.Value(userIdKey)
+	userId := ctx.Value(constants.UserIDKey)
 	if userId == nil {
 		return 0, errors.New("user id not found")
 	}
@@ -39,7 +26,7 @@ func GetUserId(ctx context.Context) (int, error) {
 }
 
 func GetClientId(ctx context.Context) *int {
-	clientId := ctx.Value(clientIdKey)
+	clientId := ctx.Value(constants.ClientIDKey)
 	if clientId == nil {
 		return nil
 	}
@@ -75,7 +62,7 @@ func GetClientIdForAccess(ctx context.Context) (*int, bool) {
 }
 
 func GetUserLevel(ctx context.Context) (int, error) {
-	userLevel := ctx.Value(userLevelKey)
+	userLevel := ctx.Value(constants.UserLevelKey)
 	if userLevel == nil {
 		return 0, errors.New("user level not found")
 	}
@@ -93,7 +80,7 @@ func GetUserLevel(ctx context.Context) (int, error) {
 }
 
 func GetUsername(ctx context.Context) (string, error) {
-	username := ctx.Value(usernameKey)
+	username := ctx.Value(constants.UsernameKey)
 	if username == nil {
 		return "", errors.New("username not found")
 	}
