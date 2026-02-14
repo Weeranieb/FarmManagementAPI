@@ -15,7 +15,7 @@ type ClientService interface {
 	Get(id int) (*dto.ClientResponse, error)
 	Update(request *model.Client, username string) error
 	GetList() ([]*dto.ClientResponse, error)
-	GetClientDropdown() ([]*dto.ClientDropdownItem, error)
+	GetClientDropdown() ([]*dto.DropdownItem, error)
 }
 
 type clientService struct {
@@ -106,17 +106,17 @@ func (s *clientService) GetList() ([]*dto.ClientResponse, error) {
 	return responses, nil
 }
 
-func (s *clientService) GetClientDropdown() ([]*dto.ClientDropdownItem, error) {
+func (s *clientService) GetClientDropdown() ([]*dto.DropdownItem, error) {
 	clients, err := s.clientRepo.List()
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
-	dropdown := make([]*dto.ClientDropdownItem, 0, len(clients))
+	dropdown := make([]*dto.DropdownItem, 0, len(clients))
 	for _, client := range clients {
-		dropdown = append(dropdown, &dto.ClientDropdownItem{
-			Id:   client.Id,
-			Name: client.Name,
+		dropdown = append(dropdown, &dto.DropdownItem{
+			Key:   client.Id,
+			Value: client.Name,
 		})
 	}
 	return dropdown, nil

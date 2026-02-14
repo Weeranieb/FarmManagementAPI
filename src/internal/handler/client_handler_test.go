@@ -254,9 +254,9 @@ func (s *ClientHandlerTestSuite) TestGetClient_ServiceError() {
 // --- GetClientList ---
 
 func (s *ClientHandlerTestSuite) TestGetClientList_Success() {
-	expectedDropdown := []*dto.ClientDropdownItem{
-		{Id: 1, Name: "Client A"},
-		{Id: 2, Name: "Client B"},
+	expectedDropdown := []*dto.DropdownItem{
+		{Key: 1, Value: "Client A"},
+		{Key: 2, Value: "Client B"},
 	}
 	s.clientService.On("GetClientDropdown").Return(expectedDropdown, nil)
 
@@ -318,7 +318,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_IsSuperAdminError() {
 
 func (s *ClientHandlerTestSuite) TestGetClientList_ServiceError() {
 	svcErr := errors.New("db error")
-	s.clientService.On("GetClientDropdown").Return(([]*dto.ClientDropdownItem)(nil), svcErr)
+	s.clientService.On("GetClientDropdown").Return(([]*dto.DropdownItem)(nil), svcErr)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{"userLevel": 3}))
@@ -337,7 +337,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_ServiceError() {
 }
 
 func (s *ClientHandlerTestSuite) TestGetClientList_EmptyDropdown() {
-	expectedDropdown := []*dto.ClientDropdownItem{}
+	expectedDropdown := []*dto.DropdownItem{}
 	s.clientService.On("GetClientDropdown").Return(expectedDropdown, nil)
 
 	app := fiber.New()
