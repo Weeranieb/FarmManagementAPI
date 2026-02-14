@@ -34,19 +34,18 @@ func TestPondServiceSuite(t *testing.T) {
 func (s *PondServiceTestSuite) TestCreate_Success() {
 	req := dto.CreatePondRequest{
 		FarmId: 1,
-		Code:   "POND001",
 		Name:   "Test Pond",
 	}
 	username := "admin"
 
-	s.pondRepo.On("GetByFarmIdAndCode", req.FarmId, req.Code).Return(nil, nil)
+	s.pondRepo.On("GetByFarmIdAndName", req.FarmId, req.Name).Return(nil, nil)
 
 	expectedTime := time.Now()
 	expectedPond := &model.Pond{
 		Id:     1,
 		FarmId: req.FarmId,
-		Code:   req.Code,
 		Name:   req.Name,
+		Status: "active",
 		BaseModel: model.BaseModel{
 			CreatedAt: expectedTime,
 			UpdatedAt: expectedTime,
@@ -66,19 +65,19 @@ func (s *PondServiceTestSuite) TestCreate_Success() {
 
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
-	assert.Equal(s.T(), req.Code, result.Code)
+	assert.Equal(s.T(), req.Name, result.Name)
 	s.pondRepo.AssertExpectations(s.T())
 }
 
 func (s *PondServiceTestSuite) TestCreateBatch_Success() {
 	reqs := []dto.CreatePondRequest{
-		{FarmId: 1, Code: "POND001", Name: "Pond 1"},
-		{FarmId: 1, Code: "POND002", Name: "Pond 2"},
+		{FarmId: 1, Name: "Pond 1"},
+		{FarmId: 1, Name: "Pond 2"},
 	}
 	username := "admin"
 
-	s.pondRepo.On("GetByFarmIdAndCode", 1, "POND001").Return(nil, nil)
-	s.pondRepo.On("GetByFarmIdAndCode", 1, "POND002").Return(nil, nil)
+	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 1").Return(nil, nil)
+	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 2").Return(nil, nil)
 
 	s.pondRepo.On("CreateBatch", mock.AnythingOfType("[]*model.Pond")).Return(nil).Run(func(args mock.Arguments) {
 		ponds := args.Get(0).([]*model.Pond)
@@ -101,8 +100,8 @@ func (s *PondServiceTestSuite) TestGet_Success() {
 	expectedPond := &model.Pond{
 		Id:     pondId,
 		FarmId: 1,
-		Code:   "POND001",
 		Name:   "Test Pond",
+		Status: "active",
 	}
 
 	s.pondRepo.On("GetByID", pondId).Return(expectedPond, nil)
@@ -118,8 +117,8 @@ func (s *PondServiceTestSuite) TestGet_Success() {
 func (s *PondServiceTestSuite) TestGetList_Success() {
 	farmId := 1
 	ponds := []*model.Pond{
-		{Id: 1, FarmId: farmId, Code: "POND001", Name: "Pond 1"},
-		{Id: 2, FarmId: farmId, Code: "POND002", Name: "Pond 2"},
+		{Id: 1, FarmId: farmId, Name: "Pond 1", Status: "active"},
+		{Id: 2, FarmId: farmId, Name: "Pond 2", Status: "active"},
 	}
 
 	s.pondRepo.On("ListByFarmId", farmId).Return(ponds, nil)

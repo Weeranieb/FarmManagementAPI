@@ -14,7 +14,7 @@ import (
 
 type FarmServiceTestSuite struct {
 	suite.Suite
-	farmRepo   *mocks.MockFarmRepository
+	farmRepo    *mocks.MockFarmRepository
 	farmService FarmService
 }
 
@@ -33,20 +33,20 @@ func TestFarmServiceSuite(t *testing.T) {
 
 func (s *FarmServiceTestSuite) TestCreate_Success() {
 	req := dto.CreateFarmRequest{
-		Code: "FARM001",
-		Name: "Test Farm",
+		ClientId: 1,
+		Name:     "Test Farm",
 	}
 	username := "admin"
 	clientId := 1
 
-	s.farmRepo.On("GetByCodeAndClientId", req.Code, clientId).Return(nil, nil)
+	s.farmRepo.On("GetByNameAndClientId", req.Name, clientId).Return(nil, nil)
 
 	expectedTime := time.Now()
 	expectedFarm := &model.Farm{
 		Id:       1,
 		ClientId: clientId,
-		Code:     req.Code,
 		Name:     req.Name,
+		Status:   "active",
 		BaseModel: model.BaseModel{
 			CreatedAt: expectedTime,
 			UpdatedAt: expectedTime,
@@ -66,26 +66,26 @@ func (s *FarmServiceTestSuite) TestCreate_Success() {
 
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
-	assert.Equal(s.T(), req.Code, result.Code)
 	assert.Equal(s.T(), req.Name, result.Name)
+	assert.Equal(s.T(), "active", result.Status)
 	s.farmRepo.AssertExpectations(s.T())
 }
 
 func (s *FarmServiceTestSuite) TestCreate_FarmExists() {
 	req := dto.CreateFarmRequest{
-		Code: "FARM001",
-		Name: "Test Farm",
+		ClientId: 1,
+		Name:     "Test Farm",
 	}
 	username := "admin"
 	clientId := 1
 
 	existingFarm := &model.Farm{
 		Id:       1,
-		Code:     req.Code,
+		Name:     req.Name,
 		ClientId: clientId,
 	}
 
-	s.farmRepo.On("GetByCodeAndClientId", req.Code, clientId).Return(existingFarm, nil)
+	s.farmRepo.On("GetByNameAndClientId", req.Name, clientId).Return(existingFarm, nil)
 
 	result, err := s.farmService.Create(req, username, clientId)
 
@@ -100,13 +100,13 @@ func (s *FarmServiceTestSuite) TestGet_Success() {
 	expectedFarm := &model.Farm{
 		Id:       farmId,
 		ClientId: clientId,
-		Code:     "FARM001",
 		Name:     "Test Farm",
+		Status:   "active",
 	}
 
 	s.farmRepo.On("GetByID", farmId).Return(expectedFarm, nil)
 
-	result, err := s.farmService.Get(farmId, clientId)
+	result, err := s.farmService.Get(farmId, &clientId)
 
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
@@ -120,7 +120,7 @@ func (s *FarmServiceTestSuite) TestGet_NotFound() {
 
 	s.farmRepo.On("GetByID", farmId).Return(nil, nil)
 
-	result, err := s.farmService.Get(farmId, clientId)
+	result, err := s.farmService.Get(farmId, &clientId)
 
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), result)
@@ -132,8 +132,8 @@ func (s *FarmServiceTestSuite) TestUpdate_Success() {
 	farm := &model.Farm{
 		Id:       1,
 		ClientId: 1,
-		Code:     "FARM001",
 		Name:     "Updated Farm",
+		Status:   "active",
 	}
 
 	s.farmRepo.On("Update", farm).Return(nil)
@@ -148,16 +148,20 @@ func (s *FarmServiceTestSuite) TestUpdate_Success() {
 func (s *FarmServiceTestSuite) TestGetList_Success() {
 	clientId := 1
 	farms := []*model.Farm{
-		{Id: 1, ClientId: clientId, Code: "FARM001", Name: "Farm 1"},
-		{Id: 2, ClientId: clientId, Code: "FARM002", Name: "Farm 2"},
+		{Id: 1, ClientId: clientId, Name: "Farm 1", Status: "active"},
+		{Id: 2, ClientId: clientId, Name: "Farm 2", Status: "active"},
 	}
+	counts := &model.FarmCountByClientId{Total: 2, ActiveCount: 2}
 
 	s.farmRepo.On("ListByClientId", clientId).Return(farms, nil)
+	s.farmRepo.On("CountByClientId", clientId).Return(counts, nil)
 
 	result, err := s.farmService.GetList(clientId)
 
 	assert.NoError(s.T(), err)
-	assert.Len(s.T(), result, 2)
+	assert.NotNil(s.T(), result)
+	assert.Len(s.T(), result.Farms, 2)
+	assert.Equal(s.T(), 2, result.Total)
+	assert.Equal(s.T(), 2, result.TotalActive)
 	s.farmRepo.AssertExpectations(s.T())
 }
-

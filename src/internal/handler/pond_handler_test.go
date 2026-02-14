@@ -35,15 +35,14 @@ func TestPondHandlerSuite(t *testing.T) {
 func (s *PondHandlerTestSuite) TestAddPond_Success() {
 	createReq := &dto.CreatePondRequest{
 		FarmId: 1,
-		Code:   "POND001",
 		Name:   "Test Pond",
 	}
 
 	expectedResponse := &dto.PondResponse{
 		Id:     1,
 		FarmId: createReq.FarmId,
-		Code:   createReq.Code,
 		Name:   createReq.Name,
+		Status: "active",
 	}
 
 	username := "admin"
@@ -68,13 +67,13 @@ func (s *PondHandlerTestSuite) TestAddPond_Success() {
 
 func (s *PondHandlerTestSuite) TestAddPonds_Success() {
 	createReqs := []dto.CreatePondRequest{
-		{FarmId: 1, Code: "POND001", Name: "Pond 1"},
-		{FarmId: 1, Code: "POND002", Name: "Pond 2"},
+		{FarmId: 1, Name: "Pond 1"},
+		{FarmId: 1, Name: "Pond 2"},
 	}
 
 	expectedResponse := []*dto.PondResponse{
-		{Id: 1, FarmId: 1, Code: "POND001", Name: "Pond 1"},
-		{Id: 2, FarmId: 1, Code: "POND002", Name: "Pond 2"},
+		{Id: 1, FarmId: 1, Name: "Pond 1", Status: "active"},
+		{Id: 2, FarmId: 1, Name: "Pond 2", Status: "active"},
 	}
 
 	username := "admin"
@@ -102,8 +101,8 @@ func (s *PondHandlerTestSuite) TestGetPond_Success() {
 	expectedResponse := &dto.PondResponse{
 		Id:     pondId,
 		FarmId: 1,
-		Code:   "POND001",
 		Name:   "Test Pond",
+		Status: "active",
 	}
 
 	s.pondService.On("Get", pondId).Return(expectedResponse, nil)
@@ -123,8 +122,8 @@ func (s *PondHandlerTestSuite) TestGetPond_Success() {
 func (s *PondHandlerTestSuite) TestGetPondList_Success() {
 	farmId := 1
 	expectedResponse := []*dto.PondResponse{
-		{Id: 1, FarmId: farmId, Code: "POND001", Name: "Pond 1"},
-		{Id: 2, FarmId: farmId, Code: "POND002", Name: "Pond 2"},
+		{Id: 1, FarmId: farmId, Name: "Pond 1", Status: "active"},
+		{Id: 2, FarmId: farmId, Name: "Pond 2", Status: "active"},
 	}
 
 	s.pondService.On("GetList", farmId).Return(expectedResponse, nil)

@@ -30,21 +30,21 @@ func (_m *MockFeedCollectionRepository) Create(feedCollection *model.FeedCollect
 	return r0
 }
 
-// GetByClientIdAndCode provides a mock function with given fields: clientId, code
-func (_m *MockFeedCollectionRepository) GetByClientIdAndCode(clientId int, code string) (*model.FeedCollection, error) {
-	ret := _m.Called(clientId, code)
+// GetByClientIdAndName provides a mock function with given fields: clientId, name
+func (_m *MockFeedCollectionRepository) GetByClientIdAndName(clientId int, name string) (*model.FeedCollection, error) {
+	ret := _m.Called(clientId, name)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetByClientIdAndCode")
+		panic("no return value specified for GetByClientIdAndName")
 	}
 
 	var r0 *model.FeedCollection
 	var r1 error
 	if rf, ok := ret.Get(0).(func(int, string) (*model.FeedCollection, error)); ok {
-		return rf(clientId, code)
+		return rf(clientId, name)
 	}
 	if rf, ok := ret.Get(0).(func(int, string) *model.FeedCollection); ok {
-		r0 = rf(clientId, code)
+		r0 = rf(clientId, name)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.FeedCollection)
@@ -52,7 +52,7 @@ func (_m *MockFeedCollectionRepository) GetByClientIdAndCode(clientId int, code 
 	}
 
 	if rf, ok := ret.Get(1).(func(int, string) error); ok {
-		r1 = rf(clientId, code)
+		r1 = rf(clientId, name)
 	} else {
 		r1 = ret.Error(1)
 	}

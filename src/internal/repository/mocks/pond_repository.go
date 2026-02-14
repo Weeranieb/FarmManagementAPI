@@ -66,21 +66,21 @@ func (_m *MockPondRepository) Delete(id int) error {
 	return r0
 }
 
-// GetByFarmIdAndCode provides a mock function with given fields: farmId, code
-func (_m *MockPondRepository) GetByFarmIdAndCode(farmId int, code string) (*model.Pond, error) {
-	ret := _m.Called(farmId, code)
+// GetByFarmIdAndName provides a mock function with given fields: farmId, name
+func (_m *MockPondRepository) GetByFarmIdAndName(farmId int, name string) (*model.Pond, error) {
+	ret := _m.Called(farmId, name)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetByFarmIdAndCode")
+		panic("no return value specified for GetByFarmIdAndName")
 	}
 
 	var r0 *model.Pond
 	var r1 error
 	if rf, ok := ret.Get(0).(func(int, string) (*model.Pond, error)); ok {
-		return rf(farmId, code)
+		return rf(farmId, name)
 	}
 	if rf, ok := ret.Get(0).(func(int, string) *model.Pond); ok {
-		r0 = rf(farmId, code)
+		r0 = rf(farmId, name)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.Pond)
@@ -88,7 +88,7 @@ func (_m *MockPondRepository) GetByFarmIdAndCode(farmId int, code string) (*mode
 	}
 
 	if rf, ok := ret.Get(1).(func(int, string) error); ok {
-		r1 = rf(farmId, code)
+		r1 = rf(farmId, name)
 	} else {
 		r1 = ret.Error(1)
 	}

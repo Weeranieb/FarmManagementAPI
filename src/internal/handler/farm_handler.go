@@ -159,9 +159,7 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 			}
 			clientId = clientIdVal
 		}
-		// If no clientId provided, clientId remains nil to get all farms
 	} else {
-		// Regular users use clientId from JWT
 		clientIdPtr := utils.GetClientId(c.UserContext())
 		if clientIdPtr == nil {
 			return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")

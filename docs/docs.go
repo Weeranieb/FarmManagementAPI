@@ -1684,15 +1684,11 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "clientId",
-                "code",
                 "name"
             ],
             "properties": {
                 "clientId": {
                     "type": "integer"
-                },
-                "code": {
-                    "type": "string"
                 },
                 "name": {
                     "type": "string"
@@ -1702,14 +1698,10 @@ const docTemplate = `{
         "dto.CreateFeedCollectionRequest": {
             "type": "object",
             "required": [
-                "code",
                 "name",
                 "unit"
             ],
             "properties": {
-                "code": {
-                    "type": "string"
-                },
                 "feedPriceHistories": {
                     "type": "array",
                     "items": {
@@ -1759,19 +1751,22 @@ const docTemplate = `{
         "dto.CreatePondRequest": {
             "type": "object",
             "required": [
-                "code",
                 "farmId",
                 "name"
             ],
             "properties": {
-                "code": {
-                    "type": "string"
-                },
                 "farmId": {
                     "type": "integer"
                 },
                 "name": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "maintenance"
+                    ]
                 }
             }
         },
@@ -1946,9 +1941,6 @@ const docTemplate = `{
                 "clientId": {
                     "type": "integer"
                 },
-                "code": {
-                    "type": "string"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -1959,6 +1951,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -1974,9 +1969,6 @@ const docTemplate = `{
             "properties": {
                 "clientId": {
                     "type": "integer"
-                },
-                "code": {
-                    "type": "string"
                 },
                 "created_at": {
                     "type": "string"
@@ -2033,9 +2025,6 @@ const docTemplate = `{
         "model.Pond": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "string"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2049,6 +2038,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "updated_at": {

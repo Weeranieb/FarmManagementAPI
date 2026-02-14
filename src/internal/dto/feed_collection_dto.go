@@ -3,7 +3,6 @@ package dto
 import "time"
 
 type CreateFeedCollectionRequest struct {
-	Code               string                           `json:"code" validate:"required"`
 	Name               string                           `json:"name" validate:"required"`
 	Unit               string                           `json:"unit" validate:"required"`
 	FeedPriceHistories []CreateFeedPriceHistoryItemRequest `json:"feedPriceHistories"`
@@ -16,7 +15,6 @@ type CreateFeedPriceHistoryItemRequest struct {
 
 type UpdateFeedCollectionRequest struct {
 	Id       int    `json:"id" validate:"required"`
-	Code     string `json:"code"`
 	Name     string `json:"name"`
 	Unit     string `json:"unit"`
 }
@@ -24,7 +22,6 @@ type UpdateFeedCollectionRequest struct {
 type FeedCollectionResponse struct {
 	Id       int       `json:"id"`
 	ClientId int       `json:"clientId"`
-	Code     string    `json:"code"`
 	Name     string    `json:"name"`
 	Unit     string    `json:"unit"`
 	CreatedAt time.Time `json:"createdAt"`

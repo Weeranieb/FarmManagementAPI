@@ -45,7 +45,7 @@ func (_m *MockFarmService) Create(request dto.CreateFarmRequest, username string
 }
 
 // Get provides a mock function with given fields: id, clientId
-func (_m *MockFarmService) Get(id int, clientId int) (*dto.FarmResponse, error) {
+func (_m *MockFarmService) Get(id int, clientId *int) (*dto.FarmResponse, error) {
 	ret := _m.Called(id, clientId)
 
 	if len(ret) == 0 {
@@ -54,10 +54,10 @@ func (_m *MockFarmService) Get(id int, clientId int) (*dto.FarmResponse, error) 
 
 	var r0 *dto.FarmResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int, int) (*dto.FarmResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(int, *int) (*dto.FarmResponse, error)); ok {
 		return rf(id, clientId)
 	}
-	if rf, ok := ret.Get(0).(func(int, int) *dto.FarmResponse); ok {
+	if rf, ok := ret.Get(0).(func(int, *int) *dto.FarmResponse); ok {
 		r0 = rf(id, clientId)
 	} else {
 		if ret.Get(0) != nil {
@@ -65,7 +65,7 @@ func (_m *MockFarmService) Get(id int, clientId int) (*dto.FarmResponse, error) 
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int, int) error); ok {
+	if rf, ok := ret.Get(1).(func(int, *int) error); ok {
 		r1 = rf(id, clientId)
 	} else {
 		r1 = ret.Error(1)
@@ -103,23 +103,23 @@ func (_m *MockFarmService) GetFarmIdByName(farmName string, clientId int) (int, 
 }
 
 // GetList provides a mock function with given fields: clientId
-func (_m *MockFarmService) GetList(clientId int) ([]*dto.FarmResponse, error) {
+func (_m *MockFarmService) GetList(clientId int) (*dto.FarmListResponse, error) {
 	ret := _m.Called(clientId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetList")
 	}
 
-	var r0 []*dto.FarmResponse
+	var r0 *dto.FarmListResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int) ([]*dto.FarmResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(int) (*dto.FarmListResponse, error)); ok {
 		return rf(clientId)
 	}
-	if rf, ok := ret.Get(0).(func(int) []*dto.FarmResponse); ok {
+	if rf, ok := ret.Get(0).(func(int) *dto.FarmListResponse); ok {
 		r0 = rf(clientId)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*dto.FarmResponse)
+			r0 = ret.Get(0).(*dto.FarmListResponse)
 		}
 	}
 

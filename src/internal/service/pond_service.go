@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -29,7 +30,7 @@ func NewPondService(pondRepo repository.PondRepository) PondService {
 
 func (s *pondService) Create(request dto.CreatePondRequest, username string) (*dto.PondResponse, error) {
 	// Check if pond already exists
-	checkPond, err := s.pondRepo.GetByFarmIdAndCode(request.FarmId, request.Code)
+	checkPond, err := s.pondRepo.GetByFarmIdAndName(request.FarmId, request.Name)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -38,10 +39,15 @@ func (s *pondService) Create(request dto.CreatePondRequest, username string) (*d
 		return nil, errors.ErrPondAlreadyExists
 	}
 
+	status := request.Status
+	if status == "" {
+		status = constants.FarmStatusActive
+	}
+
 	newPond := &model.Pond{
 		FarmId: request.FarmId,
-		Code:   request.Code,
 		Name:   request.Name,
+		Status: status,
 		BaseModel: model.BaseModel{
 			CreatedBy: username,
 			UpdatedBy: username,
@@ -61,7 +67,7 @@ func (s *pondService) CreateBatch(requests []dto.CreatePondRequest, username str
 	// Validate all requests
 	for _, req := range requests {
 		// Check if pond already exists
-		checkPond, err := s.pondRepo.GetByFarmIdAndCode(req.FarmId, req.Code)
+		checkPond, err := s.pondRepo.GetByFarmIdAndName(req.FarmId, req.Name)
 		if err != nil {
 			return nil, errors.ErrGeneric.Wrap(err)
 		}
@@ -74,10 +80,14 @@ func (s *pondService) CreateBatch(requests []dto.CreatePondRequest, username str
 	// Create all ponds
 	newPonds := make([]*model.Pond, 0, len(requests))
 	for _, req := range requests {
+		status := req.Status
+		if status == "" {
+			status = constants.FarmStatusActive
+		}
 		newPond := &model.Pond{
 			FarmId: req.FarmId,
-			Code:   req.Code,
 			Name:   req.Name,
+			Status: status,
 			BaseModel: model.BaseModel{
 				CreatedBy: username,
 				UpdatedBy: username,
@@ -149,8 +159,8 @@ func (s *pondService) toPondResponse(pond *model.Pond) *dto.PondResponse {
 	return &dto.PondResponse{
 		Id:        pond.Id,
 		FarmId:    pond.FarmId,
-		Code:      pond.Code,
 		Name:      pond.Name,
+		Status:    pond.Status,
 		CreatedAt: pond.CreatedAt,
 		CreatedBy: pond.CreatedBy,
 		UpdatedAt: pond.UpdatedAt,

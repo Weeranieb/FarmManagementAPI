@@ -49,21 +49,21 @@ func TestPondRepositorySuite(t *testing.T) {
 func (s *PondRepositoryTestSuite) TestCreate_Success() {
 	pond := &model.Pond{
 		FarmId: 1,
-		Code:   "POND001",
 		Name:   "Test Pond",
+		Status: "active",
 	}
 
 	err := s.pondRepo.Create(pond)
 
 	assert.NoError(s.T(), err)
 	assert.NotZero(s.T(), pond.Id)
-	assert.Equal(s.T(), "POND001", pond.Code)
+	assert.Equal(s.T(), "Test Pond", pond.Name)
 }
 
 func (s *PondRepositoryTestSuite) TestCreateBatch_Success() {
 	ponds := []*model.Pond{
-		{FarmId: 1, Code: "POND001", Name: "Pond 1"},
-		{FarmId: 1, Code: "POND002", Name: "Pond 2"},
+		{FarmId: 1, Name: "Pond 1", Status: "active"},
+		{FarmId: 1, Name: "Pond 2", Status: "active"},
 	}
 
 	err := s.pondRepo.CreateBatch(ponds)
@@ -76,8 +76,8 @@ func (s *PondRepositoryTestSuite) TestCreateBatch_Success() {
 func (s *PondRepositoryTestSuite) TestGetByID_Success() {
 	pond := &model.Pond{
 		FarmId: 1,
-		Code:   "POND001",
 		Name:   "Test Pond",
+		Status: "active",
 	}
 	s.pondRepo.Create(pond)
 
@@ -88,25 +88,25 @@ func (s *PondRepositoryTestSuite) TestGetByID_Success() {
 	assert.Equal(s.T(), pond.Id, result.Id)
 }
 
-func (s *PondRepositoryTestSuite) TestGetByFarmIdAndCode_Success() {
+func (s *PondRepositoryTestSuite) TestGetByFarmIdAndName_Success() {
 	pond := &model.Pond{
 		FarmId: 1,
-		Code:   "POND001",
 		Name:   "Test Pond",
+		Status: "active",
 	}
 	s.pondRepo.Create(pond)
 
-	result, err := s.pondRepo.GetByFarmIdAndCode(1, "POND001")
+	result, err := s.pondRepo.GetByFarmIdAndName(1, "Test Pond")
 
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
-	assert.Equal(s.T(), "POND001", result.Code)
+	assert.Equal(s.T(), "Test Pond", result.Name)
 }
 
 func (s *PondRepositoryTestSuite) TestListByFarmId_Success() {
-	pond1 := &model.Pond{FarmId: 1, Code: "POND001", Name: "Pond 1"}
-	pond2 := &model.Pond{FarmId: 1, Code: "POND002", Name: "Pond 2"}
-	pond3 := &model.Pond{FarmId: 2, Code: "POND003", Name: "Pond 3"}
+	pond1 := &model.Pond{FarmId: 1, Name: "Pond 1", Status: "active"}
+	pond2 := &model.Pond{FarmId: 1, Name: "Pond 2", Status: "active"}
+	pond3 := &model.Pond{FarmId: 2, Name: "Pond 3", Status: "active"}
 	s.pondRepo.Create(pond1)
 	s.pondRepo.Create(pond2)
 	s.pondRepo.Create(pond3)
@@ -120,8 +120,8 @@ func (s *PondRepositoryTestSuite) TestListByFarmId_Success() {
 func (s *PondRepositoryTestSuite) TestUpdate_Success() {
 	pond := &model.Pond{
 		FarmId: 1,
-		Code:   "POND001",
 		Name:   "Test Pond",
+		Status: "active",
 	}
 	s.pondRepo.Create(pond)
 
@@ -137,8 +137,8 @@ func (s *PondRepositoryTestSuite) TestUpdate_Success() {
 func (s *PondRepositoryTestSuite) TestDelete_Success() {
 	pond := &model.Pond{
 		FarmId: 1,
-		Code:   "POND001",
 		Name:   "Test Pond",
+		Status: "active",
 	}
 	s.pondRepo.Create(pond)
 

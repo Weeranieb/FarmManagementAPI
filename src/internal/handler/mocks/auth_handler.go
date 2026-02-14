@@ -31,6 +31,24 @@ func (_m *MockAuthHandler) Login(c *fiber.Ctx) error {
 	return r0
 }
 
+// Logout provides a mock function with given fields: c
+func (_m *MockAuthHandler) Logout(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Logout")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Register provides a mock function with given fields: c
 func (_m *MockAuthHandler) Register(c *fiber.Ctx) error {
 	ret := _m.Called(c)

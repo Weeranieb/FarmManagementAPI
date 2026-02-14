@@ -12,6 +12,36 @@ type MockFarmRepository struct {
 	mock.Mock
 }
 
+// CountByClientId provides a mock function with given fields: clientId
+func (_m *MockFarmRepository) CountByClientId(clientId int) (*model.FarmCountByClientId, error) {
+	ret := _m.Called(clientId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountByClientId")
+	}
+
+	var r0 *model.FarmCountByClientId
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) (*model.FarmCountByClientId, error)); ok {
+		return rf(clientId)
+	}
+	if rf, ok := ret.Get(0).(func(int) *model.FarmCountByClientId); ok {
+		r0 = rf(clientId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.FarmCountByClientId)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(clientId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Create provides a mock function with given fields: farm
 func (_m *MockFarmRepository) Create(farm *model.Farm) error {
 	ret := _m.Called(farm)
@@ -28,36 +58,6 @@ func (_m *MockFarmRepository) Create(farm *model.Farm) error {
 	}
 
 	return r0
-}
-
-// GetByCodeAndClientId provides a mock function with given fields: code, clientId
-func (_m *MockFarmRepository) GetByCodeAndClientId(code string, clientId int) (*model.Farm, error) {
-	ret := _m.Called(code, clientId)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByCodeAndClientId")
-	}
-
-	var r0 *model.Farm
-	var r1 error
-	if rf, ok := ret.Get(0).(func(string, int) (*model.Farm, error)); ok {
-		return rf(code, clientId)
-	}
-	if rf, ok := ret.Get(0).(func(string, int) *model.Farm); ok {
-		r0 = rf(code, clientId)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*model.Farm)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(string, int) error); ok {
-		r1 = rf(code, clientId)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
 }
 
 // GetByID provides a mock function with given fields: id
