@@ -14,64 +14,22 @@ type MockPondService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: request, username
-func (_m *MockPondService) Create(request dto.CreatePondRequest, username string) (*dto.PondResponse, error) {
+// CreatePonds provides a mock function with given fields: request, username
+func (_m *MockPondService) CreatePonds(request dto.CreatePondsRequest, username string) error {
 	ret := _m.Called(request, username)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Create")
+		panic("no return value specified for CreatePonds")
 	}
 
-	var r0 *dto.PondResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(dto.CreatePondRequest, string) (*dto.PondResponse, error)); ok {
-		return rf(request, username)
-	}
-	if rf, ok := ret.Get(0).(func(dto.CreatePondRequest, string) *dto.PondResponse); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(dto.CreatePondsRequest, string) error); ok {
 		r0 = rf(request, username)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*dto.PondResponse)
-		}
+		r0 = ret.Error(0)
 	}
 
-	if rf, ok := ret.Get(1).(func(dto.CreatePondRequest, string) error); ok {
-		r1 = rf(request, username)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// CreateBatch provides a mock function with given fields: requests, username
-func (_m *MockPondService) CreateBatch(requests []dto.CreatePondRequest, username string) ([]*dto.PondResponse, error) {
-	ret := _m.Called(requests, username)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateBatch")
-	}
-
-	var r0 []*dto.PondResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func([]dto.CreatePondRequest, string) ([]*dto.PondResponse, error)); ok {
-		return rf(requests, username)
-	}
-	if rf, ok := ret.Get(0).(func([]dto.CreatePondRequest, string) []*dto.PondResponse); ok {
-		r0 = rf(requests, username)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*dto.PondResponse)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func([]dto.CreatePondRequest, string) error); ok {
-		r1 = rf(requests, username)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // Delete provides a mock function with given fields: id, username

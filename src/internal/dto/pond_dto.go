@@ -2,13 +2,11 @@ package dto
 
 import "time"
 
-type CreatePondRequest struct {
-	FarmId int    `json:"farmId" validate:"required"`
-	Name   string `json:"name" validate:"required"`
-	Status string `json:"status" validate:"omitempty,oneof=active maintenance"`
+// CreatePondsRequest is the body for POST /pond (create multiple ponds for a farm). New ponds are created with status maintenance.
+type CreatePondsRequest struct {
+	FarmId int      `json:"farmId" validate:"required"`
+	Names  []string `json:"names" validate:"required,min=1,dive,required"`
 }
-
-type CreatePondsRequest []CreatePondRequest
 
 type UpdatePondRequest struct {
 	Id     int    `json:"id" validate:"required"`

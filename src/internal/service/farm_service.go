@@ -91,7 +91,17 @@ func (s *farmService) Get(id int, clientId *int) (*dto.FarmDetailResponse, error
 }
 
 func (s *farmService) Update(request *model.Farm, username string) error {
-	// Update farm
+	// Enforce unique farm name per client
+	if request.Name != "" {
+		existing, err := s.farmRepo.GetByNameAndClientId(request.Name, request.ClientId)
+		if err != nil {
+			return errors.ErrGeneric.Wrap(err)
+		}
+		if existing != nil && existing.Id != request.Id {
+			return errors.ErrFarmAlreadyExists
+		}
+	}
+
 	request.UpdatedBy = username
 	if err := s.farmRepo.Update(request); err != nil {
 		return errors.ErrGeneric.Wrap(err)

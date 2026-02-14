@@ -10,8 +10,7 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=PondService --output=./mocks --outpkg=service --filename=pond_service.go --structname=MockPondService --with-expecter=false
 type PondService interface {
-	Create(request dto.CreatePondRequest, username string) (*dto.PondResponse, error)
-	CreateBatch(requests []dto.CreatePondRequest, username string) ([]*dto.PondResponse, error)
+	CreatePonds(request dto.CreatePondsRequest, username string) error
 	Get(id int) (*dto.PondResponse, error)
 	Update(request *model.Pond, username string) error
 	GetList(farmId int) ([]*dto.PondResponse, error)
@@ -28,87 +27,31 @@ func NewPondService(pondRepo repository.PondRepository) PondService {
 	}
 }
 
-func (s *pondService) Create(request dto.CreatePondRequest, username string) (*dto.PondResponse, error) {
-	// Check if pond already exists
-	checkPond, err := s.pondRepo.GetByFarmIdAndName(request.FarmId, request.Name)
-	if err != nil {
-		return nil, errors.ErrGeneric.Wrap(err)
-	}
-
-	if checkPond != nil {
-		return nil, errors.ErrPondAlreadyExists
-	}
-
-	status := request.Status
-	if status == "" {
-		status = constants.FarmStatusActive
-	}
-
-	newPond := &model.Pond{
-		FarmId: request.FarmId,
-		Name:   request.Name,
-		Status: status,
-		BaseModel: model.BaseModel{
-			CreatedBy: username,
-			UpdatedBy: username,
-		},
-	}
-
-	// Create pond
-	err = s.pondRepo.Create(newPond)
-	if err != nil {
-		return nil, errors.ErrGeneric.Wrap(err)
-	}
-
-	return s.toPondResponse(newPond), nil
-}
-
-func (s *pondService) CreateBatch(requests []dto.CreatePondRequest, username string) ([]*dto.PondResponse, error) {
-	// Validate all requests
-	for _, req := range requests {
-		// Check if pond already exists
-		checkPond, err := s.pondRepo.GetByFarmIdAndName(req.FarmId, req.Name)
+func (s *pondService) CreatePonds(request dto.CreatePondsRequest, username string) error {
+	for _, name := range request.Names {
+		checkPond, err := s.pondRepo.GetByFarmIdAndName(request.FarmId, name)
 		if err != nil {
-			return nil, errors.ErrGeneric.Wrap(err)
+			return errors.ErrGeneric.Wrap(err)
 		}
-
 		if checkPond != nil {
-			return nil, errors.ErrPondAlreadyExists
+			return errors.ErrPondAlreadyExists
 		}
 	}
 
-	// Create all ponds
-	newPonds := make([]*model.Pond, 0, len(requests))
-	for _, req := range requests {
-		status := req.Status
-		if status == "" {
-			status = constants.FarmStatusActive
-		}
-		newPond := &model.Pond{
-			FarmId: req.FarmId,
-			Name:   req.Name,
-			Status: status,
+	newPonds := make([]*model.Pond, 0, len(request.Names))
+	for _, name := range request.Names {
+		newPonds = append(newPonds, &model.Pond{
+			FarmId: request.FarmId,
+			Name:   name,
+			Status: constants.FarmStatusMaintenance,
 			BaseModel: model.BaseModel{
 				CreatedBy: username,
 				UpdatedBy: username,
 			},
-		}
-		newPonds = append(newPonds, newPond)
+		})
 	}
 
-	// Create batch
-	err := s.pondRepo.CreateBatch(newPonds)
-	if err != nil {
-		return nil, errors.ErrGeneric.Wrap(err)
-	}
-
-	// Convert to responses
-	responses := make([]*dto.PondResponse, 0, len(newPonds))
-	for _, pond := range newPonds {
-		responses = append(responses, s.toPondResponse(pond))
-	}
-
-	return responses, nil
+	return s.pondRepo.CreateBatch(newPonds)
 }
 
 func (s *pondService) Get(id int) (*dto.PondResponse, error) {
@@ -125,7 +68,17 @@ func (s *pondService) Get(id int) (*dto.PondResponse, error) {
 }
 
 func (s *pondService) Update(request *model.Pond, username string) error {
-	// Update pond
+	// Enforce unique pond name per farm
+	if request.Name != "" {
+		existing, err := s.pondRepo.GetByFarmIdAndName(request.FarmId, request.Name)
+		if err != nil {
+			return errors.ErrGeneric.Wrap(err)
+		}
+		if existing != nil && existing.Id != request.Id {
+			return errors.ErrPondAlreadyExists
+		}
+	}
+
 	request.UpdatedBy = username
 	if err := s.pondRepo.Update(request); err != nil {
 		return errors.ErrGeneric.Wrap(err)
@@ -167,4 +120,3 @@ func (s *pondService) toPondResponse(pond *model.Pond) *dto.PondResponse {
 		UpdatedBy: pond.UpdatedBy,
 	}
 }
-

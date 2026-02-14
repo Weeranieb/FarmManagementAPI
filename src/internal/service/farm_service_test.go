@@ -151,6 +151,8 @@ func (s *FarmServiceTestSuite) TestUpdate_Success() {
 		Status:   "active",
 	}
 
+	// Unique name check: no other farm has this name for client
+	s.farmRepo.On("GetByNameAndClientId", "Updated Farm", 1).Return(nil, nil)
 	s.farmRepo.On("Update", farm).Return(nil)
 
 	err := s.farmService.Update(farm, username)
