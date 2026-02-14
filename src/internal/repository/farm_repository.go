@@ -68,10 +68,14 @@ func (r *farmRepository) ListByClientId(clientId int) ([]*model.Farm, error) {
 }
 
 // ListByClientIdWithPonds returns all farms for the client with their ponds using Preload (2 queries).
+// Farms and ponds are each ordered by name ASC.
 func (r *farmRepository) ListByClientIdWithPonds(clientId int) ([]*model.FarmWithPonds, error) {
 	var load []*model.FarmWithPondsLoad
 	err := r.db.Where("client_id = ? AND deleted_at IS NULL", clientId).
-		Preload("Ponds", "deleted_at IS NULL").
+		Order("name ASC").
+		Preload("Ponds", func(db *gorm.DB) *gorm.DB {
+			return db.Where("deleted_at IS NULL").Order("name ASC")
+		}).
 		Find(&load).Error
 	if err != nil {
 		return nil, err

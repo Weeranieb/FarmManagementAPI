@@ -120,7 +120,7 @@ func (s *farmService) Update(ctx context.Context, request dto.UpdateFarmRequest)
 }
 
 func (s *farmService) GetList(clientId int) (*dto.FarmListResponse, error) {
-	farms, err := s.farmRepo.ListByClientId(clientId)
+	list, err := s.farmRepo.ListByClientIdWithPonds(clientId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -130,7 +130,7 @@ func (s *farmService) GetList(clientId int) (*dto.FarmListResponse, error) {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
-	responses := mapper.ToFarmResponseList(farms)
+	responses := mapper.ToFarmResponseListFromFarmWithPonds(list)
 
 	return &dto.FarmListResponse{
 		Farms:       responses,

@@ -169,13 +169,19 @@ func (s *FarmServiceTestSuite) TestUpdate_Success() {
 
 func (s *FarmServiceTestSuite) TestGetList_Success() {
 	clientId := 1
-	farms := []*model.Farm{
-		{Id: 1, ClientId: clientId, Name: "Farm 1", Status: "active"},
-		{Id: 2, ClientId: clientId, Name: "Farm 2", Status: "active"},
+	list := []*model.FarmWithPonds{
+		{
+			Farm:  model.Farm{Id: 1, ClientId: clientId, Name: "Farm 1", Status: "active"},
+			Ponds: []*model.Pond{{Id: 1}, {Id: 2}, {Id: 3}}, // 3 ponds
+		},
+		{
+			Farm:  model.Farm{Id: 2, ClientId: clientId, Name: "Farm 2", Status: "active"},
+			Ponds: []*model.Pond{},
+		},
 	}
 	counts := &model.FarmCountByClientId{Total: 2, ActiveCount: 2}
 
-	s.farmRepo.On("ListByClientId", clientId).Return(farms, nil)
+	s.farmRepo.On("ListByClientIdWithPonds", clientId).Return(list, nil)
 	s.farmRepo.On("CountByClientId", clientId).Return(counts, nil)
 
 	result, err := s.farmService.GetList(clientId)
@@ -185,6 +191,8 @@ func (s *FarmServiceTestSuite) TestGetList_Success() {
 	assert.Len(s.T(), result.Farms, 2)
 	assert.Equal(s.T(), 2, result.Total)
 	assert.Equal(s.T(), 2, result.TotalActive)
+	assert.Equal(s.T(), 3, result.Farms[0].PondCount, "first farm has 3 ponds")
+	assert.Equal(s.T(), 0, result.Farms[1].PondCount, "second farm has 0 ponds")
 	s.farmRepo.AssertExpectations(s.T())
 }
 

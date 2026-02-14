@@ -8,17 +8,48 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 )
 
-// ToFarmResponse maps model.Farm to dto.FarmResponse
+// ToFarmResponse maps model.Farm to dto.FarmResponse (PondCount remains 0).
 func ToFarmResponse(farm *model.Farm) *dto.FarmResponse {
 	if farm == nil {
 		return nil
 	}
 	return &dto.FarmResponse{
-		Id:       farm.Id,
-		ClientId: farm.ClientId,
-		Name:     farm.Name,
-		Status:   farm.Status,
+		Id:        farm.Id,
+		ClientId:  farm.ClientId,
+		Name:      farm.Name,
+		Status:    farm.Status,
+		PondCount: 0,
 	}
+}
+
+// ToFarmResponseFromFarmWithPonds maps model.FarmWithPonds to dto.FarmResponse with PondCount set from ponds length.
+func ToFarmResponseFromFarmWithPonds(f *model.FarmWithPonds) *dto.FarmResponse {
+	if f == nil {
+		return nil
+	}
+	pondCount := 0
+	if f.Ponds != nil {
+		pondCount = len(f.Ponds)
+	}
+	return &dto.FarmResponse{
+		Id:        f.Farm.Id,
+		ClientId:  f.Farm.ClientId,
+		Name:      f.Farm.Name,
+		Status:    f.Farm.Status,
+		PondCount: pondCount,
+	}
+}
+
+// ToFarmResponseListFromFarmWithPonds maps a slice of model.FarmWithPonds to a slice of dto.FarmResponse with PondCount.
+func ToFarmResponseListFromFarmWithPonds(list []*model.FarmWithPonds) []*dto.FarmResponse {
+	if list == nil {
+		return nil
+	}
+	responses := make([]*dto.FarmResponse, 0, len(list))
+	for _, f := range list {
+		responses = append(responses, ToFarmResponseFromFarmWithPonds(f))
+	}
+	return responses
 }
 
 // ToFarmResponseList maps a slice of model.Farm to a slice of dto.FarmResponse
