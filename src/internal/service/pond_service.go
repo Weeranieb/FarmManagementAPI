@@ -14,7 +14,7 @@ import (
 type PondService interface {
 	CreatePonds(ctx context.Context, request dto.CreatePondsRequest, username string) error
 	Get(id int) (*dto.PondResponse, error)
-	Update(ctx context.Context, request *model.Pond, username string) error
+	Update(ctx context.Context, request dto.UpdatePondRequest, username string) error
 	GetList(farmId int) ([]*dto.PondResponse, error)
 	Delete(id int, username string) error
 }
@@ -66,20 +66,39 @@ func (s *pondService) Get(id int) (*dto.PondResponse, error) {
 	return s.toPondResponse(pond), nil
 }
 
-func (s *pondService) Update(ctx context.Context, request *model.Pond, username string) error {
-	// Enforce unique pond name per farm
-	if request.Name != "" {
-		existing, err := s.pondRepo.GetByFarmIdAndName(request.FarmId, request.Name)
+func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest, username string) error {
+	existing, err := s.pondRepo.GetByID(req.Id)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existing == nil {
+		return errors.ErrPondNotFound
+	}
+
+	// Apply only provided fields (non-zero / non-empty so partial update is safe)
+	if req.FarmId != 0 {
+		existing.FarmId = req.FarmId
+	}
+	if req.Name != "" {
+		existing.Name = req.Name
+	}
+	if req.Status != "" {
+		existing.Status = req.Status
+	}
+
+	// Enforce unique pond name per farm when name was updated
+	if req.Name != "" {
+		dup, err := s.pondRepo.GetByFarmIdAndName(existing.FarmId, existing.Name)
 		if err != nil {
 			return errors.ErrGeneric.Wrap(err)
 		}
-		if existing != nil && existing.Id != request.Id {
+		if dup != nil && dup.Id != existing.Id {
 			return errors.ErrPondAlreadyExists
 		}
 	}
 
 	// UpdatedBy set via BaseModel hook from ctx
-	if err := s.pondRepo.Update(ctx, request); err != nil {
+	if err := s.pondRepo.Update(ctx, existing); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

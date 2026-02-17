@@ -219,13 +219,10 @@ func (s *FarmHandlerTestSuite) TestGetFarmHierarchy_ClientIdNotFound() {
 }
 
 func (s *FarmHandlerTestSuite) TestUpdateFarm_Success() {
-	updateReq := &dto.UpdateFarmRequest{
-		Id:   1,
-		Name: "Updated Farm",
-	}
+	updateReq := dto.UpdateFarmRequest{Id: 1, Name: "Updated Farm"}
 	username := "admin"
 
-	s.farmService.On("Update", mock.Anything, *updateReq).Return(nil)
+	s.farmService.On("Update", mock.Anything, updateReq).Return(nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
@@ -233,10 +230,10 @@ func (s *FarmHandlerTestSuite) TestUpdateFarm_Success() {
 		"clientId":  1,
 		"userLevel": 3, // super admin only
 	}))
-	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
+	app.Put("/api/v1/farm/:id", s.farmHandler.UpdateFarm)
 
-	body, _ := json.Marshal(updateReq)
-	req := httptest.NewRequest("PUT", "/api/v1/farm", bytes.NewBuffer(body))
+	body, _ := json.Marshal(dto.UpdateFarmBody{Name: "Updated Farm"})
+	req := httptest.NewRequest("PUT", "/api/v1/farm/1", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -639,9 +636,9 @@ func (s *FarmHandlerTestSuite) TestUpdateFarm_InvalidBody() {
 		"clientId":  1,
 		"userLevel": 3, // super admin only
 	}))
-	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
+	app.Put("/api/v1/farm/:id", s.farmHandler.UpdateFarm)
 
-	req := httptest.NewRequest("PUT", "/api/v1/farm", bytes.NewBufferString("not json"))
+	req := httptest.NewRequest("PUT", "/api/v1/farm/1", bytes.NewBufferString("not json"))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -655,20 +652,16 @@ func (s *FarmHandlerTestSuite) TestUpdateFarm_InvalidBody() {
 }
 
 func (s *FarmHandlerTestSuite) TestUpdateFarm_NotSuperAdmin() {
-	updateReq := &dto.UpdateFarmRequest{
-		Id:   1,
-		Name: "Updated",
-	}
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  "admin",
 		"clientId":  1,
 		"userLevel": 1, // not super admin
 	}))
-	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
+	app.Put("/api/v1/farm/:id", s.farmHandler.UpdateFarm)
 
-	body, _ := json.Marshal(updateReq)
-	req := httptest.NewRequest("PUT", "/api/v1/farm", bytes.NewBuffer(body))
+	body, _ := json.Marshal(dto.UpdateFarmBody{Name: "Updated"})
+	req := httptest.NewRequest("PUT", "/api/v1/farm/1", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -685,21 +678,18 @@ func (s *FarmHandlerTestSuite) TestUpdateFarm_NotSuperAdmin() {
 
 func (s *FarmHandlerTestSuite) TestUpdateFarm_NoUsernameInContext() {
 	// Update no longer requires username param; UpdatedBy is set from ctx in repo. Test that Update is called and succeeds.
-	updateReq := &dto.UpdateFarmRequest{
-		Id:   1,
-		Name: "Updated",
-	}
-	s.farmService.On("Update", mock.Anything, *updateReq).Return(nil)
+	updateReq := dto.UpdateFarmRequest{Id: 1, Name: "Updated"}
+	s.farmService.On("Update", mock.Anything, updateReq).Return(nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"clientId":  1,
 		"userLevel": 3, // super admin; no username in context
 	}))
-	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
+	app.Put("/api/v1/farm/:id", s.farmHandler.UpdateFarm)
 
-	body, _ := json.Marshal(updateReq)
-	req := httptest.NewRequest("PUT", "/api/v1/farm", bytes.NewBuffer(body))
+	body, _ := json.Marshal(dto.UpdateFarmBody{Name: "Updated"})
+	req := httptest.NewRequest("PUT", "/api/v1/farm/1", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -713,13 +703,10 @@ func (s *FarmHandlerTestSuite) TestUpdateFarm_NoUsernameInContext() {
 }
 
 func (s *FarmHandlerTestSuite) TestUpdateFarm_ServiceError() {
-	updateReq := &dto.UpdateFarmRequest{
-		Id:   1,
-		Name: "Updated",
-	}
+	updateReq := dto.UpdateFarmRequest{Id: 1, Name: "Updated"}
 	username := "admin"
 	svcErr := errors.New("update failed")
-	s.farmService.On("Update", mock.Anything, *updateReq).Return(svcErr)
+	s.farmService.On("Update", mock.Anything, updateReq).Return(svcErr)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
@@ -727,10 +714,10 @@ func (s *FarmHandlerTestSuite) TestUpdateFarm_ServiceError() {
 		"clientId":  1,
 		"userLevel": 3, // super admin only
 	}))
-	app.Put("/api/v1/farm", s.farmHandler.UpdateFarm)
+	app.Put("/api/v1/farm/:id", s.farmHandler.UpdateFarm)
 
-	body, _ := json.Marshal(updateReq)
-	req := httptest.NewRequest("PUT", "/api/v1/farm", bytes.NewBuffer(body))
+	body, _ := json.Marshal(dto.UpdateFarmBody{Name: "Updated"})
+	req := httptest.NewRequest("PUT", "/api/v1/farm/1", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)

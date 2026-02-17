@@ -229,40 +229,45 @@ func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
 	return http.Success(c, list)
 }
 
-// PUT /farm
+// PUT /farm/:id
 // Update farm entry. Super admin only.
 // @Summary      Update farm entry
-// @Description  Update details of a farm entry. Super admin only. ClientId is not accepted; it is preserved from the existing farm.
+// @Description  Update details of a farm entry. Super admin only. Id in path; body contains name.
 // @Tags         farm
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Security     CookieAuth
-// @Param        body body dto.UpdateFarmRequest true "Farm data (id, name)"
+// @Param        id   path int true "Farm ID"
+// @Param        body body dto.UpdateFarmBody true "Farm data (name)"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /farm [put]
+// @Router       /farm/{id} [put]
 func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
-	var updateReq dto.UpdateFarmRequest
-
 	defer func() {
 		if r := recover(); r != nil {
 			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
-	if err := validateAndParse(c, &updateReq); err != nil {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid farm ID")
+	}
+
+	var body dto.UpdateFarmBody
+	if err := validateAndParse(c, &body); err != nil {
 		return err
 	}
 
-	// Super admin only
 	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
 	if err != nil || !isSuperAdmin {
 		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
+	updateReq := dto.UpdateFarmRequest{Id: id, Name: body.Name}
 	if err = h.farmService.Update(c.UserContext(), updateReq); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

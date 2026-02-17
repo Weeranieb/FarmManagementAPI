@@ -8,8 +8,16 @@ type CreatePondsRequest struct {
 	Names  []string `json:"names" validate:"required,min=1,dive,required"`
 }
 
+// UpdatePondRequest is used by the service layer (id comes from path).
 type UpdatePondRequest struct {
-	Id     int    `json:"id" validate:"required"`
+	Id     int    `json:"-"` // from path
+	FarmId int    `json:"farmId"`
+	Name   string `json:"name"`
+	Status string `json:"status" validate:"omitempty,oneof=active maintenance"`
+}
+
+// UpdatePondBody is the request body for PUT /pond/:id (id in path).
+type UpdatePondBody struct {
 	FarmId int    `json:"farmId"`
 	Name   string `json:"name"`
 	Status string `json:"status" validate:"omitempty,oneof=active maintenance"`

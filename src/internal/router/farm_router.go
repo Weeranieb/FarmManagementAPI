@@ -13,5 +13,5 @@ func (r *Router) setupFarmRoutes(group fiber.Router) {
 	farm.Get("/hierarchy", r.handlers.FarmHandler.GetFarmHierarchy)
 	farm.Get("/:id", r.handlers.FarmHandler.GetFarm)
 	farm.Get("", r.handlers.FarmHandler.GetFarmList)
-	farm.Put("", r.handlers.FarmHandler.UpdateFarm)
+	farm.Put("/:id", r.handlers.FarmHandler.UpdateFarm)
 }

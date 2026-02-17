@@ -5,8 +5,14 @@ type CreateFarmRequest struct {
 	Name     string `json:"name" validate:"required"`
 }
 
+// UpdateFarmRequest is used by the service layer (id comes from path).
 type UpdateFarmRequest struct {
-	Id   int    `json:"id" validate:"required"`
+	Id   int    `json:"-"` // from path
+	Name string `json:"name"`
+}
+
+// UpdateFarmBody is the request body for PUT /farm/:id (id in path).
+type UpdateFarmBody struct {
 	Name string `json:"name"`
 }
 

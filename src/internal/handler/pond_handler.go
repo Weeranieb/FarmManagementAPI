@@ -6,7 +6,6 @@ import (
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -145,40 +144,45 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 	return http.Success(c, pondList)
 }
 
-// PUT /pond
+// PUT /pond/:id
 // Update a pond.
 // @Summary      Update a pond
-// @Description  Update an existing pond with new details
+// @Description  Update an existing pond. Id in path; body contains optional farmId, name, status.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Security     CookieAuth
-// @Param        body body model.Pond true "Updated pond data"
+// @Param        id   path int true "Pond ID"
+// @Param        body body dto.UpdatePondBody true "Updated pond data (farmId, name, status optional)"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /pond [put]
+// @Router       /pond/{id} [put]
 func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
-	var updatePond *model.Pond
-
 	defer func() {
 		if r := recover(); r != nil {
 			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
-	if err := validateAndParse(c, &updatePond); err != nil {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+	}
+
+	var body dto.UpdatePondBody
+	if err := validateAndParse(c, &body); err != nil {
 		return err
 	}
 
-	// Get username
 	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.pondService.Update(c.UserContext(), updatePond, username)
+	req := dto.UpdatePondRequest{Id: id, FarmId: body.FarmId, Name: body.Name, Status: body.Status}
+	err = h.pondService.Update(c.UserContext(), req, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
