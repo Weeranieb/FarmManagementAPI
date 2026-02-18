@@ -9,6 +9,7 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/mapper"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=FarmService --output=./mocks --outpkg=service --filename=farm_service.go --structname=MockFarmService --with-expecter=false
@@ -34,8 +35,9 @@ func NewFarmService(farmRepo repository.FarmRepository, pondRepo repository.Pond
 }
 
 func (s *farmService) Create(ctx context.Context, request dto.CreateFarmRequest, clientId int) (*dto.FarmResponse, error) {
+	name := utils.NormalizeFarmNameForStore(request.Name)
 	// Check if farm already exists
-	checkFarm, err := s.farmRepo.GetByNameAndClientId(request.Name, clientId)
+	checkFarm, err := s.farmRepo.GetByNameAndClientId(name, clientId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -44,12 +46,12 @@ func (s *farmService) Create(ctx context.Context, request dto.CreateFarmRequest,
 		return nil, errors.ErrFarmAlreadyExists
 	}
 
-	// Set default status if not provided
-	status := constants.FarmStatusActive
+	// New farms start as maintenance until ready
+	status := constants.FarmStatusMaintenance
 
 	newFarm := &model.Farm{
 		ClientId: clientId,
-		Name:     request.Name,
+		Name:     name,
 		Status:   status,
 	}
 
@@ -97,15 +99,16 @@ func (s *farmService) Update(ctx context.Context, request dto.UpdateFarmRequest)
 	if existing == nil {
 		return errors.ErrFarmNotFound
 	}
+	name := utils.NormalizeFarmNameForStore(request.Name)
 	updateFarm := &model.Farm{
 		Id:       request.Id,
 		ClientId: existing.ClientId,
-		Name:     request.Name,
+		Name:     name,
 		Status:   existing.Status,
 	}
 	// Enforce unique farm name per client
 	if updateFarm.Name != "" {
-		byName, err := s.farmRepo.GetByNameAndClientId(updateFarm.Name, updateFarm.ClientId)
+		byName, err := s.farmRepo.GetByNameAndClientId(name, updateFarm.ClientId)
 		if err != nil {
 			return errors.ErrGeneric.Wrap(err)
 		}

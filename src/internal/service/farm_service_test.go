@@ -50,7 +50,7 @@ func (s *FarmServiceTestSuite) TestCreate_Success() {
 		Id:       1,
 		ClientId: clientId,
 		Name:     req.Name,
-		Status:   "active",
+		Status:   "maintenance",
 		BaseModel: model.BaseModel{
 			CreatedAt: expectedTime,
 			UpdatedAt: expectedTime,
@@ -69,7 +69,7 @@ func (s *FarmServiceTestSuite) TestCreate_Success() {
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
 	assert.Equal(s.T(), req.Name, result.Name)
-	assert.Equal(s.T(), "active", result.Status)
+	assert.Equal(s.T(), "maintenance", result.Status)
 	s.farmRepo.AssertExpectations(s.T())
 }
 

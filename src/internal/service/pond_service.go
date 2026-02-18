@@ -7,7 +7,8 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
+		"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=PondService --output=./mocks --outpkg=service --filename=pond_service.go --structname=MockPondService --with-expecter=false
@@ -30,7 +31,11 @@ func NewPondService(pondRepo repository.PondRepository) PondService {
 }
 
 func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest, username string) error {
+	normalizedNames := make([]string, 0, len(request.Names))
 	for _, name := range request.Names {
+		normalizedNames = append(normalizedNames, utils.NormalizePondNameForStore(name))
+	}
+	for _, name := range normalizedNames {
 		checkPond, err := s.pondRepo.GetByFarmIdAndName(request.FarmId, name)
 		if err != nil {
 			return errors.ErrGeneric.Wrap(err)
@@ -40,8 +45,8 @@ func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRe
 		}
 	}
 
-	newPonds := make([]*model.Pond, 0, len(request.Names))
-	for _, name := range request.Names {
+	newPonds := make([]*model.Pond, 0, len(normalizedNames))
+	for _, name := range normalizedNames {
 		newPonds = append(newPonds, &model.Pond{
 			FarmId: request.FarmId,
 			Name:   name,
@@ -80,7 +85,7 @@ func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest, use
 		existing.FarmId = req.FarmId
 	}
 	if req.Name != "" {
-		existing.Name = req.Name
+		existing.Name = utils.NormalizePondNameForStore(req.Name)
 	}
 	if req.Status != "" {
 		existing.Status = req.Status

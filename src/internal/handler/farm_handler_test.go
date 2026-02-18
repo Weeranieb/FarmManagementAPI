@@ -45,7 +45,7 @@ func (s *FarmHandlerTestSuite) TestAddFarm_Success() {
 		Id:       1,
 		ClientId: 1,
 		Name:     createReq.Name,
-		Status:   "active",
+		Status:   "maintenance",
 	}
 
 	username := "admin"
