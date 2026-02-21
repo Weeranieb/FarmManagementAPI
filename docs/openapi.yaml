@@ -1,0 +1,1713 @@
+openapi: 3.0.3
+info:
+  title: Boonma Farm API
+  description: A Boonma Farm application with Fiber, GORM, and Dependency Injection. REST API under /api/v1. See flows/ for domain flow descriptions.
+  version: '1.0'
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: auth
+    description: Authentication (register, login, logout). No JWT required.
+  - name: client
+    description: Client CRUD. Some operations are super admin only.
+  - name: user
+    description: User CRUD and list; client-scoped.
+  - name: farm
+    description: Farm CRUD, list, and hierarchy.
+  - name: pond
+    description: Pond CRUD; create many by farm; list by farmId.
+  - name: pond-stock-actions
+    description: Pond stock actions (fill, move, sell) and active pond lifecycle. See flows/pond-stock-*.md.
+  - name: worker
+    description: Worker CRUD and list; client-scoped.
+  - name: merchant
+    description: Merchant CRUD and list; client-scoped.
+  - name: feed-collection
+    description: Feed collection CRUD with pagination.
+  - name: feed-price-history
+    description: Feed price history CRUD and list.
+
+security:
+  - BearerAuth: []
+  - CookieAuth: []
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      description: Register a new user with the provided details. See [flows/auth.md](flows/auth.md).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      summary: Login user
+      description: Login with credentials; returns JWT. Token is also set as HTTP-only cookie. See [flows/auth.md](flows/auth.md).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout user
+      description: Logout and clear the authentication cookie.
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/client:
+    post:
+      tags: [client]
+      summary: Add a new client
+      description: Super admin only. See [flows/client.md](flows/client.md).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [client]
+      summary: Update client
+      description: Super admin can update any client; others can only update their own client.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/client/list:
+    get:
+      tags: [client]
+      summary: Get client list for dropdown
+      description: Returns clients as dropdown items (id, name). Super admin only.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/client/{id}:
+    get:
+      tags: [client]
+      summary: Get a client by ID
+      description: Super admin can access any client; others only their own.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/user:
+    post:
+      tags: [user]
+      summary: Add a new user
+      description: See [flows/user.md](flows/user.md). Client-scoped; clientId and userLevel in body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [user]
+      summary: Get current user
+      description: Returns the authenticated user (from JWT).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [user]
+      summary: Update user
+      description: Update the authenticated user or a user within scope.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/user/list:
+    get:
+      tags: [user]
+      summary: Get user list
+      description: List users for the current client (e.g. for dropdown).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/farm:
+    post:
+      tags: [farm]
+      summary: Add a new farm
+      description: Super admin only. See [flows/farm-hierarchy.md](flows/farm-hierarchy.md).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFarmRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [farm]
+      summary: Get list of farms
+      description: List farms for the current client. Optional query clientId (super admin may pass it).
+      parameters:
+        - name: clientId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/farm/hierarchy:
+    get:
+      tags: [farm]
+      summary: Get farm hierarchy with ponds
+      description: All farms for the client with nested ponds (for UI). Super admin may pass clientId.
+      parameters:
+        - name: clientId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/farm/{id}:
+    get:
+      tags: [farm]
+      summary: Get farm by ID
+      description: Farm details including summary and ponds.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [farm]
+      summary: Update farm
+      description: Super admin only. ClientId is not accepted; preserved from existing farm.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFarmBody'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/pond:
+    post:
+      tags: [pond]
+      summary: Create multiple ponds
+      description: Create ponds for a farm; new ponds have status maintenance. See [flows/pond.md](flows/pond.md).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePondsRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [pond]
+      summary: Get list of ponds by farm ID
+      description: Query by farmId.
+      parameters:
+        - name: farmId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/pond/{id}:
+    get:
+      tags: [pond]
+      summary: Get a pond by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [pond]
+      summary: Update a pond
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePondBody'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [pond]
+      summary: Delete a pond
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/pond/{pondId}/fill:
+    post:
+      tags: [pond-stock-actions]
+      summary: Fill pond (add fish)
+      description: |
+        Add fish to a pond. Path uses pondId; backend resolves or creates active_pond.
+        If pond is in maintenance (no active cycle), backend creates a new active pond and records the fill activity.
+        See [flows/pond-stock-fill.md](flows/pond-stock-fill.md).
+      parameters:
+        - name: pondId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PondFillRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found (e.g. pond not found)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/pond/{pondId}/move:
+    post:
+      tags: [pond-stock-actions]
+      summary: Move fish to another pond
+      description: |
+        Transfer fish from this pond (source) to another. Path = source pondId; body includes toPondId.
+        If destination pond is in maintenance, backend creates active_pond for it and records the move.
+        See [flows/pond-stock-move.md](flows/pond-stock-move.md).
+      parameters:
+        - name: pondId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PondMoveRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/pond/{pondId}/sell:
+    post:
+      tags: [pond-stock-actions]
+      summary: Sell fish from pond
+      description: |
+        Record a sell transaction. If markToClose is true, after the transaction the active pond is closed and the pond returns to maintenance.
+        See [flows/pond-stock-sell.md](flows/pond-stock-sell.md).
+      parameters:
+        - name: pondId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PondSellRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/worker:
+    post:
+      tags: [worker]
+      summary: Add a new worker
+      description: See [flows/worker.md](flows/worker.md). Client-scoped; farmGroupId, hireDate, salary.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkerRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [worker]
+      summary: List workers
+      description: Paginated list for the current client.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [worker]
+      summary: Update a worker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkerRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/worker/{id}:
+    get:
+      tags: [worker]
+      summary: Get a worker by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/merchant:
+    post:
+      tags: [merchant]
+      summary: Add a new merchant
+      description: See [flows/merchant.md](flows/merchant.md).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMerchantRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [merchant]
+      summary: Get list of merchants
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [merchant]
+      summary: Update a merchant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMerchantRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/merchant/{id}:
+    get:
+      tags: [merchant]
+      summary: Get a merchant by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/feed-collection:
+    post:
+      tags: [feed-collection]
+      summary: Add a new feed collection
+      description: See [flows/feed-collection.md](flows/feed-collection.md). Can include initial feedPriceHistories.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFeedCollectionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [feed-collection]
+      summary: Get list of feed collections with pagination
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: orderBy
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [feed-collection]
+      summary: Update a feed collection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFeedCollectionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/feed-collection/{id}:
+    get:
+      tags: [feed-collection]
+      summary: Get a feed collection by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/feed-price-history:
+    post:
+      tags: [feed-price-history]
+      summary: Add feed price history
+      description: See [flows/feed-price-history.md](flows/feed-price-history.md).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFeedPriceHistoryRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [feed-price-history]
+      summary: Get all feed price history
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [feed-price-history]
+      summary: Update feed price history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFeedPriceHistoryRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/feed-price-history/{id}:
+    get:
+      tags: [feed-price-history]
+      summary: Get a feed price history by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Type "Bearer" followed by a space and JWT token in Authorization header.
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt_token
+      description: JWT stored in HTTP-only cookie (sent automatically by browser).
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        result:
+          type: boolean
+          example: true
+        data:
+          description: Response payload (object or array)
+      required:
+        - result
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '100001'
+        message:
+          type: string
+          example: 'User already exists'
+      required:
+        - code
+        - message
+
+    RegisterRequest:
+      type: object
+      required: [clientId, username, password, firstName]
+      properties:
+        clientId:
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        userLevel:
+          type: integer
+        contactNumber:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        rememberMe:
+          type: boolean
+
+    CreateClientRequest:
+      type: object
+      required: [name, ownerName, contactNumber]
+      properties:
+        name:
+          type: string
+        ownerName:
+          type: string
+        contactNumber:
+          type: string
+
+    UpdateClientRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        ownerName:
+          type: string
+        contactNumber:
+          type: string
+        isActive:
+          type: boolean
+
+    CreateUserRequest:
+      type: object
+      required: [username, password, firstName]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        userLevel:
+          type: integer
+        contactNumber:
+          type: string
+        clientId:
+          type: integer
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        userLevel:
+          type: integer
+        contactNumber:
+          type: string
+
+    CreateFarmRequest:
+      type: object
+      required: [clientId, name]
+      properties:
+        clientId:
+          type: integer
+        name:
+          type: string
+
+    UpdateFarmBody:
+      type: object
+      properties:
+        name:
+          type: string
+
+    CreatePondsRequest:
+      type: object
+      required: [farmId, names]
+      properties:
+        farmId:
+          type: integer
+        names:
+          type: array
+          items:
+            type: string
+          minItems: 1
+
+    UpdatePondBody:
+      type: object
+      properties:
+        farmId:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, maintenance]
+
+    CreateWorkerRequest:
+      type: object
+      required: [farmGroupId, firstName, nationality, salary]
+      properties:
+        farmGroupId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        contactNumber:
+          type: string
+        nationality:
+          type: string
+        salary:
+          type: number
+          format: double
+        hireDate:
+          type: string
+          format: date-time
+
+    UpdateWorkerRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+        farmGroupId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        contactNumber:
+          type: string
+        nationality:
+          type: string
+        salary:
+          type: number
+          format: double
+        hireDate:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+
+    CreateMerchantRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        contactNumber:
+          type: string
+        location:
+          type: string
+
+    UpdateMerchantRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        contactNumber:
+          type: string
+        location:
+          type: string
+
+    CreateFeedPriceHistoryItemRequest:
+      type: object
+      required: [price, priceUpdatedDate]
+      properties:
+        price:
+          type: number
+          format: double
+        priceUpdatedDate:
+          type: string
+          format: date-time
+
+    CreateFeedCollectionRequest:
+      type: object
+      required: [name, unit]
+      properties:
+        name:
+          type: string
+        unit:
+          type: string
+        feedPriceHistories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateFeedPriceHistoryItemRequest'
+
+    UpdateFeedCollectionRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        unit:
+          type: string
+
+    CreateFeedPriceHistoryRequest:
+      type: object
+      required: [feedCollectionId, price, priceUpdatedDate]
+      properties:
+        feedCollectionId:
+          type: integer
+        price:
+          type: number
+          format: double
+        priceUpdatedDate:
+          type: string
+          format: date-time
+
+    UpdateFeedPriceHistoryRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+        feedCollectionId:
+          type: integer
+        price:
+          type: number
+          format: double
+        priceUpdatedDate:
+          type: string
+          format: date-time
+
+    PondFillRequest:
+      type: object
+      required: [fishType, amount, activityDate]
+      properties:
+        fishType:
+          type: string
+          description: Fish type (e.g. from fish type constants)
+        amount:
+          type: integer
+          description: Number of fish
+        fishWeight:
+          type: number
+          format: double
+        fishUnit:
+          type: string
+        pricePerUnit:
+          type: number
+          format: double
+        activityDate:
+          type: string
+          format: date
+
+    PondMoveRequest:
+      type: object
+      required: [toPondId, fishType, amount, activityDate]
+      properties:
+        toPondId:
+          type: integer
+          description: Destination pond id; backend resolves or creates active_pond for it
+        fishType:
+          type: string
+        amount:
+          type: integer
+        fishWeight:
+          type: number
+          format: double
+        activityDate:
+          type: string
+          format: date
+
+    PondSellDetailItem:
+      type: object
+      properties:
+        fishType:
+          type: string
+        size:
+          type: string
+        amount:
+          type: number
+          format: double
+        fishUnit:
+          type: string
+        pricePerUnit:
+          type: number
+          format: double
+
+    PondSellRequest:
+      type: object
+      required: [activityDate]
+      properties:
+        activityDate:
+          type: string
+          format: date
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/PondSellDetailItem'
+          description: Per-species sell lines
+        buyer:
+          type: string
+        markToClose:
+          type: boolean
+          description: If true, close active pond after transaction and set pond to maintenance
+
+    DropdownItem:
+      type: object
+      properties:
+        key:
+          type: integer
+        value:
+          type: string
