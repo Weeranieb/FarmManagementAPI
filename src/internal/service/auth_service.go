@@ -98,8 +98,12 @@ func (s *authService) Login(request dto.LoginRequest) (string, *dto.UserResponse
 	claims["clientId"] = checkUser.ClientId
 	claims["userLevel"] = checkUser.UserLevel
 
-	// Set expiration time
-	expiredDate := time.Now().AddDate(0, 0, 1)
+	var expiredDate time.Time
+	if request.RememberMe {
+		expiredDate = time.Now().AddDate(0, 1, 0) // 30 days
+	} else {
+		expiredDate = time.Now().AddDate(0, 0, 1) // 1 day
+	}
 	claims["exp"] = expiredDate.Unix()
 
 	// Sign and get the complete encoded token as a string

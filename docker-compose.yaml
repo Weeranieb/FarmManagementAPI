@@ -1,15 +1,11 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: boonmafarm-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: boonmafarm
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
@@ -21,6 +17,16 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres-mcp:
+    build:
+      context: .
+      dockerfile: postgres-mcp.Dockerfile
+    command: ["postgresql://user:password@postgres:5432/boonmafarm"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - mcp
+
 volumes:
   boonmafarm_postgres_data:
-    driver: local
