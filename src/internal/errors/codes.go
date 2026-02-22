@@ -127,6 +127,11 @@ var (
 		Code:    500072,
 		Message: "Invalid pond input",
 	}
+
+	ErrInvalidFishType = &AppError{
+		Code:    500073,
+		Message: "Invalid fish type",
+	}
 )
 
 // Worker errors (500080-500089)

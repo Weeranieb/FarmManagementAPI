@@ -1,5 +1,7 @@
 package model
 
+import "github.com/shopspring/decimal"
+
 type FeedCollection struct {
 	Id       int    `json:"id" gorm:"column:id;primaryKey;autoIncrement"`
 	ClientId int    `json:"clientId" gorm:"column:client_id"`
@@ -10,6 +12,6 @@ type FeedCollection struct {
 
 type FeedCollectionPage struct {
 	FeedCollection
-	LatestPrice            float64 `json:"latestPrice" gorm:"column:latest_price"`
-	LatestPriceUpdatedDate *string `json:"latestPriceUpdatedDate" gorm:"column:latest_price_updated_date"`
+	LatestPrice            decimal.Decimal `json:"latestPrice" gorm:"column:latest_price"`
+	LatestPriceUpdatedDate *string         `json:"latestPriceUpdatedDate" gorm:"column:latest_price_updated_date"`
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"github.com/shopspring/decimal"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -45,7 +46,7 @@ func (s *workerService) Create(ctx context.Context, request dto.CreateWorkerRequ
 		LastName:      request.LastName,
 		ContactNumber: request.ContactNumber,
 		Nationality:   request.Nationality,
-		Salary:        request.Salary,
+		Salary:        decimal.NewFromFloat(request.Salary),
 		HireDate:      request.HireDate,
 		IsActive:      true,
 	}
@@ -106,7 +107,7 @@ func (s *workerService) toWorkerResponse(worker *model.Worker) *dto.WorkerRespon
 		LastName:      worker.LastName,
 		ContactNumber: worker.ContactNumber,
 		Nationality:   worker.Nationality,
-		Salary:        worker.Salary,
+		Salary:        worker.Salary.InexactFloat64(),
 		HireDate:      worker.HireDate,
 		IsActive:      worker.IsActive,
 		CreatedAt:     worker.CreatedAt,

@@ -20,6 +20,7 @@ type PondHandler interface {
 	GetPondList(c *fiber.Ctx) error
 	UpdatePond(c *fiber.Ctx) error
 	DeletePond(c *fiber.Ctx) error
+	FillPond(c *fiber.Ctx) error
 }
 
 type pondHandlerImpl struct {
@@ -230,4 +231,50 @@ func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
 	}
 
 	return http.SuccessWithoutData(c)
+}
+
+// POST /pond/:pondId/fill
+// Add fish to a pond (fill). Creates an active_pond if the pond is in maintenance.
+// @Summary      Fill pond with fish
+// @Description  Record a fill activity for a pond. If the pond has no active cycle, creates one. Request: fishType, amount, activityDate; optional fishWeight, fishUnit, pricePerUnit.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        pondId path int true "Pond ID"
+// @Param        body   body dto.PondFillRequest true "fishType, amount, activityDate"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
+// @Failure      404  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/fill [post]
+func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	pondId, err := strconv.Atoi(c.Params("pondId"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+	}
+
+	var request dto.PondFillRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+
+	username, err := utils.GetUsername(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	response, err := h.pondService.FillPond(c.UserContext(), pondId, request, username)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return http.Success(c, response)
 }

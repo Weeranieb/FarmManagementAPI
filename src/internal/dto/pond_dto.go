@@ -1,6 +1,10 @@
 package dto
 
-import "time"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 // CreatePondsRequest is the body for POST /pond (create multiple ponds for a farm). New ponds are created with status maintenance.
 type CreatePondsRequest struct {
@@ -34,3 +38,25 @@ type PondResponse struct {
 	UpdatedBy string    `json:"updatedBy"`
 }
 
+// AdditionalCostItem represents a single additional cost with a title and amount.
+type AdditionalCostItem struct {
+	Title string          `json:"title" validate:"required"`
+	Cost  decimal.Decimal `json:"cost" validate:"required,decimal_gte0" swaggertype:"number"`
+}
+
+// PondFillRequest is the body for POST /pond/:pondId/fill (add fish to pond).
+type PondFillRequest struct {
+	FishType        string               `json:"fishType" validate:"required"`
+	Amount          int                  `json:"amount" validate:"required,min=1"`
+	FishWeight      decimal.Decimal      `json:"fishWeight,omitempty" validate:"omitempty,decimal_gt0" swaggertype:"number"`
+	PricePerUnit    decimal.Decimal      `json:"pricePerUnit" validate:"required,decimal_gt0" swaggertype:"number"`
+	AdditionalCosts []AdditionalCostItem `json:"additionalCosts,omitempty" validate:"dive"`
+	ActivityDate    string               `json:"activityDate" validate:"required"`
+	Remark          *string              `json:"remark,omitempty"`
+}
+
+// PondFillResponse is the response for POST /pond/:pondId/fill.
+type PondFillResponse struct {
+	ActivityId   int64 `json:"activityId"`
+	ActivePondId int64 `json:"activePondId"`
+}
