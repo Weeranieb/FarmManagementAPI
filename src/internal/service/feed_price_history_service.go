@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"github.com/shopspring/decimal"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -40,7 +41,7 @@ func (s *feedPriceHistoryService) Create(ctx context.Context, request dto.Create
 
 	newFeedPriceHistory := &model.FeedPriceHistory{
 		FeedCollectionId: request.FeedCollectionId,
-		Price:            request.Price,
+		Price:            decimal.NewFromFloat(request.Price),
 		PriceUpdatedDate: request.PriceUpdatedDate,
 	}
 
@@ -92,7 +93,7 @@ func (s *feedPriceHistoryService) toFeedPriceHistoryResponse(fph *model.FeedPric
 	return &dto.FeedPriceHistoryResponse{
 		Id:               fph.Id,
 		FeedCollectionId: fph.FeedCollectionId,
-		Price:            fph.Price,
+		Price:            fph.Price.InexactFloat64(),
 		PriceUpdatedDate: fph.PriceUpdatedDate,
 		CreatedAt:        fph.CreatedAt,
 		CreatedBy:        fph.CreatedBy,

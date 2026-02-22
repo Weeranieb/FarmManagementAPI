@@ -423,64 +423,6 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Update details of a farm entry. Super admin only. ClientId is not accepted; it is preserved from the existing farm.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "farm"
-                ],
-                "summary": "Update farm entry",
-                "parameters": [
-                    {
-                        "description": "Farm data (id, name)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.UpdateFarmRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
             "post": {
                 "security": [
                     {
@@ -630,6 +572,71 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Update details of a farm entry. Super admin only. Id in path; body contains name.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm"
+                ],
+                "summary": "Update farm entry",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Farm ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Farm data (name)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateFarmBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -1092,58 +1099,6 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Update an existing pond with new details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "pond"
-                ],
-                "summary": "Update a pond",
-                "parameters": [
-                    {
-                        "description": "Updated pond data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.Pond"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
             "post": {
                 "security": [
                     {
@@ -1246,6 +1201,65 @@ const docTemplate = `{
                     }
                 }
             },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Update an existing pond. Id in path; body contains optional farmId, name, status.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Update a pond",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated pond data (farmId, name, status optional)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdatePondBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -1284,6 +1298,79 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/{pondId}/fill": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Record a fill activity for a pond. If the pond has no active cycle, creates one. Request: fishType, amount, activityDate; optional fishWeight, fishUnit, pricePerUnit.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Fill pond with fish",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "fishType, amount, activityDate",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondFillRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -1710,6 +1797,21 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AdditionalCostItem": {
+            "type": "object",
+            "required": [
+                "cost",
+                "title"
+            ],
+            "properties": {
+                "cost": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.CreateClientRequest": {
             "type": "object",
             "required": [
@@ -1889,7 +1991,46 @@ const docTemplate = `{
                 "password": {
                     "type": "string"
                 },
+                "rememberMe": {
+                    "type": "boolean"
+                },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PondFillRequest": {
+            "type": "object",
+            "required": [
+                "activityDate",
+                "amount",
+                "fishType",
+                "pricePerUnit"
+            ],
+            "properties": {
+                "activityDate": {
+                    "type": "string"
+                },
+                "additionalCosts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdditionalCostItem"
+                    }
+                },
+                "amount": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "fishType": {
+                    "type": "string"
+                },
+                "fishWeight": {
+                    "type": "number"
+                },
+                "pricePerUnit": {
+                    "type": "number"
+                },
+                "remark": {
                     "type": "string"
                 }
             }
@@ -1926,17 +2067,29 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.UpdateFarmRequest": {
+        "dto.UpdateFarmBody": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
-                "id": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UpdatePondBody": {
+            "type": "object",
+            "properties": {
+                "farmId": {
                     "type": "integer"
                 },
                 "name": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "maintenance"
+                    ]
                 }
             }
         },
@@ -2043,35 +2196,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.Pond": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "farmId": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 },
                 "updated_at": {

@@ -14,6 +14,9 @@ const (
 
 	// FishTypeDuk - Catfish (ปลาดุก)
 	FishTypeDuk = "duk"
+
+	// FishUnitKg - Default unit for fish weight (kilograms)
+	FishUnitKg = "kg"
 )
 
 // ValidFishTypes returns all valid fish type values (lowercase, for API/DB).

@@ -45,7 +45,7 @@ func NewError(c *fiber.Ctx, defaultCode int, err error) error {
 }
 
 // Success sends a successful response with optional data
-func Success(c *fiber.Ctx, data interface{}) error {
+func Success(c *fiber.Ctx, data any) error {
 	response := ResponseModel{
 		Result: true,
 		Data:   data,
@@ -63,7 +63,7 @@ func SuccessWithoutData(c *fiber.Ctx) error {
 
 // Error sends an error response wrapped in ResponseModel
 // Accepts either numeric code (int) or string code for backward compatibility
-func Error(c *fiber.Ctx, code interface{}, message string) error {
+func Error(c *fiber.Ctx, code any, message string) error {
 	var codeStr string
 	switch v := code.(type) {
 	case int:
@@ -83,4 +83,3 @@ func Error(c *fiber.Ctx, code interface{}, message string) error {
 	}
 	return c.Status(fiber.StatusOK).JSON(response)
 }
-

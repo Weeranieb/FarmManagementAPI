@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"github.com/shopspring/decimal"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -33,7 +34,7 @@ func NewFeedCollectionService(
 	return &feedCollectionService{
 		feedCollectionRepo:   feedCollectionRepo,
 		feedPriceHistoryRepo: feedPriceHistoryRepo,
-		db:                 db,
+		db:                   db,
 	}
 }
 
@@ -69,13 +70,13 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 	}
 
 	// Create feed price histories if provided
-	var feedPriceHistories []interface{}
+	var feedPriceHistories []any
 	if len(request.FeedPriceHistories) > 0 {
 		priceHistories := make([]*model.FeedPriceHistory, 0, len(request.FeedPriceHistories))
 		for _, priceHistoryReq := range request.FeedPriceHistories {
 			priceHistory := &model.FeedPriceHistory{
 				FeedCollectionId: newFeedCollection.Id,
-				Price:            priceHistoryReq.Price,
+				Price:            decimal.NewFromFloat(priceHistoryReq.Price),
 				PriceUpdatedDate: priceHistoryReq.PriceUpdatedDate,
 			}
 			priceHistories = append(priceHistories, priceHistory)
@@ -88,10 +89,10 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 
 		// Convert to response format
 		for _, ph := range priceHistories {
-			feedPriceHistories = append(feedPriceHistories, map[string]interface{}{
+			feedPriceHistories = append(feedPriceHistories, map[string]any{
 				"id":               ph.Id,
 				"feedCollectionId": ph.FeedCollectionId,
-				"price":            ph.Price,
+				"price":            ph.Price.InexactFloat64(),
 				"priceUpdatedDate": ph.PriceUpdatedDate,
 			})
 		}
@@ -140,8 +141,9 @@ func (s *feedCollectionService) GetPage(clientId, page, pageSize int, orderBy, k
 		response := &dto.FeedCollectionPageResponse{
 			FeedCollectionResponse: *s.toFeedCollectionResponse(&fc.FeedCollection),
 		}
-		if fc.LatestPrice > 0 {
-			response.LatestPrice = &fc.LatestPrice
+		if fc.LatestPrice.GreaterThan(decimal.Zero) {
+			v := fc.LatestPrice.InexactFloat64()
+			response.LatestPrice = &v
 		}
 		if fc.LatestPriceUpdatedDate != nil {
 			response.LatestPriceUpdatedDate = fc.LatestPriceUpdatedDate
@@ -167,4 +169,3 @@ func (s *feedCollectionService) toFeedCollectionResponse(feedCollection *model.F
 		UpdatedBy: feedCollection.UpdatedBy,
 	}
 }
-

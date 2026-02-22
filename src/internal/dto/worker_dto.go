@@ -42,7 +42,6 @@ type WorkerResponse struct {
 }
 
 type PageResponse struct {
-	Items interface{} `json:"items"`
-	Total int64       `json:"total"`
+	Items any   `json:"items"`
+	Total int64 `json:"total"`
 }
-

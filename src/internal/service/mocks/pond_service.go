@@ -50,6 +50,36 @@ func (_m *MockPondService) Delete(id int, username string) error {
 	return r0
 }
 
+// FillPond provides a mock function with given fields: ctx, pondId, request, username
+func (_m *MockPondService) FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error) {
+	ret := _m.Called(ctx, pondId, request, username)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FillPond")
+	}
+
+	var r0 *dto.PondFillResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.PondFillRequest, string) (*dto.PondFillResponse, error)); ok {
+		return rf(ctx, pondId, request, username)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.PondFillRequest, string) *dto.PondFillResponse); ok {
+		r0 = rf(ctx, pondId, request, username)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*dto.PondFillResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, dto.PondFillRequest, string) error); ok {
+		r1 = rf(ctx, pondId, request, username)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Get provides a mock function with given fields: id
 func (_m *MockPondService) Get(id int) (*dto.PondResponse, error) {
 	ret := _m.Called(id)

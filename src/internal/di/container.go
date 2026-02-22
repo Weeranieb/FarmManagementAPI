@@ -5,6 +5,7 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/handler"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/transaction"
 
 	"go.uber.org/dig"
 )
@@ -20,9 +21,14 @@ func NewContainer(conf *config.Config) *dig.Container {
 	c.Provide(repository.NewFarmRepository)
 	c.Provide(repository.NewMerchantRepository)
 	c.Provide(repository.NewPondRepository)
+	c.Provide(repository.NewActivePondRepository)
+	c.Provide(repository.NewActivityRepository)
 	c.Provide(repository.NewWorkerRepository)
 	c.Provide(repository.NewFeedCollectionRepository)
 	c.Provide(repository.NewFeedPriceHistoryRepository)
+
+	// Transaction
+	c.Provide(transaction.NewManager)
 
 	// Service
 	c.Provide(service.NewUserService)

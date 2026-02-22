@@ -2,13 +2,19 @@ package service
 
 import (
 	"context"
+	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
-		"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/transaction"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
+
+	"go.uber.org/dig"
+	"gorm.io/gorm"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=PondService --output=./mocks --outpkg=service --filename=pond_service.go --structname=MockPondService --with-expecter=false
@@ -18,15 +24,34 @@ type PondService interface {
 	Update(ctx context.Context, request dto.UpdatePondRequest, username string) error
 	GetList(farmId int) ([]*dto.PondResponse, error)
 	Delete(id int, username string) error
+	FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error)
+}
+
+type PondServiceParams struct {
+	dig.In
+
+	PondRepo       repository.PondRepository
+	FarmRepo       repository.FarmRepository
+	ActivePondRepo repository.ActivePondRepository
+	ActivityRepo   repository.ActivityRepository
+	TxManager      transaction.Manager
 }
 
 type pondService struct {
-	pondRepo repository.PondRepository
+	pondRepo       repository.PondRepository
+	farmRepo       repository.FarmRepository
+	activePondRepo repository.ActivePondRepository
+	activityRepo   repository.ActivityRepository
+	txManager      transaction.Manager
 }
 
-func NewPondService(pondRepo repository.PondRepository) PondService {
+func NewPondService(params PondServiceParams) PondService {
 	return &pondService{
-		pondRepo: pondRepo,
+		pondRepo:       params.PondRepo,
+		farmRepo:       params.FarmRepo,
+		activePondRepo: params.ActivePondRepo,
+		activityRepo:   params.ActivityRepo,
+		txManager:      params.TxManager,
 	}
 }
 
@@ -129,6 +154,107 @@ func (s *pondService) Delete(id int, username string) error {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil
+}
+
+func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error) {
+	data, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, pondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if data == nil || data.Pond == nil {
+		return nil, errors.ErrPondNotFound
+	}
+	pond := data.Pond
+	if data.ClientId == 0 {
+		return nil, errors.ErrFarmNotFound
+	}
+	ok, err := utils.CanAccessClient(ctx, data.ClientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return nil, errors.ErrAuthPermissionDenied
+	}
+
+	if !constants.IsValidFishType(request.FishType) {
+		return nil, errors.ErrInvalidFishType
+	}
+
+	activityDate, err := time.Parse("2006-01-02", request.ActivityDate)
+	if err != nil {
+		return nil, errors.ErrValidationFailed.Wrap(err)
+	}
+
+	activePond := data.ActivePond
+
+	additionalCosts := make([]decimal.Decimal, 0, len(request.AdditionalCosts))
+	for _, item := range request.AdditionalCosts {
+		additionalCosts = append(additionalCosts, item.Cost)
+	}
+	fillCost := utils.FillCost(request.Amount, request.PricePerUnit, additionalCosts)
+
+	var resp *dto.PondFillResponse
+	err = s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
+		if activePond == nil {
+			activePond = &model.ActivePond{
+				PondId:    pondId,
+				StartDate: activityDate,
+				IsActive:  true,
+				TotalCost: fillCost,
+				NetResult: decimal.Zero.Sub(fillCost), // TotalProfit - TotalCost; no sales yet
+			}
+			if err := tx.Create(activePond).Error; err != nil {
+				return err
+			}
+			if pond.Status == constants.FarmStatusMaintenance {
+				pond.Status = constants.FarmStatusActive
+				if err := tx.Save(pond).Error; err != nil {
+					return err
+				}
+			}
+		} else {
+			activePond.TotalCost = activePond.TotalCost.Add(fillCost)
+			activePond.NetResult = activePond.TotalProfit.Sub(activePond.TotalCost)
+			if err := tx.Save(activePond).Error; err != nil {
+				return err
+			}
+		}
+
+		activity := &model.Activity{
+			ActivePondId: activePond.Id,
+			Mode:         constants.ActivityModeFill,
+			Amount:       request.Amount,
+			FishType:     request.FishType,
+			FishWeight:   request.FishWeight,
+			FishUnit:     constants.FishUnitKg,
+			PricePerUnit: request.PricePerUnit,
+			ActivityDate: activityDate,
+		}
+		if err := tx.Create(activity).Error; err != nil {
+			return err
+		}
+
+		for _, item := range request.AdditionalCosts {
+			ac := &model.AdditionalCost{
+				ActivityId: activity.Id,
+				Title:      item.Title,
+				Cost:       item.Cost,
+			}
+			if err := tx.Create(ac).Error; err != nil {
+				return err
+			}
+		}
+
+		resp = &dto.PondFillResponse{
+			ActivityId:   int64(activity.Id),
+			ActivePondId: int64(activePond.Id),
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	return resp, nil
 }
 
 func (s *pondService) toPondResponse(pond *model.Pond) *dto.PondResponse {
