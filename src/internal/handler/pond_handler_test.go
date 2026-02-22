@@ -49,7 +49,7 @@ func (s *PondHandlerTestSuite) TestAddPonds_Success() {
 	s.pondService.On("CreatePonds", mock.Anything, *createReq, username).Return(nil)
 
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]interface{}{
+	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  username,
 		"userLevel": 3, // super admin only
 	}))
@@ -73,7 +73,7 @@ func (s *PondHandlerTestSuite) TestAddPonds_NonSuperAdmin_ReturnsPermissionDenie
 	}
 
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]interface{}{
+	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  "user",
 		"userLevel": 1, // normal user, not super admin
 	}))
@@ -165,7 +165,7 @@ func (s *PondHandlerTestSuite) TestGetPondList_Success() {
 // fillPondApp returns a Fiber app with FillPond route and optional username in context
 func (s *PondHandlerTestSuite) fillPondApp(username string) *fiber.App {
 	app := fiber.New()
-	locals := map[string]interface{}{}
+	locals := map[string]any{}
 	if username != "" {
 		locals["username"] = username
 	}
@@ -187,10 +187,10 @@ func (s *PondHandlerTestSuite) TestFillPond_InvalidPondID_ReturnsValidationError
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	require.NotNil(s.T(), result["error"], "expected error for invalid pond ID")
-	errObj, ok := result["error"].(map[string]interface{})
+	errObj, ok := result["error"].(map[string]any)
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), "500010", errObj["code"])
 }
@@ -208,10 +208,10 @@ func (s *PondHandlerTestSuite) TestFillPond_MissingUsername_ReturnsAuthError() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.True(s.T(), result["error"] != nil, "expected auth error when username missing")
-	if errObj, ok := result["error"].(map[string]interface{}); ok && errObj["code"] != nil {
+	if errObj, ok := result["error"].(map[string]any); ok && errObj["code"] != nil {
 		assert.Equal(s.T(), "500022", errObj["code"]) // ErrAuthTokenInvalid
 	}
 }
@@ -233,7 +233,7 @@ func (s *PondHandlerTestSuite) TestFillPond_Success() {
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 
-	var result map[string]interface{}
+	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.True(s.T(), result["result"].(bool))
 	assert.NotNil(s.T(), result["data"])
@@ -243,7 +243,7 @@ func (s *PondHandlerTestSuite) TestFillPond_Success() {
 // updatePondApp returns a Fiber app with PUT /pond/:id and optional username in context.
 func (s *PondHandlerTestSuite) updatePondApp(username string) *fiber.App {
 	app := fiber.New()
-	locals := map[string]interface{}{}
+	locals := map[string]any{}
 	if username != "" {
 		locals["username"] = username
 	}
@@ -269,7 +269,7 @@ func (s *PondHandlerTestSuite) TestUpdatePond_Success() {
 	resp, err := app.Test(req)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]interface{}
+	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.True(s.T(), result["result"].(bool))
 	s.pondService.AssertExpectations(s.T())
@@ -284,10 +284,10 @@ func (s *PondHandlerTestSuite) TestUpdatePond_InvalidPondID() {
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	require.NotNil(s.T(), result["error"])
-	errObj := result["error"].(map[string]interface{})
+	errObj := result["error"].(map[string]any)
 	assert.Equal(s.T(), "500010", errObj["code"])
 }
 
@@ -300,10 +300,10 @@ func (s *PondHandlerTestSuite) TestUpdatePond_MissingUsername() {
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
-	errObj := result["error"].(map[string]interface{})
+	errObj := result["error"].(map[string]any)
 	assert.Equal(s.T(), "500022", errObj["code"]) // ErrAuthTokenInvalid
 }
 
@@ -318,7 +318,7 @@ func (s *PondHandlerTestSuite) TestUpdatePond_ServiceError() {
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	// http.NewError returns { "code": "...", "message": "..." } at top level
 	assert.Equal(s.T(), "500070", result["code"]) // ErrPondNotFound
@@ -328,7 +328,7 @@ func (s *PondHandlerTestSuite) TestUpdatePond_ServiceError() {
 // deletePondApp returns a Fiber app with DELETE /pond/:id and optional username in context.
 func (s *PondHandlerTestSuite) deletePondApp(username string) *fiber.App {
 	app := fiber.New()
-	locals := map[string]interface{}{}
+	locals := map[string]any{}
 	if username != "" {
 		locals["username"] = username
 	}
@@ -349,7 +349,7 @@ func (s *PondHandlerTestSuite) TestDeletePond_Success() {
 	resp, err := app.Test(req)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]interface{}
+	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.True(s.T(), result["result"].(bool))
 	s.pondService.AssertExpectations(s.T())
@@ -362,10 +362,10 @@ func (s *PondHandlerTestSuite) TestDeletePond_InvalidPondID() {
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	require.NotNil(s.T(), result["error"])
-	errObj := result["error"].(map[string]interface{})
+	errObj := result["error"].(map[string]any)
 	assert.Equal(s.T(), "500010", errObj["code"])
 }
 
@@ -376,10 +376,10 @@ func (s *PondHandlerTestSuite) TestDeletePond_MissingUsername() {
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
-	errObj := result["error"].(map[string]interface{})
+	errObj := result["error"].(map[string]any)
 	assert.Equal(s.T(), "500022", errObj["code"])
 }
 
@@ -393,7 +393,7 @@ func (s *PondHandlerTestSuite) TestDeletePond_ServiceError() {
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotEmpty(s.T(), result["message"])
 	s.pondService.AssertExpectations(s.T())

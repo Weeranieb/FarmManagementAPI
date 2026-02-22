@@ -70,7 +70,7 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 	}
 
 	// Create feed price histories if provided
-	var feedPriceHistories []interface{}
+	var feedPriceHistories []any
 	if len(request.FeedPriceHistories) > 0 {
 		priceHistories := make([]*model.FeedPriceHistory, 0, len(request.FeedPriceHistories))
 		for _, priceHistoryReq := range request.FeedPriceHistories {
@@ -89,7 +89,7 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 
 		// Convert to response format
 		for _, ph := range priceHistories {
-			feedPriceHistories = append(feedPriceHistories, map[string]interface{}{
+			feedPriceHistories = append(feedPriceHistories, map[string]any{
 				"id":               ph.Id,
 				"feedCollectionId": ph.FeedCollectionId,
 				"price":            ph.Price.InexactFloat64(),

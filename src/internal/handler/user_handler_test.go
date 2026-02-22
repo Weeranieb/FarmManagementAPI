@@ -45,7 +45,7 @@ func TestHandlerSuite(t *testing.T) {
 }
 
 // Helper middleware to set context values for testing
-func setLocalsMiddleware(locals map[string]interface{}) fiber.Handler {
+func setLocalsMiddleware(locals map[string]any) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.UserContext()
 		if ctx == nil {
@@ -103,7 +103,7 @@ func (s *UserHandlerTestSuite) TestAddUser_Success() {
 	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil }), *createReq, username, clientId).Return(expectedResponse, nil)
 
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]interface{}{
+	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  username,
 		"clientId":  clientIdInt, // Set as int, handler will convert to *int
 		"userLevel": userLevel,   // Super admin level
@@ -262,7 +262,7 @@ func (s *UserHandlerTestSuite) TestGetUser_Success() {
 	s.userService.On("GetUser", userID).Return(expectedResponse, nil)
 
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]interface{}{
+	app.Use(setLocalsMiddleware(map[string]any{
 		"userId": userID,
 	}))
 	app.Get("/api/v1/user", s.userHandler.GetUser)
@@ -293,7 +293,7 @@ func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
 	s.userService.On("GetUser", userID).Return(nil, errors.New("user not found"))
 
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]interface{}{
+	app.Use(setLocalsMiddleware(map[string]any{
 		"userId": userID,
 	}))
 	app.Get("/api/v1/user", s.userHandler.GetUser)
@@ -323,7 +323,7 @@ func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
 	s.userService.On("Update", mock.Anything, updateUser, username).Return(nil)
 
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]interface{}{
+	app.Use(setLocalsMiddleware(map[string]any{
 		"username": username,
 	}))
 	app.Put("/api/v1/user", s.userHandler.UpdateUser)
@@ -383,7 +383,7 @@ func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
 	s.userService.On("Update", mock.Anything, updateUser, username).Return(errors.New("update failed"))
 
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]interface{}{
+	app.Use(setLocalsMiddleware(map[string]any{
 		"username": username,
 	}))
 	app.Put("/api/v1/user", s.userHandler.UpdateUser)
@@ -433,13 +433,13 @@ func (s *UserHandlerTestSuite) TestGetUserList_Success() {
 	}
 
 	// Super admin can pass nil clientId
-	s.userService.On("GetUserList", mock.MatchedBy(func(ctx interface{}) bool {
+	s.userService.On("GetUserList", mock.MatchedBy(func(ctx any) bool {
 		_, ok := ctx.(context.Context)
 		return ok
 	}), (*int)(nil)).Return(expectedUsers, nil)
 
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]interface{}{
+	app.Use(setLocalsMiddleware(map[string]any{
 		"userLevel": 3, // Super admin - doesn't need clientId
 	}))
 	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
@@ -467,13 +467,13 @@ func (s *UserHandlerTestSuite) TestGetUserList_MissingClientId() {
 
 func (s *UserHandlerTestSuite) TestGetUserList_ServiceError() {
 	// Super admin can pass nil clientId
-	s.userService.On("GetUserList", mock.MatchedBy(func(ctx interface{}) bool {
+	s.userService.On("GetUserList", mock.MatchedBy(func(ctx any) bool {
 		_, ok := ctx.(context.Context)
 		return ok
 	}), (*int)(nil)).Return(nil, errors.New("database error"))
 
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]interface{}{
+	app.Use(setLocalsMiddleware(map[string]any{
 		"userLevel": 3, // Super admin - doesn't need clientId
 	}))
 	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
