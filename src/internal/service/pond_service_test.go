@@ -126,14 +126,17 @@ func (s *PondServiceTestSuite) TestCreatePonds_PondAlreadyExists() {
 
 func (s *PondServiceTestSuite) TestGet_Success() {
 	pondId := 1
-	expectedPond := &model.Pond{
-		Id:     pondId,
-		FarmId: 1,
-		Name:   "Test Pond",
-		Status: "active",
+	pa := &repository.PondWithFarmAndActivePond{
+		Pond: &model.Pond{
+			Id:     pondId,
+			FarmId: 1,
+			Name:   "Test Pond",
+			Status: "active",
+		},
+		ClientId:   1,
+		ActivePond: nil,
 	}
-
-	s.pondRepo.On("GetByID", pondId).Return(expectedPond, nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(pa, nil)
 
 	result, err := s.pondService.Get(pondId)
 
@@ -145,7 +148,7 @@ func (s *PondServiceTestSuite) TestGet_Success() {
 
 func (s *PondServiceTestSuite) TestGet_NotFound() {
 	pondId := 999
-	s.pondRepo.On("GetByID", pondId).Return(nil, nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(nil, nil)
 
 	result, err := s.pondService.Get(pondId)
 
@@ -157,7 +160,7 @@ func (s *PondServiceTestSuite) TestGet_NotFound() {
 
 func (s *PondServiceTestSuite) TestGet_RepoError() {
 	pondId := 1
-	s.pondRepo.On("GetByID", pondId).Return(nil, assert.AnError)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(nil, assert.AnError)
 
 	result, err := s.pondService.Get(pondId)
 
@@ -168,12 +171,11 @@ func (s *PondServiceTestSuite) TestGet_RepoError() {
 
 func (s *PondServiceTestSuite) TestGetList_Success() {
 	farmId := 1
-	ponds := []*model.Pond{
-		{Id: 1, FarmId: farmId, Name: "Pond 1", Status: "active"},
-		{Id: 2, FarmId: farmId, Name: "Pond 2", Status: "active"},
+	list := []*repository.PondWithFarmAndActivePond{
+		{Pond: &model.Pond{Id: 1, FarmId: farmId, Name: "Pond 1", Status: "active"}, ClientId: 1, ActivePond: nil},
+		{Pond: &model.Pond{Id: 2, FarmId: farmId, Name: "Pond 2", Status: "active"}, ClientId: 1, ActivePond: nil},
 	}
-
-	s.pondRepo.On("ListByFarmId", farmId).Return(ponds, nil)
+	s.pondRepo.On("ListByFarmIdWithActivePond", mock.Anything, farmId).Return(list, nil)
 
 	result, err := s.pondService.GetList(farmId)
 

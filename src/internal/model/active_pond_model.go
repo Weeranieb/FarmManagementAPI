@@ -16,6 +16,7 @@ type ActivePond struct {
 	TotalProfit decimal.Decimal `json:"totalProfit" gorm:"column:total_profit"`
 	NetResult   decimal.Decimal `json:"netResult" gorm:"column:net_result"`
 	TotalFish   int             `json:"totalFish" gorm:"column:total_fish"`
+	FishTypes   []string        `json:"fishTypes" gorm:"column:fish_types;serializer:json"`
 	BaseModel
 }
 

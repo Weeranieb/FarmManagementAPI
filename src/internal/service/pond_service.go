@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -84,16 +85,14 @@ func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRe
 }
 
 func (s *pondService) Get(id int) (*dto.PondResponse, error) {
-	pond, err := s.pondRepo.GetByID(id)
+	pa, err := s.pondRepo.GetByIDWithFarmAndActivePond(context.Background(), id)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
-
-	if pond == nil {
+	if pa == nil {
 		return nil, errors.ErrPondNotFound
 	}
-
-	return s.toPondResponse(pond), nil
+	return s.toPondResponseFromPondWithActive(pa), nil
 }
 
 func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest, username string) error {
@@ -135,16 +134,14 @@ func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest, use
 }
 
 func (s *pondService) GetList(farmId int) ([]*dto.PondResponse, error) {
-	ponds, err := s.pondRepo.ListByFarmId(farmId)
+	list, err := s.pondRepo.ListByFarmIdWithActivePond(context.Background(), farmId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
-
-	responses := make([]*dto.PondResponse, 0, len(ponds))
-	for _, pond := range ponds {
-		responses = append(responses, s.toPondResponse(pond))
+	responses := make([]*dto.PondResponse, 0, len(list))
+	for _, pa := range list {
+		responses = append(responses, s.toPondResponseFromPondWithActive(pa))
 	}
-
 	return responses, nil
 }
 
@@ -201,7 +198,9 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 				StartDate: activityDate,
 				IsActive:  true,
 				TotalCost: fillCost,
-				NetResult: decimal.Zero.Sub(fillCost), // TotalProfit - TotalCost; no sales yet
+				NetResult: decimal.Zero.Sub(fillCost),
+				TotalFish: request.Amount,
+				FishTypes: []string{request.FishType},
 			}
 			if err := tx.Create(activePond).Error; err != nil {
 				return err
@@ -215,6 +214,12 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 		} else {
 			activePond.TotalCost = activePond.TotalCost.Add(fillCost)
 			activePond.NetResult = activePond.TotalProfit.Sub(activePond.TotalCost)
+			activePond.TotalFish += request.Amount
+			if activePond.FishTypes == nil {
+				activePond.FishTypes = []string{request.FishType}
+			} else if !slices.Contains(activePond.FishTypes, request.FishType) {
+				activePond.FishTypes = append(activePond.FishTypes, request.FishType)
+			}
 			if err := tx.Save(activePond).Error; err != nil {
 				return err
 			}
@@ -257,8 +262,12 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 	return resp, nil
 }
 
-func (s *pondService) toPondResponse(pond *model.Pond) *dto.PondResponse {
-	return &dto.PondResponse{
+func (s *pondService) toPondResponseFromPondWithActive(pa *repository.PondWithFarmAndActivePond) *dto.PondResponse {
+	if pa == nil || pa.Pond == nil {
+		return nil
+	}
+	pond := pa.Pond
+	resp := &dto.PondResponse{
 		Id:        pond.Id,
 		FarmId:    pond.FarmId,
 		Name:      pond.Name,
@@ -268,4 +277,21 @@ func (s *pondService) toPondResponse(pond *model.Pond) *dto.PondResponse {
 		UpdatedAt: pond.UpdatedAt,
 		UpdatedBy: pond.UpdatedBy,
 	}
+	if pa.ActivePond != nil {
+		ap := pa.ActivePond
+		totalFish := ap.TotalFish
+		resp.TotalFish = &totalFish
+		resp.FishTypes = ap.FishTypes
+		if !ap.StartDate.IsZero() {
+			// Start date = day 1; each full day after adds 1
+			daysSince := int(time.Since(ap.StartDate).Hours() / 24)
+			ageDays := daysSince + 1
+			if ageDays < 1 {
+				ageDays = 0
+			}
+			resp.AgeDays = &ageDays
+		}
+	}
+	resp.LatestActivityDate = pa.LatestActivityDate
+	return resp
 }

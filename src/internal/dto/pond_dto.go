@@ -28,14 +28,18 @@ type UpdatePondBody struct {
 }
 
 type PondResponse struct {
-	Id        int       `json:"id"`
-	FarmId    int       `json:"farmId"`
-	Name      string    `json:"name"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"createdAt"`
-	CreatedBy string    `json:"createdBy"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	UpdatedBy string    `json:"updatedBy"`
+	Id                 int        `json:"id"`
+	FarmId             int        `json:"farmId"`
+	Name               string     `json:"name"`
+	TotalFish          *int       `json:"totalFish"`
+	Status             string     `json:"status"`
+	FishTypes          []string   `json:"fishTypes"`
+	AgeDays            *int       `json:"ageDays"`
+	LatestActivityDate *time.Time `json:"latestActivityDate"`
+	CreatedAt          time.Time  `json:"createdAt"`
+	CreatedBy          string     `json:"createdBy"`
+	UpdatedAt          time.Time  `json:"updatedAt"`
+	UpdatedBy          string     `json:"updatedBy"`
 }
 
 // AdditionalCostItem represents a single additional cost with a title and amount.

@@ -190,6 +190,36 @@ func (_m *MockPondRepository) ListByFarmId(farmId int) ([]*model.Pond, error) {
 	return r0, r1
 }
 
+// ListByFarmIdWithActivePond provides a mock function with given fields: ctx, farmId
+func (_m *MockPondRepository) ListByFarmIdWithActivePond(ctx context.Context, farmId int) ([]*repository.PondWithFarmAndActivePond, error) {
+	ret := _m.Called(ctx, farmId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByFarmIdWithActivePond")
+	}
+
+	var r0 []*repository.PondWithFarmAndActivePond
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*repository.PondWithFarmAndActivePond, error)); ok {
+		return rf(ctx, farmId)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*repository.PondWithFarmAndActivePond); ok {
+		r0 = rf(ctx, farmId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*repository.PondWithFarmAndActivePond)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, farmId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: ctx, pond
 func (_m *MockPondRepository) Update(ctx context.Context, pond *model.Pond) error {
 	ret := _m.Called(ctx, pond)
