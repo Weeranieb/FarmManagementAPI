@@ -91,7 +91,15 @@ Runtime logs (stdout/stderr from your Go function) appear in the Vercel dashboar
 
 You should see:
 
+- **`[Farm API] GET /health`** (or similar) on every request – confirms the function ran and logging works.
 - **`[Farm API] serverless cold start – building app`** and **`[Farm API] app ready`** on the first request (cold start).
-- **Fiber request lines** (method, path, status, latency) from the logger middleware on each request.
+- **Fiber request lines** (method, path, status, latency) from the logger middleware.
+
+**No logs in the table?**
+
+1. Turn **Live** on (top right on the Logs page).
+2. In another tab, open your deployment URL and hit a route, e.g. `https://<project>.vercel.app/health`.
+3. Wait a few seconds; a row should appear with the request and the `[Farm API]` message. If nothing appears, the request may not be reaching the function (e.g. 404 before the function runs – check the rewrite and redeploy).
+4. Try **Timeline → Last 24 hours** (or **Last 3 days**) in case you tested earlier.
 
 Logs are kept for about 3 days. For longer retention, use [Log Drains](https://vercel.com/docs/drains).
