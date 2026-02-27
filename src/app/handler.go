@@ -1,6 +1,6 @@
-// Package handler provides the Vercel serverless entrypoint for the Farm API.
-// Vercel invokes Handler(w, r) for each request; the Fiber app handles routing.
-package handler
+// Package app provides the serverless HTTP handler for the Farm API.
+// It lives under src/ so it can import internal packages; the Vercel entrypoint in api/ only imports this package.
+package app
 
 import (
 	"net/http"
@@ -22,12 +22,12 @@ var (
 	loadFn = config.LoadConfig
 )
 
-// Handler is the entrypoint Vercel calls for every request.
+// Handler is the HTTP handler for each request; Fiber handles routing.
 func Handler(w http.ResponseWriter, r *http.Request) {
 	r.RequestURI = r.URL.String()
 	once.Do(func() {
-		app := buildApp()
-		hndlr = adaptor.FiberApp(app)
+		fiberApp := buildApp()
+		hndlr = adaptor.FiberApp(fiberApp)
 	})
 	hndlr.ServeHTTP(w, r)
 }
@@ -36,7 +36,7 @@ func buildApp() *fiber.App {
 	conf := loadFn()
 	container := di.NewContainer(conf)
 
-	app := fiber.New(fiber.Config{
+	fiberApp := fiber.New(fiber.Config{
 		ReadBufferSize: 60 * 1024,
 		BodyLimit:      10 * 1024 * 1024,
 	})
@@ -48,6 +48,6 @@ func buildApp() *fiber.App {
 		panic("DI: " + err.Error())
 	}
 
-	router.SetupRoutes(app, conf, handlers)
-	return app
+	router.SetupRoutes(fiberApp, conf, handlers)
+	return fiberApp
 }

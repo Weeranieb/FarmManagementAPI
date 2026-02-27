@@ -1,6 +1,6 @@
 # Deploying Farm API (Go) on Vercel
 
-The app is already set up for Vercel: it runs as a **Go serverless function** via `src/api/index.go` (exposes `Handler`) and `vercel.json`.
+The app is already set up for Vercel: it runs as a **Go serverless function** via `api/index.go` (package `handler`, exposes `Handler`) and `vercel.json`. The entrypoint only imports `src/app`, which in turn uses `internal` packages, so Vercel’s build does not hit Go’s “internal package not allowed” restriction.
 
 ## 0. Set up dev environment first
 
