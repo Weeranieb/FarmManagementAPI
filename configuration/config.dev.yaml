@@ -5,9 +5,9 @@ server:
 database:
   host: 'ep-plain-violet-a1qqoe8j-pooler.ap-southeast-1.aws.neon.tech'
   port: '5432'
-  name: 'neondb'
+  name: 'farm_os_dev'
   user: 'neondb_owner'
-  password: 'npg_qJm59ZAPwlQv'
+  password: 'npg_2Xz8SkMWVfwu'
   ssl_mode: 'require'
 
 app:
