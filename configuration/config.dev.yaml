@@ -1,0 +1,20 @@
+server:
+  port: '8080'
+  host: 'localhost'
+
+database:
+  host: 'ep-plain-violet-a1qqoe8j-pooler.ap-southeast-1.aws.neon.tech'
+  port: '5432'
+  name: 'neondb'
+  user: 'neondb_owner'
+  password: 'npg_qJm59ZAPwlQv'
+  ssl_mode: 'require'
+
+app:
+  environment: 'development'
+  log_level: 'info'
+  debug: true
+
+authentication:
+  jwt_secret: 'FarmSecretKey'
+  jwt_expiry: '24h'

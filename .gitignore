@@ -1,6 +1,7 @@
-# Environment variables
+# Environment variables and local dev config (secrets)
 config/.env
 .env
+configuration/config.env
 
 # Build artifacts
 bin/
