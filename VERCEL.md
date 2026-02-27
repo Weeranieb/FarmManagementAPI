@@ -79,3 +79,19 @@ No config file is required on Vercel; env vars override defaults.
 - From the repo root: `cd backend && vercel` (Vercel CLI will use `backend/vercel.json` and `go.mod`).
 
 After deploy, all routes are rewritten to the Go handler (see `vercel.json`), so your API is available at the project URL (e.g. `https://<project>.vercel.app/api/v1/...`).
+
+## 4. Viewing logs
+
+Runtime logs (stdout/stderr from your Go function) appear in the Vercel dashboard:
+
+1. Open your **project** on [vercel.com](https://vercel.com).
+2. Go to the **Logs** tab (top navigation).
+3. Trigger a request (e.g. open `https://<project>.vercel.app/health` or any API route).
+4. In Logs, use **Live** or the time range filter to see recent output.
+
+You should see:
+
+- **`[Farm API] serverless cold start – building app`** and **`[Farm API] app ready`** on the first request (cold start).
+- **Fiber request lines** (method, path, status, latency) from the logger middleware on each request.
+
+Logs are kept for about 3 days. For longer retention, use [Log Drains](https://vercel.com/docs/drains).

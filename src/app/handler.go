@@ -3,7 +3,9 @@
 package app
 
 import (
+	"log"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,10 +26,29 @@ var (
 
 // Handler is the HTTP handler for each request; Fiber handles routing.
 func Handler(w http.ResponseWriter, r *http.Request) {
-	r.RequestURI = r.URL.String()
+	// Vercel rewrites send /api/index/:path* so the request path is /api/index/health, /api/index/api/v1/..., etc.
+	// Restore the original path so Fiber can route correctly.
+	const prefix = "/api/index"
+	if path := r.URL.Path; strings.HasPrefix(path, prefix) {
+		orig := strings.TrimPrefix(path, prefix)
+		if orig == "" {
+			orig = "/"
+		} else if orig[0] != '/' {
+			orig = "/" + orig
+		}
+		r.URL.Path = orig
+		r.RequestURI = orig
+		if r.URL.RawQuery != "" {
+			r.RequestURI += "?" + r.URL.RawQuery
+		}
+	} else {
+		r.RequestURI = r.URL.String()
+	}
 	once.Do(func() {
+		log.Println("[Farm API] serverless cold start – building app")
 		fiberApp := buildApp()
 		hndlr = adaptor.FiberApp(fiberApp)
+		log.Println("[Farm API] app ready")
 	})
 	hndlr.ServeHTTP(w, r)
 }

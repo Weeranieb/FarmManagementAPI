@@ -6,6 +6,6 @@
       "use": "@vercel/go"
     }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }],
+  "rewrites": [{ "source": "/:path*", "destination": "/api/index/:path*" }],
   "env": {}
 }
