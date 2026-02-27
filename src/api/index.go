@@ -1,6 +1,6 @@
-// Package main provides the Vercel serverless entrypoint for the Farm API.
+// Package handler provides the Vercel serverless entrypoint for the Farm API.
 // Vercel invokes Handler(w, r) for each request; the Fiber app handles routing.
-package main
+package handler
 
 import (
 	"net/http"
@@ -10,7 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/di"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/handler"
+	apphandler "github.com/weeranieb/boonmafarm-backend/src/internal/handler"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/router"
 
 	_ "github.com/weeranieb/boonmafarm-backend/docs"
@@ -21,9 +21,6 @@ var (
 	hndlr  http.HandlerFunc
 	loadFn = config.LoadConfig
 )
-
-// main is not used on Vercel (serverless invokes Handler). Keeps package buildable.
-func main() {}
 
 // Handler is the entrypoint Vercel calls for every request.
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +41,8 @@ func buildApp() *fiber.App {
 		BodyLimit:      10 * 1024 * 1024,
 	})
 
-	var handlers *handler.Handler
-	if err := container.Invoke(func(h *handler.Handler) {
+	var handlers *apphandler.Handler
+	if err := container.Invoke(func(h *apphandler.Handler) {
 		handlers = h
 	}); err != nil {
 		panic("DI: " + err.Error())
