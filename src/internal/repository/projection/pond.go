@@ -34,4 +34,5 @@ type PondFillQueryRow struct {
 	ApUpdatedAt        *time.Time     `gorm:"column:ap_updated_at"`
 	ApUpdatedBy        *string        `gorm:"column:ap_updated_by"`
 	LatestActivityDate *time.Time     `gorm:"column:latest_activity_date"`
+	LatestActivityType *string        `gorm:"column:latest_activity_type"`
 }

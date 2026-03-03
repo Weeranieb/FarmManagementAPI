@@ -36,6 +36,7 @@ type PondResponse struct {
 	FishTypes          []string   `json:"fishTypes"`
 	AgeDays            *int       `json:"ageDays"`
 	LatestActivityDate *time.Time `json:"latestActivityDate"`
+	LatestActivityType *string    `json:"latestActivityType"`
 	CreatedAt          time.Time  `json:"createdAt"`
 	CreatedBy          string     `json:"createdBy"`
 	UpdatedAt          time.Time  `json:"updatedAt"`

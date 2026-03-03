@@ -17,8 +17,9 @@ import (
 type PondWithFarmAndActivePond struct {
 	Pond               *model.Pond
 	ClientId           int
-	ActivePond         *model.ActivePond // nil when pond has no active cycle
-	LatestActivityDate *time.Time        // max(activity_date) for this pond's activities
+	ActivePond         *model.ActivePond
+	LatestActivityDate *time.Time
+	LatestActivityType *string
 }
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=PondRepository --output=./mocks --outpkg=mocks --filename=pond_repository.go --structname=MockPondRepository --with-expecter=false
@@ -73,7 +74,8 @@ SELECT
   ap.net_result AS ap_net_result, ap.total_fish AS ap_total_fish, ap.fish_types AS ap_fish_types,
   ap.created_at AS ap_created_at, ap.created_by AS ap_created_by,
   ap.updated_at AS ap_updated_at, ap.updated_by AS ap_updated_by,
-  (SELECT MAX(a.activity_date) FROM activities a INNER JOIN active_ponds ap2 ON a.active_pond_id = ap2.id AND ap2.deleted_at IS NULL WHERE ap2.pond_id = p.id AND a.deleted_at IS NULL) AS latest_activity_date
+  (SELECT MAX(a.activity_date) FROM activities a INNER JOIN active_ponds ap2 ON a.active_pond_id = ap2.id AND ap2.deleted_at IS NULL WHERE ap2.pond_id = p.id AND a.deleted_at IS NULL) AS latest_activity_date,
+  (SELECT a.mode FROM activities a INNER JOIN active_ponds ap2 ON a.active_pond_id = ap2.id AND ap2.deleted_at IS NULL WHERE ap2.pond_id = p.id AND a.deleted_at IS NULL ORDER BY a.activity_date DESC LIMIT 1) AS latest_activity_type
 FROM ponds p
 INNER JOIN farms f ON p.farm_id = f.id AND f.deleted_at IS NULL
 LEFT JOIN active_ponds ap ON ap.pond_id = p.id AND ap.is_active = true AND ap.deleted_at IS NULL
@@ -90,7 +92,8 @@ SELECT
   ap.net_result AS ap_net_result, ap.total_fish AS ap_total_fish, ap.fish_types AS ap_fish_types,
   ap.created_at AS ap_created_at, ap.created_by AS ap_created_by,
   ap.updated_at AS ap_updated_at, ap.updated_by AS ap_updated_by,
-  (SELECT MAX(a.activity_date) FROM activities a INNER JOIN active_ponds ap2 ON a.active_pond_id = ap2.id AND ap2.deleted_at IS NULL WHERE ap2.pond_id = p.id AND a.deleted_at IS NULL) AS latest_activity_date
+  (SELECT MAX(a.activity_date) FROM activities a INNER JOIN active_ponds ap2 ON a.active_pond_id = ap2.id AND ap2.deleted_at IS NULL WHERE ap2.pond_id = p.id AND a.deleted_at IS NULL) AS latest_activity_date,
+  (SELECT a.mode FROM activities a INNER JOIN active_ponds ap2 ON a.active_pond_id = ap2.id AND ap2.deleted_at IS NULL WHERE ap2.pond_id = p.id AND a.deleted_at IS NULL ORDER BY a.activity_date DESC LIMIT 1) AS latest_activity_type
 FROM ponds p
 INNER JOIN farms f ON p.farm_id = f.id AND f.deleted_at IS NULL
 LEFT JOIN active_ponds ap ON ap.pond_id = p.id AND ap.is_active = true AND ap.deleted_at IS NULL
@@ -110,7 +113,7 @@ func rowToPondWithFarmAndActivePond(row *projection.PondFillQueryRow) *PondWithF
 			UpdatedBy: row.PondUpdatedBy,
 		},
 	}
-	out := &PondWithFarmAndActivePond{Pond: pond, ClientId: row.ClientId, LatestActivityDate: row.LatestActivityDate}
+	out := &PondWithFarmAndActivePond{Pond: pond, ClientId: row.ClientId, LatestActivityDate: row.LatestActivityDate, LatestActivityType: row.LatestActivityType}
 	if row.ApId != nil {
 		totalCost := decimal.Zero
 		if row.ApTotalCost != nil {

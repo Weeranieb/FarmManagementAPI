@@ -293,5 +293,6 @@ func (s *pondService) toPondResponseFromPondWithActive(pa *repository.PondWithFa
 		}
 	}
 	resp.LatestActivityDate = pa.LatestActivityDate
+	resp.LatestActivityType = pa.LatestActivityType
 	return resp
 }
