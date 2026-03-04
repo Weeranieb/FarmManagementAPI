@@ -161,6 +161,36 @@ definitions:
     - fishType
     - pricePerUnit
     type: object
+  dto.PondMoveRequest:
+    properties:
+      activityDate:
+        type: string
+      additionalCosts:
+        items:
+          $ref: '#/definitions/dto.AdditionalCostItem'
+        type: array
+      amount:
+        minimum: 1
+        type: integer
+      fishType:
+        type: string
+      fishWeight:
+        type: number
+      isClose:
+        type: boolean
+      pricePerUnit:
+        type: number
+      remark:
+        type: string
+      toPondId:
+        type: integer
+    required:
+    - activityDate
+    - amount
+    - fishType
+    - pricePerUnit
+    - toPondId
+    type: object
   dto.RegisterRequest:
     properties:
       clientId:
@@ -1211,6 +1241,49 @@ paths:
       - BearerAuth: []
       - CookieAuth: []
       summary: Fill pond with fish
+      tags:
+      - pond
+  /pond/{pondId}/move:
+    post:
+      consumes:
+      - application/json
+      description: Transfer fish from this pond to another. If destination is in maintenance,
+        backend creates active_pond for it.
+      parameters:
+      - description: Source pond ID
+        in: path
+        name: pondId
+        required: true
+        type: integer
+      - description: toPondId, fishType, amount, activityDate
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PondMoveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Move fish to another pond
       tags:
       - pond
   /user:

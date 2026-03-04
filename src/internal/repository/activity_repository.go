@@ -10,6 +10,7 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=ActivityRepository --output=./mocks --outpkg=mocks --filename=activity_repository.go --structname=MockActivityRepository --with-expecter=false
 type ActivityRepository interface {
+	WithTx(tx *gorm.DB) ActivityRepository
 	Create(ctx context.Context, activity *model.Activity) error
 }
 
@@ -19,6 +20,10 @@ type activityRepository struct {
 
 func NewActivityRepository(db *gorm.DB) ActivityRepository {
 	return &activityRepository{db: db}
+}
+
+func (r *activityRepository) WithTx(tx *gorm.DB) ActivityRepository {
+	return &activityRepository{db: tx}
 }
 
 func (r *activityRepository) Create(ctx context.Context, activity *model.Activity) error {

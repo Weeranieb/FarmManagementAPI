@@ -24,6 +24,7 @@ type PondWithFarmAndActivePond struct {
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=PondRepository --output=./mocks --outpkg=mocks --filename=pond_repository.go --structname=MockPondRepository --with-expecter=false
 type PondRepository interface {
+	WithTx(tx *gorm.DB) PondRepository
 	Create(ctx context.Context, pond *model.Pond) error
 	CreateBatch(ctx context.Context, ponds []*model.Pond) error
 	GetByID(id int) (*model.Pond, error)
@@ -41,6 +42,10 @@ type pondRepository struct {
 
 func NewPondRepository(db *gorm.DB) PondRepository {
 	return &pondRepository{db: db}
+}
+
+func (r *pondRepository) WithTx(tx *gorm.DB) PondRepository {
+	return &pondRepository{db: tx}
 }
 
 func (r *pondRepository) Create(ctx context.Context, pond *model.Pond) error {

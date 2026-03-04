@@ -23,6 +23,7 @@ func NewContainer(conf *config.Config) *dig.Container {
 	c.Provide(repository.NewPondRepository)
 	c.Provide(repository.NewActivePondRepository)
 	c.Provide(repository.NewActivityRepository)
+	c.Provide(repository.NewAdditionalCostRepository)
 	c.Provide(repository.NewWorkerRepository)
 	c.Provide(repository.NewFeedCollectionRepository)
 	c.Provide(repository.NewFeedPriceHistoryRepository)

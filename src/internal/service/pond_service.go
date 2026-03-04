@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"slices"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -26,33 +25,37 @@ type PondService interface {
 	GetList(farmId int) ([]*dto.PondResponse, error)
 	Delete(id int, username string) error
 	FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error)
+	MovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest, username string) (*dto.PondMoveResponse, error)
 }
 
 type PondServiceParams struct {
 	dig.In
 
-	PondRepo       repository.PondRepository
-	FarmRepo       repository.FarmRepository
-	ActivePondRepo repository.ActivePondRepository
-	ActivityRepo   repository.ActivityRepository
-	TxManager      transaction.Manager
+	PondRepo           repository.PondRepository
+	FarmRepo           repository.FarmRepository
+	ActivePondRepo     repository.ActivePondRepository
+	ActivityRepo       repository.ActivityRepository
+	AdditionalCostRepo repository.AdditionalCostRepository
+	TxManager          transaction.Manager
 }
 
 type pondService struct {
-	pondRepo       repository.PondRepository
-	farmRepo       repository.FarmRepository
-	activePondRepo repository.ActivePondRepository
-	activityRepo   repository.ActivityRepository
-	txManager      transaction.Manager
+	pondRepo           repository.PondRepository
+	farmRepo           repository.FarmRepository
+	activePondRepo     repository.ActivePondRepository
+	activityRepo       repository.ActivityRepository
+	additionalCostRepo repository.AdditionalCostRepository
+	txManager          transaction.Manager
 }
 
 func NewPondService(params PondServiceParams) PondService {
 	return &pondService{
-		pondRepo:       params.PondRepo,
-		farmRepo:       params.FarmRepo,
-		activePondRepo: params.ActivePondRepo,
-		activityRepo:   params.ActivityRepo,
-		txManager:      params.TxManager,
+		pondRepo:           params.PondRepo,
+		farmRepo:           params.FarmRepo,
+		activePondRepo:     params.ActivePondRepo,
+		activityRepo:       params.ActivityRepo,
+		additionalCostRepo: params.AdditionalCostRepo,
+		txManager:          params.TxManager,
 	}
 }
 
@@ -183,15 +186,13 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 	}
 
 	activePond := data.ActivePond
-
-	additionalCosts := make([]decimal.Decimal, 0, len(request.AdditionalCosts))
-	for _, item := range request.AdditionalCosts {
-		additionalCosts = append(additionalCosts, item.Cost)
-	}
-	fillCost := utils.FillCost(request.Amount, request.PricePerUnit, additionalCosts)
+	fillCost := utils.CalculateFillCost(request.Amount, request.PricePerUnit, request.AdditionalCosts)
 
 	var resp *dto.PondFillResponse
 	err = s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
+		pondRepo := s.pondRepo.WithTx(tx)
+		activePondRepo := s.activePondRepo.WithTx(tx)
+
 		if activePond == nil {
 			activePond = &model.ActivePond{
 				PondId:    pondId,
@@ -202,12 +203,12 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 				TotalFish: request.Amount,
 				FishTypes: []string{request.FishType},
 			}
-			if err := tx.Create(activePond).Error; err != nil {
+			if err := activePondRepo.Create(ctx, activePond); err != nil {
 				return err
 			}
 			if pond.Status == constants.FarmStatusMaintenance {
 				pond.Status = constants.FarmStatusActive
-				if err := tx.Save(pond).Error; err != nil {
+				if err := pondRepo.Update(ctx, pond); err != nil {
 					return err
 				}
 			}
@@ -215,12 +216,8 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 			activePond.TotalCost = activePond.TotalCost.Add(fillCost)
 			activePond.NetResult = activePond.TotalProfit.Sub(activePond.TotalCost)
 			activePond.TotalFish += request.Amount
-			if activePond.FishTypes == nil {
-				activePond.FishTypes = []string{request.FishType}
-			} else if !slices.Contains(activePond.FishTypes, request.FishType) {
-				activePond.FishTypes = append(activePond.FishTypes, request.FishType)
-			}
-			if err := tx.Save(activePond).Error; err != nil {
+			activePond.FishTypes = utils.AppendStringIfMissing(activePond.FishTypes, request.FishType)
+			if err := activePondRepo.Update(ctx, activePond); err != nil {
 				return err
 			}
 		}
@@ -235,19 +232,8 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 			PricePerUnit: request.PricePerUnit,
 			ActivityDate: activityDate,
 		}
-		if err := tx.Create(activity).Error; err != nil {
+		if err := s.createActivityWithAdditionalCosts(ctx, tx, activity, request.AdditionalCosts); err != nil {
 			return err
-		}
-
-		for _, item := range request.AdditionalCosts {
-			ac := &model.AdditionalCost{
-				ActivityId: activity.Id,
-				Title:      item.Title,
-				Cost:       item.Cost,
-			}
-			if err := tx.Create(ac).Error; err != nil {
-				return err
-			}
 		}
 
 		resp = &dto.PondFillResponse{
@@ -260,6 +246,181 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	return resp, nil
+}
+
+// validatePondWithFarmAndActivePondSource validates that data from GetByIDWithFarmAndActivePond
+// represents a valid source pond (has pond, active pond, and farm/client).
+func (s *pondService) validatePondWithFarmAndActivePondSource(data *repository.PondWithFarmAndActivePond) error {
+	if data == nil || data.Pond == nil {
+		return errors.ErrPondNotFound
+	}
+	if data.ActivePond == nil {
+		return errors.ErrPondSourceNotActive
+	}
+	if data.ClientId == 0 {
+		return errors.ErrFarmNotFound
+	}
+	return nil
+}
+
+// validatePondWithFarmAndActivePondDest validates that data from GetByIDWithFarmAndActivePond
+// represents a valid destination pond (has pond) and belongs to the same client as the source.
+func (s *pondService) validatePondWithFarmAndActivePondDest(data *repository.PondWithFarmAndActivePond, expectedClientId int) error {
+	if data == nil || data.Pond == nil {
+		return errors.ErrPondNotFound
+	}
+	if data.ClientId != expectedClientId {
+		return errors.ErrAuthPermissionDenied
+	}
+	return nil
+}
+
+func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest, username string) (*dto.PondMoveResponse, error) {
+	sourceData, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, sourcePondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if err := s.validatePondWithFarmAndActivePondSource(sourceData); err != nil {
+		return nil, err
+	}
+	ok, err := utils.CanAccessClient(ctx, sourceData.ClientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return nil, errors.ErrAuthPermissionDenied
+	}
+
+	if sourcePondId == request.ToPondId {
+		return nil, errors.ErrPondInvalidInput
+	}
+
+	destData, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, request.ToPondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if err := s.validatePondWithFarmAndActivePondDest(destData, sourceData.ClientId); err != nil {
+		return nil, err
+	}
+
+	if !constants.IsValidFishType(request.FishType) {
+		return nil, errors.ErrInvalidFishType
+	}
+	activityDate, err := time.Parse("2006-01-02", request.ActivityDate)
+	if err != nil {
+		return nil, errors.ErrValidationFailed.Wrap(err)
+	}
+
+	// Calculate price part = total fish weight * price per kg
+	fishCost, additionalCost := utils.CalculateMoveCost(request.Amount, request.PricePerUnit, request.FishWeight, request.AdditionalCosts)
+	halfAdditional := additionalCost.Div(decimal.NewFromInt(2))
+	destMoveCost := fishCost.Add(halfAdditional)
+
+	sourceActive := sourceData.ActivePond
+	destPond := destData.Pond
+	destActive := destData.ActivePond
+
+	var resp *dto.PondMoveResponse
+	err = s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
+		pondRepo := s.pondRepo.WithTx(tx)
+		activePondRepo := s.activePondRepo.WithTx(tx)
+
+		if destActive == nil {
+			newDestActive := &model.ActivePond{
+				PondId:      request.ToPondId,
+				StartDate:   activityDate,
+				IsActive:    true,
+				TotalCost:   destMoveCost,
+				TotalProfit: decimal.Zero,
+				NetResult:   decimal.Zero.Sub(destMoveCost),
+				TotalFish:   request.Amount,
+				FishTypes:   []string{request.FishType},
+			}
+			if err := activePondRepo.Create(ctx, newDestActive); err != nil {
+				return err
+			}
+			destActive = newDestActive
+			if destPond.Status == constants.FarmStatusMaintenance {
+				destPond.Status = constants.FarmStatusActive
+				if err := pondRepo.Update(ctx, destPond); err != nil {
+					return err
+				}
+			}
+		} else {
+			destActive.TotalCost = destActive.TotalCost.Add(destMoveCost)
+			destActive.NetResult = destActive.TotalProfit.Sub(destActive.TotalCost)
+			destActive.TotalFish += request.Amount
+			destActive.FishTypes = utils.AppendStringIfMissing(destActive.FishTypes, request.FishType)
+			if err := activePondRepo.Update(ctx, destActive); err != nil {
+				return err
+			}
+		}
+
+		sourceActive.TotalCost = sourceActive.TotalCost.Add(halfAdditional)
+		sourceActive.TotalProfit = sourceActive.TotalProfit.Add(fishCost)
+		sourceActive.NetResult = sourceActive.TotalProfit.Sub(sourceActive.TotalCost)
+		sourceActive.TotalFish -= request.Amount
+		sourceActive.IsActive = !request.IsClose // if true then the pond is close
+		if sourceActive.TotalFish < 0 {
+			sourceActive.TotalFish = 0
+		}
+		if err := activePondRepo.Update(ctx, sourceActive); err != nil {
+			return err
+		}
+
+		toActivePondId := destActive.Id
+		activity := &model.Activity{
+			ActivePondId:   sourceActive.Id,
+			ToActivePondId: &toActivePondId,
+			Mode:           constants.ActivityModeMove,
+			Amount:         request.Amount,
+			FishType:       request.FishType,
+			FishWeight:     request.FishWeight,
+			FishUnit:       constants.FishUnitKg,
+			PricePerUnit:   request.PricePerUnit,
+			ActivityDate:   activityDate,
+		}
+		if err := s.createActivityWithAdditionalCosts(ctx, tx, activity, request.AdditionalCosts); err != nil {
+			return err
+		}
+
+		resp = &dto.PondMoveResponse{
+			ActivityId:     int64(activity.Id),
+			ActivePondId:   int64(sourceActive.Id),
+			ToActivePondId: int64(destActive.Id),
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	return resp, nil
+}
+
+// createActivityWithAdditionalCosts creates the activity and then each additional cost linked to it.
+func (s *pondService) createActivityWithAdditionalCosts(
+	ctx context.Context,
+	tx *gorm.DB,
+	activity *model.Activity,
+	additionalCosts []dto.AdditionalCostItem,
+) error {
+	if err := s.activityRepo.WithTx(tx).Create(ctx, activity); err != nil {
+		return err
+	}
+	if len(additionalCosts) > 0 {
+		items := make([]*model.AdditionalCost, 0, len(additionalCosts))
+		for _, item := range additionalCosts {
+			items = append(items, &model.AdditionalCost{
+				ActivityId: activity.Id,
+				Title:      item.Title,
+				Cost:       item.Cost,
+			})
+		}
+		if err := s.additionalCostRepo.WithTx(tx).CreateBatch(ctx, items); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *pondService) toPondResponseFromPondWithActive(pa *repository.PondWithFarmAndActivePond) *dto.PondResponse {

@@ -23,12 +23,13 @@ import (
 
 type PondServiceTestSuite struct {
 	suite.Suite
-	pondRepo       *mocks.MockPondRepository
-	farmRepo       *mocks.MockFarmRepository
-	activePondRepo *mocks.MockActivePondRepository
-	activityRepo   *mocks.MockActivityRepository
-	db             *gorm.DB
-	pondService    PondService
+	pondRepo           *mocks.MockPondRepository
+	farmRepo           *mocks.MockFarmRepository
+	activePondRepo     *mocks.MockActivePondRepository
+	activityRepo       *mocks.MockActivityRepository
+	additionalCostRepo *mocks.MockAdditionalCostRepository
+	db                 *gorm.DB
+	pondService        PondService
 }
 
 func (s *PondServiceTestSuite) SetupTest() {
@@ -36,17 +37,19 @@ func (s *PondServiceTestSuite) SetupTest() {
 	s.farmRepo = mocks.NewMockFarmRepository(s.T())
 	s.activePondRepo = mocks.NewMockActivePondRepository(s.T())
 	s.activityRepo = mocks.NewMockActivityRepository(s.T())
+	s.additionalCostRepo = mocks.NewMockAdditionalCostRepository(s.T())
 	var err error
 	s.db, err = gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	s.Require().NoError(err)
 	err = s.db.AutoMigrate(&model.Pond{}, &model.ActivePond{}, &model.Activity{}, &model.AdditionalCost{})
 	s.Require().NoError(err)
 	s.pondService = NewPondService(PondServiceParams{
-		PondRepo:       s.pondRepo,
-		FarmRepo:       s.farmRepo,
-		ActivePondRepo: s.activePondRepo,
-		ActivityRepo:   s.activityRepo,
-		TxManager:      transaction.NewManager(s.db),
+		PondRepo:           s.pondRepo,
+		FarmRepo:           s.farmRepo,
+		ActivePondRepo:     s.activePondRepo,
+		ActivityRepo:       s.activityRepo,
+		AdditionalCostRepo: s.additionalCostRepo,
+		TxManager:          transaction.NewManager(s.db),
 	})
 }
 
@@ -72,6 +75,30 @@ func (s *PondServiceTestSuite) TearDownTest() {
 	s.farmRepo.ExpectedCalls = nil
 	s.activePondRepo.ExpectedCalls = nil
 	s.activityRepo.ExpectedCalls = nil
+	s.additionalCostRepo.ExpectedCalls = nil
+}
+
+// setupReposWithTxForTransaction mocks WithTx to return the same mock; Create/Update assign IDs and return nil. Use Maybe() so tests that only Create or only Update still pass.
+func (s *PondServiceTestSuite) setupReposWithTxForTransaction() {
+	s.pondRepo.On("WithTx", mock.Anything).Return(s.pondRepo)
+	s.pondRepo.On("Update", mock.Anything, mock.Anything).Maybe().Return(nil)
+	s.activePondRepo.On("WithTx", mock.Anything).Return(s.activePondRepo)
+	s.activePondRepo.On("Create", mock.Anything, mock.Anything).Maybe().Return(nil).Run(func(args mock.Arguments) {
+		ap := args.Get(1).(*model.ActivePond)
+		if ap.Id == 0 {
+			ap.Id = 99
+		}
+	})
+	s.activePondRepo.On("Update", mock.Anything, mock.Anything).Maybe().Return(nil)
+	s.activityRepo.On("WithTx", mock.Anything).Return(s.activityRepo)
+	s.activityRepo.On("Create", mock.Anything, mock.Anything).Maybe().Return(nil).Run(func(args mock.Arguments) {
+		a := args.Get(1).(*model.Activity)
+		if a.Id == 0 {
+			a.Id = 88
+		}
+	})
+	s.additionalCostRepo.On("WithTx", mock.Anything).Return(s.additionalCostRepo)
+	s.additionalCostRepo.On("Create", mock.Anything, mock.Anything).Maybe().Return(nil)
 }
 
 func TestPondServiceSuite(t *testing.T) {
@@ -356,6 +383,7 @@ func (s *PondServiceTestSuite) TestFillPond_Success_NewActivePond() {
 	}
 
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.setupReposWithTxForTransaction()
 
 	resp, err := s.pondService.FillPond(fillPondCtx(), pondId, req, "user")
 
@@ -385,6 +413,7 @@ func (s *PondServiceTestSuite) TestFillPond_Success_ExistingActivePond() {
 	}
 
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.setupReposWithTxForTransaction()
 
 	resp, err := s.pondService.FillPond(fillPondCtx(), pondId, req, "user")
 
@@ -406,4 +435,206 @@ func validPondFillRequest() dto.PondFillRequest {
 			{Title: "Transport", Cost: decimal.RequireFromString("50")},
 		},
 	}
+}
+
+func validPondMoveRequest() dto.PondMoveRequest {
+	return dto.PondMoveRequest{
+		ToPondId:     2,
+		FishType:     constants.FishTypeNil,
+		Amount:       50,
+		ActivityDate: "2025-06-01",
+	}
+}
+
+func (s *PondServiceTestSuite) TestMovePond_SourceNotFound() {
+	req := validPondMoveRequest()
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(nil, nil)
+
+	resp, err := s.pondService.MovePond(fillPondCtx(), 1, req, "user")
+
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	assert.ErrorIs(s.T(), err, errors.ErrPondNotFound)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestMovePond_SourceNotActive() {
+	sourcePondId := 1
+	req := validPondMoveRequest()
+	sourceData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusMaintenance},
+		ClientId:   1,
+		ActivePond: nil, // source in maintenance
+	}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, sourcePondId).Return(sourceData, nil)
+
+	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
+
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	assert.ErrorIs(s.T(), err, errors.ErrPondSourceNotActive)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestMovePond_DestNotFound() {
+	sourcePondId := 1
+	req := validPondMoveRequest()
+	sourceData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive},
+		ClientId:   1,
+		ActivePond: &model.ActivePond{Id: 10, PondId: sourcePondId, IsActive: true, TotalFish: 100},
+	}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, sourcePondId).Return(sourceData, nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, req.ToPondId).Return(nil, nil)
+
+	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
+
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	assert.ErrorIs(s.T(), err, errors.ErrPondNotFound)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestMovePond_DestDifferentClient_ReturnsPermissionDenied() {
+	sourcePondId := 1
+	req := validPondMoveRequest()
+	sourceData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive},
+		ClientId:   1,
+		ActivePond: &model.ActivePond{Id: 10, PondId: sourcePondId, IsActive: true, TotalFish: 100},
+	}
+	destData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: req.ToPondId, FarmId: 2, Name: "P2", Status: constants.FarmStatusActive},
+		ClientId:   2, // different client
+		ActivePond: &model.ActivePond{Id: 20, PondId: req.ToPondId, IsActive: true},
+	}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, sourcePondId).Return(sourceData, nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, req.ToPondId).Return(destData, nil)
+
+	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
+
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	assert.ErrorIs(s.T(), err, errors.ErrAuthPermissionDenied)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestMovePond_SamePond_ReturnsInvalidInput() {
+	sourcePondId := 1
+	req := validPondMoveRequest()
+	req.ToPondId = sourcePondId
+	sourceData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive},
+		ClientId:   1,
+		ActivePond: &model.ActivePond{Id: 10, PondId: sourcePondId, IsActive: true, TotalFish: 100},
+	}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, sourcePondId).Return(sourceData, nil)
+
+	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
+
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	assert.ErrorIs(s.T(), err, errors.ErrPondInvalidInput)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestMovePond_InvalidFishType() {
+	sourcePondId := 1
+	req := validPondMoveRequest()
+	req.FishType = "invalid"
+	sourceData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive},
+		ClientId:   1,
+		ActivePond: &model.ActivePond{Id: 10, PondId: sourcePondId, IsActive: true, TotalFish: 100},
+	}
+	destData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: req.ToPondId, FarmId: 1, Name: "P2", Status: constants.FarmStatusActive},
+		ClientId:   1,
+		ActivePond: &model.ActivePond{Id: 20, PondId: req.ToPondId, IsActive: true},
+	}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, sourcePondId).Return(sourceData, nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, req.ToPondId).Return(destData, nil)
+
+	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
+
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	assert.ErrorIs(s.T(), err, errors.ErrInvalidFishType)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestMovePond_Success_BothActive() {
+	sourcePondId := 1
+	req := validPondMoveRequest()
+	sourcePond := &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive}
+	sourceActive := &model.ActivePond{
+		Id:          10,
+		PondId:      sourcePondId,
+		IsActive:    true,
+		TotalFish:   100,
+		TotalCost:   decimal.Zero,
+		TotalProfit: decimal.Zero,
+		NetResult:   decimal.Zero,
+		FishTypes:   []string{constants.FishTypeNil},
+	}
+	destPond := &model.Pond{Id: req.ToPondId, FarmId: 1, Name: "P2", Status: constants.FarmStatusActive}
+	destActive := &model.ActivePond{
+		Id:          20,
+		PondId:      req.ToPondId,
+		IsActive:    true,
+		TotalFish:   0,
+		TotalCost:   decimal.Zero,
+		TotalProfit: decimal.Zero,
+		NetResult:   decimal.Zero,
+		FishTypes:   []string{},
+	}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, sourcePondId).Return(&repository.PondWithFarmAndActivePond{
+		Pond: sourcePond, ClientId: 1, ActivePond: sourceActive,
+	}, nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, req.ToPondId).Return(&repository.PondWithFarmAndActivePond{
+		Pond: destPond, ClientId: 1, ActivePond: destActive,
+	}, nil)
+	s.setupReposWithTxForTransaction()
+
+	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
+
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), resp)
+	assert.Greater(s.T(), resp.ActivityId, int64(0))
+	assert.Equal(s.T(), int64(10), resp.ActivePondId)
+	assert.Equal(s.T(), int64(20), resp.ToActivePondId)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestMovePond_Success_DestInMaintenance() {
+	sourcePondId := 1
+	req := validPondMoveRequest()
+	sourcePond := &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive}
+	sourceActive := &model.ActivePond{
+		Id:          10,
+		PondId:      sourcePondId,
+		IsActive:    true,
+		TotalFish:   100,
+		TotalCost:   decimal.Zero,
+		TotalProfit: decimal.Zero,
+		NetResult:   decimal.Zero,
+		FishTypes:   []string{constants.FishTypeNil},
+	}
+	destPond := &model.Pond{Id: req.ToPondId, FarmId: 1, Name: "P2", Status: constants.FarmStatusMaintenance}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, sourcePondId).Return(&repository.PondWithFarmAndActivePond{
+		Pond: sourcePond, ClientId: 1, ActivePond: sourceActive,
+	}, nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, req.ToPondId).Return(&repository.PondWithFarmAndActivePond{
+		Pond: destPond, ClientId: 1, ActivePond: nil, // dest in maintenance
+	}, nil)
+	s.setupReposWithTxForTransaction()
+
+	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
+
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), resp)
+	assert.Greater(s.T(), resp.ActivityId, int64(0))
+	assert.Equal(s.T(), int64(10), resp.ActivePondId)
+	assert.Greater(s.T(), resp.ToActivePondId, int64(0))
+	s.pondRepo.AssertExpectations(s.T())
 }

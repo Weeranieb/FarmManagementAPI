@@ -65,3 +65,23 @@ type PondFillResponse struct {
 	ActivityId   int64 `json:"activityId"`
 	ActivePondId int64 `json:"activePondId"`
 }
+
+// PondMoveRequest is the body for POST /pond/:pondId/move (transfer fish to another pond).
+type PondMoveRequest struct {
+	ToPondId        int                  `json:"toPondId" validate:"required"`
+	FishType        string               `json:"fishType" validate:"required"`
+	Amount          int                  `json:"amount" validate:"required,min=1"`
+	FishWeight      decimal.Decimal      `json:"fishWeight,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+	PricePerUnit    decimal.Decimal      `json:"pricePerUnit" validate:"required,decimal_gt0" swaggertype:"number"`
+	AdditionalCosts []AdditionalCostItem `json:"additionalCosts,omitempty" validate:"dive"`
+	ActivityDate    string               `json:"activityDate" validate:"required"`
+	Remark          *string              `json:"remark,omitempty"`
+	IsClose         bool                 `json:"isClose"`
+}
+
+// PondMoveResponse is the response for POST /pond/:pondId/move.
+type PondMoveResponse struct {
+	ActivityId     int64 `json:"activityId"`
+	ActivePondId   int64 `json:"activePondId"`
+	ToActivePondId int64 `json:"toActivePondId"`
+}

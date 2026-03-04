@@ -1378,6 +1378,73 @@
                 }
             }
         },
+        "/pond/{pondId}/move": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Transfer fish from this pond to another. If destination is in maintenance, backend creates active_pond for it.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Move fish to another pond",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Source pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "toPondId, fishType, amount, activityDate",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondMoveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/user": {
             "get": {
                 "security": [
@@ -2026,6 +2093,49 @@
                 },
                 "remark": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.PondMoveRequest": {
+            "type": "object",
+            "required": [
+                "activityDate",
+                "amount",
+                "fishType",
+                "pricePerUnit",
+                "toPondId"
+            ],
+            "properties": {
+                "activityDate": {
+                    "type": "string"
+                },
+                "additionalCosts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdditionalCostItem"
+                    }
+                },
+                "amount": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "fishType": {
+                    "type": "string"
+                },
+                "fishWeight": {
+                    "type": "number"
+                },
+                "isClose": {
+                    "type": "boolean"
+                },
+                "pricePerUnit": {
+                    "type": "number"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "toPondId": {
+                    "type": "integer"
                 }
             }
         },

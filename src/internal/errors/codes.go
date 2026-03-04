@@ -132,6 +132,11 @@ var (
 		Code:    500073,
 		Message: "Invalid fish type",
 	}
+
+	ErrPondSourceNotActive = &AppError{
+		Code:    500074,
+		Message: "Source pond has no active cycle",
+	}
 )
 
 // Worker errors (500080-500089)

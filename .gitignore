@@ -7,6 +7,11 @@ configuration/config.env
 bin/
 tmp/
 
+**/mocks/
+src/internal/handler/mocks/
+src/internal/service/mocks/
+src/internal/repository/mocks/
+
 # IDE
 .vscode/
 .idea/

@@ -21,6 +21,7 @@ type PondHandler interface {
 	UpdatePond(c *fiber.Ctx) error
 	DeletePond(c *fiber.Ctx) error
 	FillPond(c *fiber.Ctx) error
+	MovePond(c *fiber.Ctx) error
 }
 
 type pondHandlerImpl struct {
@@ -273,6 +274,51 @@ func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
 	}
 
 	response, err := h.pondService.FillPond(c.UserContext(), pondId, request, username)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return http.Success(c, response)
+}
+
+// POST /pond/:pondId/move
+// Move fish from this pond (source) to another. Path = source pondId; body includes toPondId.
+// @Summary      Move fish to another pond
+// @Description  Transfer fish from this pond to another. If destination is in maintenance, backend creates active_pond for it.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        pondId path int true "Source pond ID"
+// @Param        body   body dto.PondMoveRequest true "toPondId, fishType, amount, activityDate"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      404  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/move [post]
+func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	pondId, err := strconv.Atoi(c.Params("pondId"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+	}
+
+	var request dto.PondMoveRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+
+	username, err := utils.GetUsername(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	response, err := h.pondService.MovePond(c.UserContext(), pondId, request, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
