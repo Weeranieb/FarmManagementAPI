@@ -8,7 +8,7 @@ import (
 // CalculateFillCost returns cost for a single fill: amount × pricePerUnit + sum(additionalCosts).
 func CalculateFillCost(amount int, pricePerUnit decimal.Decimal, additionalCosts []dto.AdditionalCostItem) decimal.Decimal {
 	fishCost := decimal.NewFromInt(int64(amount)).Mul(pricePerUnit)
-	fishCost.Add(CalculateAdditionalCostsTotal(additionalCosts))
+	fishCost = fishCost.Add(CalculateAdditionalCostsTotal(additionalCosts))
 	return fishCost
 }
 

@@ -99,6 +99,7 @@ func (s *PondServiceTestSuite) setupReposWithTxForTransaction() {
 	})
 	s.additionalCostRepo.On("WithTx", mock.Anything).Return(s.additionalCostRepo)
 	s.additionalCostRepo.On("Create", mock.Anything, mock.Anything).Maybe().Return(nil)
+	s.additionalCostRepo.On("CreateBatch", mock.Anything, mock.Anything).Maybe().Return(nil)
 }
 
 func TestPondServiceSuite(t *testing.T) {
