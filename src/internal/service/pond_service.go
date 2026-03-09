@@ -26,6 +26,7 @@ type PondService interface {
 	Delete(id int, username string) error
 	FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error)
 	MovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest, username string) (*dto.PondMoveResponse, error)
+	SellPond(ctx context.Context, pondId int, request dto.PondSellRequest, username string) (*dto.PondSellResponse, error)
 }
 
 type PondServiceParams struct {
@@ -36,6 +37,8 @@ type PondServiceParams struct {
 	ActivePondRepo     repository.ActivePondRepository
 	ActivityRepo       repository.ActivityRepository
 	AdditionalCostRepo repository.AdditionalCostRepository
+	SellDetailRepo     repository.SellDetailRepository
+	MerchantRepo       repository.MerchantRepository
 	TxManager          transaction.Manager
 }
 
@@ -45,6 +48,8 @@ type pondService struct {
 	activePondRepo     repository.ActivePondRepository
 	activityRepo       repository.ActivityRepository
 	additionalCostRepo repository.AdditionalCostRepository
+	sellDetailRepo     repository.SellDetailRepository
+	merchantRepo       repository.MerchantRepository
 	txManager          transaction.Manager
 }
 
@@ -55,6 +60,8 @@ func NewPondService(params PondServiceParams) PondService {
 		activePondRepo:     params.ActivePondRepo,
 		activityRepo:       params.ActivityRepo,
 		additionalCostRepo: params.AdditionalCostRepo,
+		sellDetailRepo:     params.SellDetailRepo,
+		merchantRepo:       params.MerchantRepo,
 		txManager:          params.TxManager,
 	}
 }
@@ -186,6 +193,7 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 	}
 
 	activePond := data.ActivePond
+	// Calculate
 	fillCost := utils.CalculateFillCost(request.Amount, request.PricePerUnit, request.AdditionalCosts)
 
 	var resp *dto.PondFillResponse
@@ -193,8 +201,20 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 		pondRepo := s.pondRepo.WithTx(tx)
 		activePondRepo := s.activePondRepo.WithTx(tx)
 
+		var newTotalCost, newNetResult decimal.Decimal
+		var newTotalFish int
+		var newFishTypes []string
+		if activePond != nil {
+			newTotalCost = activePond.TotalCost.Add(fillCost)
+			newNetResult = activePond.TotalProfit.Sub(newTotalCost)
+			newTotalFish = activePond.TotalFish + request.Amount
+			newFishTypes = utils.AppendStringIfMissing(activePond.FishTypes, request.FishType)
+		}
+
+		// Mapping
+		var newActivePond *model.ActivePond
 		if activePond == nil {
-			activePond = &model.ActivePond{
+			newActivePond = &model.ActivePond{
 				PondId:    pondId,
 				StartDate: activityDate,
 				IsActive:  true,
@@ -203,9 +223,14 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 				TotalFish: request.Amount,
 				FishTypes: []string{request.FishType},
 			}
-			if err := activePondRepo.Create(ctx, activePond); err != nil {
+		}
+
+		// Save
+		if activePond == nil {
+			if err := activePondRepo.Create(ctx, newActivePond); err != nil {
 				return err
 			}
+			activePond = newActivePond
 			if pond.Status == constants.FarmStatusMaintenance {
 				pond.Status = constants.FarmStatusActive
 				if err := pondRepo.Update(ctx, pond); err != nil {
@@ -213,15 +238,14 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 				}
 			}
 		} else {
-			activePond.TotalCost = activePond.TotalCost.Add(fillCost)
-			activePond.NetResult = activePond.TotalProfit.Sub(activePond.TotalCost)
-			activePond.TotalFish += request.Amount
-			activePond.FishTypes = utils.AppendStringIfMissing(activePond.FishTypes, request.FishType)
+			activePond.TotalCost = newTotalCost
+			activePond.NetResult = newNetResult
+			activePond.TotalFish = newTotalFish
+			activePond.FishTypes = newFishTypes
 			if err := activePondRepo.Update(ctx, activePond); err != nil {
 				return err
 			}
 		}
-
 		activity := &model.Activity{
 			ActivePondId: activePond.Id,
 			Mode:         constants.ActivityModeFill,
@@ -235,7 +259,6 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 		if err := s.createActivityWithAdditionalCosts(ctx, tx, activity, request.AdditionalCosts); err != nil {
 			return err
 		}
-
 		resp = &dto.PondFillResponse{
 			ActivityId:   int64(activity.Id),
 			ActivePondId: int64(activePond.Id),
@@ -311,22 +334,39 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 		return nil, errors.ErrValidationFailed.Wrap(err)
 	}
 
-	// Calculate price part = total fish weight * price per kg
+	sourceActive := sourceData.ActivePond
+	destPond := destData.Pond
+	destActive := destData.ActivePond
+
+	// Calculate: price part = total fish weight * price per kg; split additional cost 50/50
 	fishCost, additionalCost := utils.CalculateMoveCost(request.Amount, request.PricePerUnit, request.FishWeight, request.AdditionalCosts)
 	halfAdditional := additionalCost.Div(decimal.NewFromInt(2))
 	destMoveCost := fishCost.Add(halfAdditional)
 
-	sourceActive := sourceData.ActivePond
-	destPond := destData.Pond
-	destActive := destData.ActivePond
+	var destTotalCost, destNetResult decimal.Decimal
+	var destTotalFish int
+	var destFishTypes []string
+	if destActive != nil {
+		destTotalCost = destActive.TotalCost.Add(destMoveCost)
+		destNetResult = destActive.TotalProfit.Sub(destTotalCost)
+		destTotalFish = destActive.TotalFish + request.Amount
+		destFishTypes = utils.AppendStringIfMissing(destActive.FishTypes, request.FishType)
+	}
+
+	sourceTotalCost := sourceActive.TotalCost.Add(halfAdditional)
+	sourceTotalProfit := sourceActive.TotalProfit.Add(fishCost)
+	sourceNetResult := sourceTotalProfit.Sub(sourceTotalCost)
+	sourceTotalFish := max(sourceActive.TotalFish-request.Amount, 0)
 
 	var resp *dto.PondMoveResponse
 	err = s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
 		pondRepo := s.pondRepo.WithTx(tx)
 		activePondRepo := s.activePondRepo.WithTx(tx)
 
+		// Mapping
+		var newDestActive *model.ActivePond
 		if destActive == nil {
-			newDestActive := &model.ActivePond{
+			newDestActive = &model.ActivePond{
 				PondId:      request.ToPondId,
 				StartDate:   activityDate,
 				IsActive:    true,
@@ -336,6 +376,10 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 				TotalFish:   request.Amount,
 				FishTypes:   []string{request.FishType},
 			}
+		}
+
+		// Save
+		if destActive == nil {
 			if err := activePondRepo.Create(ctx, newDestActive); err != nil {
 				return err
 			}
@@ -347,25 +391,32 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 				}
 			}
 		} else {
-			destActive.TotalCost = destActive.TotalCost.Add(destMoveCost)
-			destActive.NetResult = destActive.TotalProfit.Sub(destActive.TotalCost)
-			destActive.TotalFish += request.Amount
-			destActive.FishTypes = utils.AppendStringIfMissing(destActive.FishTypes, request.FishType)
+			destActive.TotalCost = destTotalCost
+			destActive.NetResult = destNetResult
+			destActive.TotalFish = destTotalFish
+			destActive.FishTypes = destFishTypes
 			if err := activePondRepo.Update(ctx, destActive); err != nil {
 				return err
 			}
 		}
 
-		sourceActive.TotalCost = sourceActive.TotalCost.Add(halfAdditional)
-		sourceActive.TotalProfit = sourceActive.TotalProfit.Add(fishCost)
-		sourceActive.NetResult = sourceActive.TotalProfit.Sub(sourceActive.TotalCost)
-		sourceActive.TotalFish -= request.Amount
-		sourceActive.IsActive = !request.IsClose // if true then the pond is close
-		if sourceActive.TotalFish < 0 {
-			sourceActive.TotalFish = 0
+		sourceActive.TotalCost = sourceTotalCost
+		sourceActive.TotalProfit = sourceTotalProfit
+		sourceActive.NetResult = sourceNetResult
+		sourceActive.TotalFish = sourceTotalFish
+		if request.MarkToClose {
+			sourceActive.IsActive = false
+			sourceActive.EndDate = &activityDate
 		}
 		if err := activePondRepo.Update(ctx, sourceActive); err != nil {
 			return err
+		}
+		if request.MarkToClose {
+			sourcePond := sourceData.Pond
+			sourcePond.Status = constants.FarmStatusMaintenance
+			if err := pondRepo.Update(ctx, sourcePond); err != nil {
+				return err
+			}
 		}
 
 		toActivePondId := destActive.Id
@@ -383,7 +434,6 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 		if err := s.createActivityWithAdditionalCosts(ctx, tx, activity, request.AdditionalCosts); err != nil {
 			return err
 		}
-
 		resp = &dto.PondMoveResponse{
 			ActivityId:     int64(activity.Id),
 			ActivePondId:   int64(sourceActive.Id),
@@ -395,6 +445,147 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	return resp, nil
+}
+
+// validatePondForSell ensures data has pond, active cycle, and client (for sell flow).
+func (s *pondService) validatePondForSell(data *repository.PondWithFarmAndActivePond) error {
+	if data == nil || data.Pond == nil {
+		return errors.ErrPondNotFound
+	}
+	if data.ActivePond == nil {
+		return errors.ErrPondNotActive
+	}
+	if data.ClientId == 0 {
+		return errors.ErrFarmNotFound
+	}
+	return nil
+}
+
+// validateSellMerchantIfSet checks that merchantId exists when provided.
+func (s *pondService) validateSellMerchantIfSet(merchantId *int) error {
+	if merchantId == nil {
+		return nil
+	}
+	merchant, err := s.merchantRepo.GetByID(*merchantId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if merchant == nil {
+		return errors.ErrMerchantNotFound
+	}
+	return nil
+}
+
+func buildSellDetailModels(activityId int, details []dto.PondSellDetailItem) []*model.SellDetail {
+	out := make([]*model.SellDetail, 0, len(details))
+	for _, d := range details {
+		out = append(out, &model.SellDetail{
+			SellId:       activityId,
+			FishType:     d.FishType,
+			Size:         d.Size,
+			Amount:       d.Amount,
+			FishUnit:     d.FishUnit,
+			PricePerUnit: d.PricePerUnit,
+		})
+	}
+	return out
+}
+
+func (s *pondService) SellPond(ctx context.Context, pondId int, request dto.PondSellRequest, username string) (*dto.PondSellResponse, error) {
+	data, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, pondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if err := s.validatePondForSell(data); err != nil {
+		return nil, err
+	}
+	ok, err := utils.CanAccessClient(ctx, data.ClientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return nil, errors.ErrAuthPermissionDenied
+	}
+	if err := s.validateSellMerchantIfSet(request.MerchantId); err != nil {
+		return nil, err
+	}
+	activityDate, err := time.Parse("2006-01-02", request.ActivityDate)
+	if err != nil {
+		return nil, errors.ErrValidationFailed.Wrap(err)
+	}
+
+	activePond := data.ActivePond
+	pond := data.Pond
+
+	var resp *dto.PondSellResponse
+	err = s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
+		resp, err = s.executeSellTransaction(ctx, tx, activePond, pond, request, activityDate)
+		return err
+	})
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	return resp, nil
+}
+
+// executeSellTransaction creates sell activity + details, updates active pond, optionally closes pond.
+func (s *pondService) executeSellTransaction(
+	ctx context.Context,
+	tx *gorm.DB,
+	activePond *model.ActivePond,
+	pond *model.Pond,
+	request dto.PondSellRequest,
+	activityDate time.Time,
+) (*dto.PondSellResponse, error) {
+	sellDetailRepo := s.sellDetailRepo.WithTx(tx)
+	activePondRepo := s.activePondRepo.WithTx(tx)
+	pondRepo := s.pondRepo.WithTx(tx)
+
+	// Calculate
+	revenue, additionalCostTotal := utils.CalculateSellTotals(request.Details, request.AdditionalCosts)
+	newTotalCost := activePond.TotalCost
+	if len(request.AdditionalCosts) > 0 {
+		newTotalCost = newTotalCost.Add(additionalCostTotal)
+	}
+	newTotalProfit := activePond.TotalProfit.Add(revenue)
+	newNetResult := newTotalProfit.Sub(newTotalCost)
+
+	// Mapping
+	activity := &model.Activity{
+		ActivePondId: activePond.Id,
+		Mode:         constants.ActivityModeSell,
+		MerchantId:   request.MerchantId,
+		ActivityDate: activityDate,
+	}
+
+	// Save
+	if err := s.createActivityWithAdditionalCosts(ctx, tx, activity, request.AdditionalCosts); err != nil {
+		return nil, err
+	}
+	sellDetails := buildSellDetailModels(activity.Id, request.Details)
+	if err := sellDetailRepo.CreateBatch(ctx, sellDetails); err != nil {
+		return nil, err
+	}
+	activePond.TotalCost = newTotalCost
+	activePond.TotalProfit = newTotalProfit
+	activePond.NetResult = newNetResult
+	if request.MarkToClose {
+		activePond.IsActive = false
+		activePond.EndDate = &activityDate
+	}
+	if err := activePondRepo.Update(ctx, activePond); err != nil {
+		return nil, err
+	}
+	if request.MarkToClose {
+		pond.Status = constants.FarmStatusMaintenance
+		if err := pondRepo.Update(ctx, pond); err != nil {
+			return nil, err
+		}
+	}
+	return &dto.PondSellResponse{
+		ActivityId:   int64(activity.Id),
+		ActivePondId: int64(activePond.Id),
+	}, nil
 }
 
 // createActivityWithAdditionalCosts creates the activity and then each additional cost linked to it.
