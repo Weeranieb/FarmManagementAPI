@@ -1451,6 +1451,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/pond/{pondId}/sell": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Record a sell activity. If markToClose is true, close the active cycle and set pond to maintenance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Sell fish from pond",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "activityDate, details[], merchantId, markToClose",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondSellRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/user": {
             "get": {
                 "security": [
@@ -2131,7 +2198,7 @@ const docTemplate = `{
                 "fishWeight": {
                     "type": "number"
                 },
-                "isClose": {
+                "markToClose": {
                     "type": "boolean"
                 },
                 "pricePerUnit": {
@@ -2141,6 +2208,58 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "toPondId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.PondSellDetailItem": {
+            "type": "object",
+            "required": [
+                "amount",
+                "fishType",
+                "fishUnit",
+                "pricePerUnit",
+                "size"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "fishType": {
+                    "type": "string"
+                },
+                "fishUnit": {
+                    "type": "string"
+                },
+                "pricePerUnit": {
+                    "type": "number"
+                },
+                "size": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PondSellRequest": {
+            "type": "object",
+            "required": [
+                "activityDate",
+                "details"
+            ],
+            "properties": {
+                "activityDate": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/dto.PondSellDetailItem"
+                    }
+                },
+                "markToClose": {
+                    "type": "boolean"
+                },
+                "merchantId": {
                     "type": "integer"
                 }
             }

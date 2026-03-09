@@ -19,13 +19,14 @@ Full request/response schemas: [../openapi.yaml](../openapi.yaml) (tag `pond-sto
 ## Request / response
 
 - **Path**: `pondId` = pond to sell from.
-- **Body** `PondSellRequest`: `activityDate` (required); `details` (array of per-species lines: fishType, size, amount, fishUnit, pricePerUnit), `buyer`, `markToClose` (optional). If `markToClose` is true, close the active cycle and set pond to maintenance after the transaction.
-- **Response**: Success with created sell activity (and sell_details). Standard `{ "result": true, "data": ... }`.
+- **Body** `PondSellRequest`: `activityDate` (required); `details` (array of per-species lines: fishType, size, amount, fishUnit, pricePerUnit); `merchantId`, `markToClose`, `additionalCosts` (optional). `additionalCosts` is an array of `{ title, cost }` for record-keeping (e.g. transport, packaging). If `markToClose` is true, close the active cycle and set pond to maintenance after the transaction.
+- **Response**: Success with created sell activity (and sell_details, and additional_costs when provided). Standard `{ "result": true, "data": ... }`.
 
 ## Behavior
 
 - Resolve pond’s active cycle. If none, return 400/404.
 - Create activity with `mode = sell` and related `sell_details` rows from `details`.
+- When `additionalCosts` is present, create `additional_costs` rows linked to the new activity.
 - If `markToClose`: update the active_pond row to `is_active = false`, set `end_date`; update pond status to `maintenance`.
 
 ## Errors

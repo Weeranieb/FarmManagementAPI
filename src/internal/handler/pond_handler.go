@@ -22,6 +22,7 @@ type PondHandler interface {
 	DeletePond(c *fiber.Ctx) error
 	FillPond(c *fiber.Ctx) error
 	MovePond(c *fiber.Ctx) error
+	SellPond(c *fiber.Ctx) error
 }
 
 type pondHandlerImpl struct {
@@ -319,6 +320,51 @@ func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
 	}
 
 	response, err := h.pondService.MovePond(c.UserContext(), pondId, request, username)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return http.Success(c, response)
+}
+
+// POST /pond/:pondId/sell
+// Record a sell transaction from a pond. Optionally close the active cycle.
+// @Summary      Sell fish from pond
+// @Description  Record a sell activity. If markToClose is true, close the active cycle and set pond to maintenance.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        pondId path int true "Pond ID"
+// @Param        body   body dto.PondSellRequest true "activityDate, details[], merchantId, markToClose"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      404  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/sell [post]
+func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	pondId, err := strconv.Atoi(c.Params("pondId"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+	}
+
+	var request dto.PondSellRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+
+	username, err := utils.GetUsername(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	response, err := h.pondService.SellPond(c.UserContext(), pondId, request, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

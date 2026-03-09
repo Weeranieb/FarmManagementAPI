@@ -137,6 +137,11 @@ var (
 		Code:    500074,
 		Message: "Source pond has no active cycle",
 	}
+
+	ErrPondNotActive = &AppError{
+		Code:    500075,
+		Message: "Pond has no active cycle",
+	}
 )
 
 // Worker errors (500080-500089)

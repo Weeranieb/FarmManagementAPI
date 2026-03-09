@@ -76,7 +76,7 @@ type PondMoveRequest struct {
 	AdditionalCosts []AdditionalCostItem `json:"additionalCosts,omitempty" validate:"dive"`
 	ActivityDate    string               `json:"activityDate" validate:"required"`
 	Remark          *string              `json:"remark,omitempty"`
-	IsClose         bool                 `json:"isClose"`
+	MarkToClose     bool                 `json:"markToClose"`
 }
 
 // PondMoveResponse is the response for POST /pond/:pondId/move.
@@ -84,4 +84,28 @@ type PondMoveResponse struct {
 	ActivityId     int64 `json:"activityId"`
 	ActivePondId   int64 `json:"activePondId"`
 	ToActivePondId int64 `json:"toActivePondId"`
+}
+
+// PondSellDetailItem represents a single per-species line in a sell request.
+type PondSellDetailItem struct {
+	FishType     string          `json:"fishType" validate:"required"`
+	Size         string          `json:"size" validate:"required"`
+	Amount       decimal.Decimal `json:"amount" validate:"required,decimal_gt0" swaggertype:"number"`
+	FishUnit     string          `json:"fishUnit" validate:"required"`
+	PricePerUnit decimal.Decimal `json:"pricePerUnit" validate:"required,decimal_gt0" swaggertype:"number"`
+}
+
+// PondSellRequest is the body for POST /pond/:pondId/sell.
+type PondSellRequest struct {
+	ActivityDate    string               `json:"activityDate" validate:"required"`
+	Details         []PondSellDetailItem `json:"details" validate:"required,min=1,dive"`
+	MerchantId      *int                 `json:"merchantId,omitempty"`
+	MarkToClose     bool                 `json:"markToClose"`
+	AdditionalCosts []AdditionalCostItem `json:"additionalCosts,omitempty" validate:"dive"`
+}
+
+// PondSellResponse is the response for POST /pond/:pondId/sell.
+type PondSellResponse struct {
+	ActivityId   int64 `json:"activityId"`
+	ActivePondId int64 `json:"activePondId"`
 }

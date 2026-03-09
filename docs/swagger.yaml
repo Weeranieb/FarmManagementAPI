@@ -7,8 +7,8 @@ definitions:
       title:
         type: string
     required:
-    - cost
-    - title
+      - cost
+      - title
     type: object
   dto.CreateClientRequest:
     properties:
@@ -19,9 +19,9 @@ definitions:
       ownerName:
         type: string
     required:
-    - contactNumber
-    - name
-    - ownerName
+      - contactNumber
+      - name
+      - ownerName
     type: object
   dto.CreateFarmRequest:
     properties:
@@ -30,8 +30,8 @@ definitions:
       name:
         type: string
     required:
-    - clientId
-    - name
+      - clientId
+      - name
     type: object
   dto.CreateFeedCollectionRequest:
     properties:
@@ -44,8 +44,8 @@ definitions:
       unit:
         type: string
     required:
-    - name
-    - unit
+      - name
+      - unit
     type: object
   dto.CreateFeedPriceHistoryItemRequest:
     properties:
@@ -54,8 +54,8 @@ definitions:
       priceUpdatedDate:
         type: string
     required:
-    - price
-    - priceUpdatedDate
+      - price
+      - priceUpdatedDate
     type: object
   dto.CreateMerchantRequest:
     properties:
@@ -66,7 +66,7 @@ definitions:
       name:
         type: string
     required:
-    - name
+      - name
     type: object
   dto.CreatePondsRequest:
     properties:
@@ -78,8 +78,8 @@ definitions:
         minItems: 1
         type: array
     required:
-    - farmId
-    - names
+      - farmId
+      - names
     type: object
   dto.CreateUserRequest:
     properties:
@@ -98,9 +98,9 @@ definitions:
       username:
         type: string
     required:
-    - firstName
-    - password
-    - username
+      - firstName
+      - password
+      - username
     type: object
   dto.CreateWorkerRequest:
     properties:
@@ -119,10 +119,10 @@ definitions:
       salary:
         type: number
     required:
-    - farmGroupId
-    - firstName
-    - nationality
-    - salary
+      - farmGroupId
+      - firstName
+      - nationality
+      - salary
     type: object
   dto.LoginRequest:
     properties:
@@ -133,8 +133,8 @@ definitions:
       username:
         type: string
     required:
-    - password
-    - username
+      - password
+      - username
     type: object
   dto.PondFillRequest:
     properties:
@@ -156,10 +156,10 @@ definitions:
       remark:
         type: string
     required:
-    - activityDate
-    - amount
-    - fishType
-    - pricePerUnit
+      - activityDate
+      - amount
+      - fishType
+      - pricePerUnit
     type: object
   dto.PondMoveRequest:
     properties:
@@ -176,7 +176,7 @@ definitions:
         type: string
       fishWeight:
         type: number
-      isClose:
+      markToClose:
         type: boolean
       pricePerUnit:
         type: number
@@ -185,11 +185,51 @@ definitions:
       toPondId:
         type: integer
     required:
-    - activityDate
-    - amount
-    - fishType
-    - pricePerUnit
-    - toPondId
+      - activityDate
+      - amount
+      - fishType
+      - pricePerUnit
+      - toPondId
+    type: object
+  dto.PondSellDetailItem:
+    properties:
+      amount:
+        type: number
+      fishType:
+        type: string
+      fishUnit:
+        type: string
+      pricePerUnit:
+        type: number
+      size:
+        type: string
+    required:
+      - amount
+      - fishType
+      - fishUnit
+      - pricePerUnit
+      - size
+    type: object
+  dto.PondSellRequest:
+    properties:
+      activityDate:
+        type: string
+      details:
+        items:
+          $ref: '#/definitions/dto.PondSellDetailItem'
+        minItems: 1
+        type: array
+      markToClose:
+        type: boolean
+      merchantId:
+        type: integer
+      additionalCosts:
+        items:
+          $ref: '#/definitions/dto.AdditionalCostItem'
+        type: array
+    required:
+      - activityDate
+      - details
     type: object
   dto.RegisterRequest:
     properties:
@@ -208,10 +248,10 @@ definitions:
       username:
         type: string
     required:
-    - clientId
-    - firstName
-    - password
-    - username
+      - clientId
+      - firstName
+      - password
+      - username
     type: object
   dto.UpdateFarmBody:
     properties:
@@ -226,14 +266,14 @@ definitions:
         type: string
       status:
         enum:
-        - active
-        - maintenance
+          - active
+          - maintenance
         type: string
     type: object
   http.ErrorResponseModel:
     properties:
       code:
-        example: "100001"
+        example: '100001'
         type: string
       message:
         example: User already exists
@@ -366,1188 +406,1244 @@ info:
   contact: {}
   description: A Boonma Farm application with Fiber, GORM, and Dependency Injection
   title: Boonma Farm API
-  version: "1.0"
+  version: '1.0'
 paths:
   /auth/login:
     post:
       consumes:
-      - application/json
-      description: Login user with provided credentials and return JWT token. Token
+        - application/json
+      description:
+        Login user with provided credentials and return JWT token. Token
         is also set as HTTP-only cookie.
       parameters:
-      - description: Login data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.LoginRequest'
+        - description: Login data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.LoginRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "401":
+        '401':
           description: Unauthorized
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Login user
       tags:
-      - auth
+        - auth
   /auth/logout:
     post:
       consumes:
-      - application/json
+        - application/json
       description: Logout user and clear the authentication cookie
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Logout user
       tags:
-      - auth
+        - auth
   /auth/register:
     post:
       consumes:
-      - application/json
+        - application/json
       description: Register a new user with the provided details
       parameters:
-      - description: User data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.RegisterRequest'
+        - description: User data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.RegisterRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Register a new user
       tags:
-      - auth
+        - auth
   /client:
     post:
       consumes:
-      - application/json
-      description: Add a new client with the provided details. Only super admin can
+        - application/json
+      description:
+        Add a new client with the provided details. Only super admin can
         create clients.
       parameters:
-      - description: Client data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateClientRequest'
+        - description: Client data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.CreateClientRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "403":
+        '403':
           description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Add a new client
       tags:
-      - client
+        - client
     put:
       consumes:
-      - application/json
-      description: Update details of a client. Super admin can update any client,
+        - application/json
+      description:
+        Update details of a client. Super admin can update any client,
         others can only update their own client.
       parameters:
-      - description: Client data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/model.Client'
+        - description: Client data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/model.Client'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "403":
+        '403':
           description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Update client
       tags:
-      - client
+        - client
   /client/{id}:
     get:
       consumes:
-      - application/json
-      description: Retrieve a client by its ID. Super admin can access any client,
+        - application/json
+      description:
+        Retrieve a client by its ID. Super admin can access any client,
         others can only access their own client.
       parameters:
-      - description: Client ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Client ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "403":
+        '403':
           description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Get a client by ID
       tags:
-      - client
+        - client
   /client/list:
     get:
       consumes:
-      - application/json
-      description: Returns a list of clients with id and name for dropdown/select.
+        - application/json
+      description:
+        Returns a list of clients with id and name for dropdown/select.
         Only super admin can access.
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "403":
+        '403':
           description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Get client list for dropdown
       tags:
-      - client
+        - client
   /farm:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a list of farms associated with the current client
       parameters:
-      - description: Client ID
-        in: query
-        name: clientId
-        type: integer
+        - description: Client ID
+          in: query
+          name: clientId
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Get list of farms
       tags:
-      - farm
+        - farm
     post:
       consumes:
-      - application/json
+        - application/json
       description: Add a new farm entry with the provided details. Super admin only.
       parameters:
-      - description: Farm data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateFarmRequest'
+        - description: Farm data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.CreateFarmRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "403":
+        '403':
           description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Add a new farm entry
       tags:
-      - farm
+        - farm
   /farm/{id}:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve details of a specific farm by its ID
       parameters:
-      - description: Farm ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Farm ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Get farm by ID
       tags:
-      - farm
+        - farm
     put:
       consumes:
-      - application/json
-      description: Update details of a farm entry. Super admin only. Id in path; body
+        - application/json
+      description:
+        Update details of a farm entry. Super admin only. Id in path; body
         contains name.
       parameters:
-      - description: Farm ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Farm data (name)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.UpdateFarmBody'
+        - description: Farm ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: Farm data (name)
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.UpdateFarmBody'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "403":
+        '403':
           description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Update farm entry
       tags:
-      - farm
+        - farm
   /farm/hierarchy:
     get:
       consumes:
-      - application/json
-      description: Retrieve all farms for the client with their nested ponds (for
+        - application/json
+      description:
+        Retrieve all farms for the client with their nested ponds (for
         Existing Data view). Super admin may pass clientId query param.
       parameters:
-      - description: Client ID (optional for super admin)
-        in: query
-        name: clientId
-        type: integer
+        - description: Client ID (optional for super admin)
+          in: query
+          name: clientId
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Get farm hierarchy with ponds
       tags:
-      - farm
+        - farm
   /feed-collection:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a paginated list of feed collections for the current client
       parameters:
-      - description: Page number
-        in: query
-        name: page
-        required: true
-        type: integer
-      - description: Page size
-        in: query
-        name: pageSize
-        required: true
-        type: integer
-      - description: Order by field
-        in: query
-        name: orderBy
-        type: string
-      - description: Search keyword
-        in: query
-        name: keyword
-        type: string
+        - description: Page number
+          in: query
+          name: page
+          required: true
+          type: integer
+        - description: Page size
+          in: query
+          name: pageSize
+          required: true
+          type: integer
+        - description: Order by field
+          in: query
+          name: orderBy
+          type: string
+        - description: Search keyword
+          in: query
+          name: keyword
+          type: string
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a list of feed collections with pagination
       tags:
-      - feed-collection
+        - feed-collection
     post:
       consumes:
-      - application/json
+        - application/json
       description: Add a new feed collection with the provided details
       parameters:
-      - description: Feed collection data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateFeedCollectionRequest'
+        - description: Feed collection data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.CreateFeedCollectionRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Add a new feed collection
       tags:
-      - feed-collection
+        - feed-collection
     put:
       consumes:
-      - application/json
+        - application/json
       description: Update an existing feed collection with new details
       parameters:
-      - description: Updated feed collection data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/model.FeedCollection'
+        - description: Updated feed collection data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/model.FeedCollection'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Update a feed collection
       tags:
-      - feed-collection
+        - feed-collection
   /feed-collection/{id}:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a feed collection by its ID
       parameters:
-      - description: Feed collection ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Feed collection ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a feed collection by ID
       tags:
-      - feed-collection
+        - feed-collection
   /merchant:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a list of all merchants
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get list of merchants
       tags:
-      - merchant
+        - merchant
     post:
       consumes:
-      - application/json
+        - application/json
       description: Create a new merchant with the provided details
       parameters:
-      - description: Merchant data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateMerchantRequest'
+        - description: Merchant data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.CreateMerchantRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Add a new merchant
       tags:
-      - merchant
+        - merchant
     put:
       consumes:
-      - application/json
+        - application/json
       description: Update an existing merchant with new details
       parameters:
-      - description: Updated merchant data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/model.Merchant'
+        - description: Updated merchant data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/model.Merchant'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Update a merchant
       tags:
-      - merchant
+        - merchant
   /merchant/{id}:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a merchant by its ID
       parameters:
-      - description: Merchant ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Merchant ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a merchant by ID
       tags:
-      - merchant
+        - merchant
   /pond:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a list of ponds belonging to a specific farm
       parameters:
-      - description: Farm ID
-        in: query
-        name: farmId
-        required: true
-        type: integer
+        - description: Farm ID
+          in: query
+          name: farmId
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a list of ponds by farm ID
       tags:
-      - pond
+        - pond
     post:
       consumes:
-      - application/json
-      description: 'Create multiple ponds for a farm. Request: farmId, array of names.
+        - application/json
+      description:
+        'Create multiple ponds for a farm. Request: farmId, array of names.
         New ponds have status maintenance.'
       parameters:
-      - description: farmId, names[]
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreatePondsRequest'
+        - description: farmId, names[]
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.CreatePondsRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Create multiple ponds
       tags:
-      - pond
+        - pond
   /pond/{id}:
     delete:
       consumes:
-      - application/json
+        - application/json
       description: Delete a pond by its ID
       parameters:
-      - description: Pond ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Pond ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Delete a pond
       tags:
-      - pond
+        - pond
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a pond by its ID
       parameters:
-      - description: Pond ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Pond ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a pond by ID
       tags:
-      - pond
+        - pond
     put:
       consumes:
-      - application/json
-      description: Update an existing pond. Id in path; body contains optional farmId,
+        - application/json
+      description:
+        Update an existing pond. Id in path; body contains optional farmId,
         name, status.
       parameters:
-      - description: Pond ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Updated pond data (farmId, name, status optional)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.UpdatePondBody'
+        - description: Pond ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: Updated pond data (farmId, name, status optional)
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.UpdatePondBody'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Update a pond
       tags:
-      - pond
+        - pond
   /pond/{pondId}/fill:
     post:
       consumes:
-      - application/json
-      description: 'Record a fill activity for a pond. If the pond has no active cycle,
+        - application/json
+      description:
+        'Record a fill activity for a pond. If the pond has no active cycle,
         creates one. Request: fishType, amount, activityDate; optional fishWeight,
         fishUnit, pricePerUnit.'
       parameters:
-      - description: Pond ID
-        in: path
-        name: pondId
-        required: true
-        type: integer
-      - description: fishType, amount, activityDate
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.PondFillRequest'
+        - description: Pond ID
+          in: path
+          name: pondId
+          required: true
+          type: integer
+        - description: fishType, amount, activityDate
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.PondFillRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "403":
+        '403':
           description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Fill pond with fish
       tags:
-      - pond
+        - pond
   /pond/{pondId}/move:
     post:
       consumes:
-      - application/json
-      description: Transfer fish from this pond to another. If destination is in maintenance,
+        - application/json
+      description:
+        Transfer fish from this pond to another. If destination is in maintenance,
         backend creates active_pond for it.
       parameters:
-      - description: Source pond ID
-        in: path
-        name: pondId
-        required: true
-        type: integer
-      - description: toPondId, fishType, amount, activityDate
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.PondMoveRequest'
+        - description: Source pond ID
+          in: path
+          name: pondId
+          required: true
+          type: integer
+        - description: toPondId, fishType, amount, activityDate
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.PondMoveRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Move fish to another pond
       tags:
-      - pond
+        - pond
+  /pond/{pondId}/sell:
+    post:
+      consumes:
+        - application/json
+      description:
+        Record a sell activity. If markToClose is true, close the active
+        cycle and set pond to maintenance.
+      parameters:
+        - description: Pond ID
+          in: path
+          name: pondId
+          required: true
+          type: integer
+        - description: activityDate, details[], merchantId, markToClose
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.PondSellRequest'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      summary: Sell fish from pond
+      tags:
+        - pond
   /user:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve the user details of the currently authenticated user
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Get the current user
       tags:
-      - user
+        - user
     post:
       consumes:
-      - application/json
-      description: Create a new user with the provided details. For system setup,
+        - application/json
+      description:
+        Create a new user with the provided details. For system setup,
         this endpoint is public and allows creating users without authentication.
         When authenticated, uses JWT context for creator and clientId.
       parameters:
-      - description: Bearer token (optional for system setup)
-        in: header
-        name: Authorization
-        type: string
-      - description: User data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateUserRequest'
+        - description: Bearer token (optional for system setup)
+          in: header
+          name: Authorization
+          type: string
+        - description: User data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.CreateUserRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Add a new user
       tags:
-      - user
+        - user
     put:
       consumes:
-      - application/json
+        - application/json
       description: Update the details of the currently authenticated user
       parameters:
-      - description: Updated user data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/model.User'
+        - description: Updated user data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/model.User'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Update the current user
       tags:
-      - user
+        - user
   /user/list:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a list of users associated with the current client ID
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Get a list of users
       tags:
-      - user
+        - user
   /worker:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a paginated list of workers for the current client
       parameters:
-      - description: Page number
-        in: query
-        name: page
-        required: true
-        type: integer
-      - description: Page size
-        in: query
-        name: pageSize
-        required: true
-        type: integer
-      - description: Order by field
-        in: query
-        name: orderBy
-        type: string
-      - description: Search keyword
-        in: query
-        name: keyword
-        type: string
+        - description: Page number
+          in: query
+          name: page
+          required: true
+          type: integer
+        - description: Page size
+          in: query
+          name: pageSize
+          required: true
+          type: integer
+        - description: Order by field
+          in: query
+          name: orderBy
+          type: string
+        - description: Search keyword
+          in: query
+          name: keyword
+          type: string
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a list of workers with pagination
       tags:
-      - worker
+        - worker
     post:
       consumes:
-      - application/json
+        - application/json
       description: Add a new worker with the provided details
       parameters:
-      - description: Worker data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateWorkerRequest'
+        - description: Worker data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/dto.CreateWorkerRequest'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Add a new worker
       tags:
-      - worker
+        - worker
     put:
       consumes:
-      - application/json
+        - application/json
       description: Update an existing worker with new details
       parameters:
-      - description: Updated worker data
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/model.Worker'
+        - description: Updated worker data
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/model.Worker'
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       security:
-      - BearerAuth: []
-      - CookieAuth: []
+        - BearerAuth: []
+        - CookieAuth: []
       summary: Update a worker
       tags:
-      - worker
+        - worker
   /worker/{id}:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Retrieve a worker by its ID
       parameters:
-      - description: Worker ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Worker ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseModel'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: Get a worker by ID
       tags:
-      - worker
+        - worker
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.
@@ -1559,4 +1655,4 @@ securityDefinitions:
     in: cookie
     name: jwt_token
     type: apiKey
-swagger: "2.0"
+swagger: '2.0'

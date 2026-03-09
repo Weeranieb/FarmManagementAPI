@@ -38,6 +38,7 @@ func TestClientHandlerSuite(t *testing.T) {
 // --- AddClient ---
 
 func (s *ClientHandlerTestSuite) TestAddClient_Success() {
+	// GIVEN — valid CreateClientRequest; service returns success
 	createReq := &dto.CreateClientRequest{
 		Name:          "Acme Corp",
 		OwnerName:     "John",
@@ -64,14 +65,17 @@ func (s *ClientHandlerTestSuite) TestAddClient_Success() {
 	req := httptest.NewRequest("POST", "/api/v1/client", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/client is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.clientService.AssertExpectations(s.T())
 }
 
 func (s *ClientHandlerTestSuite) TestAddClient_InvalidBody() {
+	// GIVEN — malformed JSON body
 	s.clientService.On("Create", mock.Anything, mock.Anything, mock.Anything).Return((*dto.ClientResponse)(nil), errors.New("")).Maybe()
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "admin"}))
@@ -80,16 +84,19 @@ func (s *ClientHandlerTestSuite) TestAddClient_InvalidBody() {
 	req := httptest.NewRequest("POST", "/api/v1/client", bytes.NewBufferString("not json"))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST with invalid JSON is sent
 	resp, err := app.Test(req)
 
+	// THEN — error or message in response
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.True(s.T(), result["error"] != nil || result["message"] != nil, "expected error or message in response")
+	assert.True(s.T(), result["error"] != nil || result["message"] != nil)
 }
 
 func (s *ClientHandlerTestSuite) TestAddClient_ValidationFailed() {
+	// GIVEN — body with empty required name
 	s.clientService.On("Create", mock.Anything, mock.Anything, mock.Anything).Return((*dto.ClientResponse)(nil), errors.New("")).Maybe()
 	createReq := map[string]any{
 		"name":          "",
@@ -104,16 +111,19 @@ func (s *ClientHandlerTestSuite) TestAddClient_ValidationFailed() {
 	req := httptest.NewRequest("POST", "/api/v1/client", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST with invalid body is sent
 	resp, err := app.Test(req)
 
+	// THEN — error or message in response
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.True(s.T(), result["error"] != nil || result["message"] != nil, "expected error or message in response")
+	assert.True(s.T(), result["error"] != nil || result["message"] != nil)
 }
 
 func (s *ClientHandlerTestSuite) TestAddClient_MissingUsername() {
+	// GIVEN — valid body; no username in context
 	createReq := &dto.CreateClientRequest{
 		Name:          "Acme",
 		OwnerName:     "John",
@@ -127,8 +137,10 @@ func (s *ClientHandlerTestSuite) TestAddClient_MissingUsername() {
 	req := httptest.NewRequest("POST", "/api/v1/client", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/client is sent
 	resp, err := app.Test(req)
 
+	// THEN — error in response
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -137,6 +149,7 @@ func (s *ClientHandlerTestSuite) TestAddClient_MissingUsername() {
 }
 
 func (s *ClientHandlerTestSuite) TestAddClient_ServiceError() {
+	// GIVEN — valid body; service returns error
 	createReq := &dto.CreateClientRequest{
 		Name:          "Acme",
 		OwnerName:     "John",
@@ -154,19 +167,22 @@ func (s *ClientHandlerTestSuite) TestAddClient_ServiceError() {
 	req := httptest.NewRequest("POST", "/api/v1/client", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/client is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 with message in body
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.NotEmpty(s.T(), result["message"], "service error should return message")
+	assert.NotEmpty(s.T(), result["message"])
 	s.clientService.AssertExpectations(s.T())
 }
 
 // --- GetClient ---
 
 func (s *ClientHandlerTestSuite) TestGetClient_Success() {
+	// GIVEN — clientId in context; service returns client
 	clientId := 1
 	expectedResponse := &dto.ClientResponse{
 		Id:   1,
@@ -183,14 +199,17 @@ func (s *ClientHandlerTestSuite) TestGetClient_Success() {
 
 	req := httptest.NewRequest("GET", "/api/v1/client/1", nil)
 
+	// WHEN — GET /api/v1/client/1 is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.clientService.AssertExpectations(s.T())
 }
 
 func (s *ClientHandlerTestSuite) TestGetClient_InvalidId() {
+	// GIVEN — invalid id "not-a-number" in path
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"clientId":  1,
@@ -200,8 +219,10 @@ func (s *ClientHandlerTestSuite) TestGetClient_InvalidId() {
 
 	req := httptest.NewRequest("GET", "/api/v1/client/not-a-number", nil)
 
+	// WHEN — GET /api/v1/client/not-a-number is sent
 	resp, err := app.Test(req)
 
+	// THEN — error in response
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -210,6 +231,7 @@ func (s *ClientHandlerTestSuite) TestGetClient_InvalidId() {
 }
 
 func (s *ClientHandlerTestSuite) TestGetClient_AccessDenied() {
+	// GIVEN — user client 1; request for client 2
 	app := fiber.New()
 	app.Use(userContextFromRequest)
 	app.Get("/api/v1/client/:id", s.clientHandler.GetClient)
@@ -218,8 +240,10 @@ func (s *ClientHandlerTestSuite) TestGetClient_AccessDenied() {
 	// User belongs to client 1, requesting client 2
 	req = req.WithContext(withUserContext("user", 1, 1))
 
+	// WHEN — GET /api/v1/client/2 is sent
 	resp, err := app.Test(req)
 
+	// THEN — error in response
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -228,6 +252,7 @@ func (s *ClientHandlerTestSuite) TestGetClient_AccessDenied() {
 }
 
 func (s *ClientHandlerTestSuite) TestGetClient_ServiceError() {
+	// GIVEN — service returns error
 	clientId := 1
 	svcErr := errors.New("not found")
 	s.clientService.On("Get", 1).Return((*dto.ClientResponse)(nil), svcErr)
@@ -241,19 +266,22 @@ func (s *ClientHandlerTestSuite) TestGetClient_ServiceError() {
 
 	req := httptest.NewRequest("GET", "/api/v1/client/1", nil)
 
+	// WHEN — GET /api/v1/client/1 is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 with message in body
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.NotEmpty(s.T(), result["message"], "service error should return message")
+	assert.NotEmpty(s.T(), result["message"])
 	s.clientService.AssertExpectations(s.T())
 }
 
 // --- GetClientList ---
 
 func (s *ClientHandlerTestSuite) TestGetClientList_Success() {
+	// GIVEN — super admin; service returns dropdown
 	expectedDropdown := []*dto.DropdownItem{
 		{Key: 1, Value: "Client A"},
 		{Key: 2, Value: "Client B"},
@@ -268,8 +296,10 @@ func (s *ClientHandlerTestSuite) TestGetClientList_Success() {
 
 	req := httptest.NewRequest("GET", "/api/v1/client/list", nil)
 
+	// WHEN — GET /api/v1/client/list is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200, result true, data present
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -280,6 +310,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_Success() {
 }
 
 func (s *ClientHandlerTestSuite) TestGetClientList_NotSuperAdmin() {
+	// GIVEN — userLevel 1 (not super admin)
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"userLevel": 1, // normal user
@@ -288,27 +319,32 @@ func (s *ClientHandlerTestSuite) TestGetClientList_NotSuperAdmin() {
 
 	req := httptest.NewRequest("GET", "/api/v1/client/list", nil)
 
+	// WHEN — GET /api/v1/client/list is sent
 	resp, err := app.Test(req)
 
+	// THEN — error 500024
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"])
 	if errObj, ok := result["error"].(map[string]any); ok && errObj["code"] != nil {
-		assert.Equal(s.T(), "500024", errObj["code"]) // ErrAuthPermissionDenied
+		assert.Equal(s.T(), "500024", errObj["code"])
 	}
 }
 
 func (s *ClientHandlerTestSuite) TestGetClientList_IsSuperAdminError() {
+	// GIVEN — no userLevel in context
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{})) // no userLevel
 	app.Get("/api/v1/client/list", s.clientHandler.GetClientList)
 
 	req := httptest.NewRequest("GET", "/api/v1/client/list", nil)
 
+	// WHEN — GET /api/v1/client/list is sent
 	resp, err := app.Test(req)
 
+	// THEN — error in response
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -317,6 +353,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_IsSuperAdminError() {
 }
 
 func (s *ClientHandlerTestSuite) TestGetClientList_ServiceError() {
+	// GIVEN — service returns error
 	svcErr := errors.New("db error")
 	s.clientService.On("GetClientDropdown").Return(([]*dto.DropdownItem)(nil), svcErr)
 
@@ -326,17 +363,20 @@ func (s *ClientHandlerTestSuite) TestGetClientList_ServiceError() {
 
 	req := httptest.NewRequest("GET", "/api/v1/client/list", nil)
 
+	// WHEN — GET /api/v1/client/list is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 with message in body
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.NotEmpty(s.T(), result["message"], "service error should return message")
+	assert.NotEmpty(s.T(), result["message"])
 	s.clientService.AssertExpectations(s.T())
 }
 
 func (s *ClientHandlerTestSuite) TestGetClientList_EmptyDropdown() {
+	// GIVEN — service returns empty dropdown
 	expectedDropdown := []*dto.DropdownItem{}
 	s.clientService.On("GetClientDropdown").Return(expectedDropdown, nil)
 
@@ -346,8 +386,10 @@ func (s *ClientHandlerTestSuite) TestGetClientList_EmptyDropdown() {
 
 	req := httptest.NewRequest("GET", "/api/v1/client/list", nil)
 
+	// WHEN — GET /api/v1/client/list is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and result true
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -359,6 +401,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_EmptyDropdown() {
 // --- UpdateClient ---
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_Success() {
+	// GIVEN — valid update body; service returns nil
 	updateReq := &model.Client{
 		Id:            1,
 		Name:          "Updated Name",
@@ -381,14 +424,17 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_Success() {
 	req := httptest.NewRequest("PUT", "/api/v1/client", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/client is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.clientService.AssertExpectations(s.T())
 }
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_InvalidBody() {
+	// GIVEN — non-JSON body
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  "admin",
@@ -400,8 +446,10 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_InvalidBody() {
 	req := httptest.NewRequest("PUT", "/api/v1/client", bytes.NewBufferString("not json"))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT with invalid body is sent
 	resp, err := app.Test(req)
 
+	// THEN — error in response
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -410,9 +458,10 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_InvalidBody() {
 }
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_AccessDenied() {
+	// GIVEN — user client 1; update body for client 2
 	updateReq := &model.Client{
-		Id:    2, // update client 2
-		Name:  "Updated",
+		Id:       2, // update client 2
+		Name:     "Updated",
 		IsActive: true,
 	}
 	app := fiber.New()
@@ -422,10 +471,12 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_AccessDenied() {
 	body, _ := json.Marshal(updateReq)
 	req := httptest.NewRequest("PUT", "/api/v1/client", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	req = req.WithContext(withUserContext("user", 1, 1)) // user client 1, update client 2
+	req = req.WithContext(withUserContext("user", 1, 1))
 
+	// WHEN — PUT with client 2 body is sent
 	resp, err := app.Test(req)
 
+	// THEN — error in response
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -434,9 +485,10 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_AccessDenied() {
 }
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_MissingUsername() {
+	// GIVEN — valid body; no username in context
 	updateReq := &model.Client{
-		Id:    1,
-		Name:  "Updated",
+		Id:       1,
+		Name:     "Updated",
 		IsActive: true,
 	}
 	app := fiber.New()
@@ -450,8 +502,10 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_MissingUsername() {
 	req := httptest.NewRequest("PUT", "/api/v1/client", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/client is sent
 	resp, err := app.Test(req)
 
+	// THEN — error in response
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -460,9 +514,10 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_MissingUsername() {
 }
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_ServiceError() {
+	// GIVEN — valid body; service returns error
 	updateReq := &model.Client{
-		Id:    1,
-		Name:  "Updated",
+		Id:       1,
+		Name:     "Updated",
 		IsActive: true,
 	}
 	username := "admin"
@@ -481,12 +536,14 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_ServiceError() {
 	req := httptest.NewRequest("PUT", "/api/v1/client", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/client is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 with message in body
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.NotEmpty(s.T(), result["message"], "service error should return message")
+	assert.NotEmpty(s.T(), result["message"])
 	s.clientService.AssertExpectations(s.T())
 }

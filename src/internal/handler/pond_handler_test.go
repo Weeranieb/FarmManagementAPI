@@ -40,77 +40,79 @@ func TestPondHandlerSuite(t *testing.T) {
 }
 
 func (s *PondHandlerTestSuite) TestAddPonds_Success() {
+	// GIVEN — valid create request; super admin context; service mock returns nil
 	createReq := &dto.CreatePondsRequest{
 		FarmId: 1,
 		Names:  []string{"Pond 1", "Pond 2"},
 	}
-
 	username := "admin"
 	s.pondService.On("CreatePonds", mock.Anything, *createReq, username).Return(nil)
-
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  username,
-		"userLevel": 3, // super admin only
+		"userLevel": 3,
 	}))
 	app.Post("/api/v1/pond", s.pondHandler.AddPonds)
-
 	body, _ := json.Marshal(createReq)
 	req := httptest.NewRequest("POST", "/api/v1/pond", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/pond is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 OK; service was called
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.pondService.AssertExpectations(s.T())
 }
 
 func (s *PondHandlerTestSuite) TestAddPonds_NonSuperAdmin_ReturnsPermissionDenied() {
+	// GIVEN — valid create request; user is not super admin (userLevel 1)
 	createReq := &dto.CreatePondsRequest{
 		FarmId: 1,
 		Names:  []string{"Pond 1"},
 	}
-
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  "user",
-		"userLevel": 1, // normal user, not super admin
+		"userLevel": 1,
 	}))
 	app.Post("/api/v1/pond", s.pondHandler.AddPonds)
-
 	body, _ := json.Marshal(createReq)
 	req := httptest.NewRequest("POST", "/api/v1/pond", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/pond is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 with error body; code 500024 (ErrAuthPermissionDenied)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"])
 	if errObj, ok := result["error"].(map[string]any); ok && errObj["code"] != nil {
-		assert.Equal(s.T(), "500024", errObj["code"]) // ErrAuthPermissionDenied
+		assert.Equal(s.T(), "500024", errObj["code"])
 	}
 }
 
 func (s *PondHandlerTestSuite) TestAddPonds_IsSuperAdminError() {
+	// GIVEN — valid create request; no user context (empty locals)
 	createReq := &dto.CreatePondsRequest{
 		FarmId: 1,
 		Names:  []string{"Pond 1"},
 	}
-
 	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]any{})) // no userLevel
+	app.Use(setLocalsMiddleware(map[string]any{}))
 	app.Post("/api/v1/pond", s.pondHandler.AddPonds)
-
 	body, _ := json.Marshal(createReq)
 	req := httptest.NewRequest("POST", "/api/v1/pond", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/pond is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 with error body
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	var result map[string]any
@@ -119,6 +121,7 @@ func (s *PondHandlerTestSuite) TestAddPonds_IsSuperAdminError() {
 }
 
 func (s *PondHandlerTestSuite) TestGetPond_Success() {
+	// GIVEN — pond id 1; service returns pond response
 	pondId := 1
 	expectedResponse := &dto.PondResponse{
 		Id:     pondId,
@@ -134,14 +137,17 @@ func (s *PondHandlerTestSuite) TestGetPond_Success() {
 
 	req := httptest.NewRequest("GET", "/api/v1/pond/1", nil)
 
+	// WHEN — GET /api/v1/pond/1 is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 OK; service was called
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.pondService.AssertExpectations(s.T())
 }
 
 func (s *PondHandlerTestSuite) TestGetPondList_Success() {
+	// GIVEN — farmId 1; service returns list of ponds
 	farmId := 1
 	expectedResponse := []*dto.PondResponse{
 		{Id: 1, FarmId: farmId, Name: "Pond 1", Status: "active"},
@@ -155,8 +161,10 @@ func (s *PondHandlerTestSuite) TestGetPondList_Success() {
 
 	req := httptest.NewRequest("GET", "/api/v1/pond?farmId=1", nil)
 
+	// WHEN — GET /api/v1/pond?farmId=1 is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 OK; service was called
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.pondService.AssertExpectations(s.T())
@@ -175,14 +183,15 @@ func (s *PondHandlerTestSuite) fillPondApp(username string) *fiber.App {
 }
 
 func (s *PondHandlerTestSuite) TestFillPond_InvalidPondID_ReturnsValidationError() {
+	// GIVEN — body with invalid pond id "abc"
 	s.pondService.On("FillPond", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return((*dto.PondFillResponse)(nil), errors.New("")).Maybe()
-
 	body := []byte(`{"fishType":"nil","amount":100,"pricePerUnit":10.5,"activityDate":"2024-01-15"}`)
 	app := s.fillPondApp("user")
 	req := httptest.NewRequest("POST", "/api/v1/pond/abc/fill", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
 
+	// WHEN — POST /api/v1/pond/abc/fill is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
@@ -191,48 +200,52 @@ func (s *PondHandlerTestSuite) TestFillPond_InvalidPondID_ReturnsValidationError
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	require.NotNil(s.T(), result["error"], "expected error for invalid pond ID")
 	errObj, ok := result["error"].(map[string]any)
+	// THEN — error with code 500010
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), "500010", errObj["code"])
 }
 
 func (s *PondHandlerTestSuite) TestFillPond_MissingUsername_ReturnsAuthError() {
+	// GIVEN — valid body; no username in context
 	s.pondService.On("FillPond", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return((*dto.PondFillResponse)(nil), errors.New("")).Maybe()
-
 	body := []byte(`{"fishType":"nil","amount":100,"pricePerUnit":10.5,"activityDate":"2024-01-15"}`)
-	app := s.fillPondApp("") // no username
+	app := s.fillPondApp("")
 	req := httptest.NewRequest("POST", "/api/v1/pond/1/fill", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
 
+	// WHEN — POST /api/v1/pond/1/fill is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 
+	// THEN — auth error with code 500022
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.True(s.T(), result["error"] != nil, "expected auth error when username missing")
 	if errObj, ok := result["error"].(map[string]any); ok && errObj["code"] != nil {
-		assert.Equal(s.T(), "500022", errObj["code"]) // ErrAuthTokenInvalid
+		assert.Equal(s.T(), "500022", errObj["code"])
 	}
 }
 
 func (s *PondHandlerTestSuite) TestFillPond_Success() {
+	// GIVEN — valid fill body; username; service returns success response
 	pondId := 1
 	username := "admin"
 	body := []byte(`{"fishType":"nil","amount":100,"pricePerUnit":10.5,"activityDate":"2024-01-15"}`)
-
 	expectedResponse := &dto.PondFillResponse{ActivityId: 1, ActivePondId: 1}
 	s.pondService.On("FillPond", mock.Anything, pondId, mock.Anything, username).Return(expectedResponse, nil)
-
 	app := s.fillPondApp(username)
 	req := httptest.NewRequest("POST", "/api/v1/pond/1/fill", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
 
+	// WHEN — POST /api/v1/pond/1/fill is sent
 	resp, err := app.Test(req)
+
+	// THEN — 200 OK; result true and data present
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.True(s.T(), result["result"].(bool))
@@ -253,22 +266,23 @@ func (s *PondHandlerTestSuite) movePondApp(username string) *fiber.App {
 }
 
 func (s *PondHandlerTestSuite) TestMovePond_Success() {
+	// GIVEN — valid move body; username; service returns success response
 	sourcePondId := 1
 	username := "admin"
 	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"activityDate":"2024-06-01"}`)
-
 	expectedResponse := &dto.PondMoveResponse{ActivityId: 1, ActivePondId: 10, ToActivePondId: 20}
 	s.pondService.On("MovePond", mock.Anything, sourcePondId, mock.Anything, username).Return(expectedResponse, nil)
-
 	app := s.movePondApp(username)
 	req := httptest.NewRequest("POST", "/api/v1/pond/1/move", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
 
+	// WHEN — POST /api/v1/pond/1/move is sent
 	resp, err := app.Test(req)
+
+	// THEN — 200 OK; result true and data present
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.True(s.T(), result["result"].(bool))
@@ -277,16 +291,18 @@ func (s *PondHandlerTestSuite) TestMovePond_Success() {
 }
 
 func (s *PondHandlerTestSuite) TestMovePond_InvalidPondID_ReturnsValidationError() {
+	// GIVEN — body with invalid pond id "abc"
 	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"activityDate":"2024-06-01"}`)
 	app := s.movePondApp("user")
 	req := httptest.NewRequest("POST", "/api/v1/pond/abc/move", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
 
+	// WHEN — POST /api/v1/pond/abc/move is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-
+	// THEN — error with code 500010
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	require.NotNil(s.T(), result["error"], "expected error for invalid pond ID")
@@ -295,57 +311,63 @@ func (s *PondHandlerTestSuite) TestMovePond_InvalidPondID_ReturnsValidationError
 }
 
 func (s *PondHandlerTestSuite) TestMovePond_MissingUsername_ReturnsAuthError() {
+	// GIVEN — valid body; no username in context
 	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"activityDate":"2024-06-01"}`)
 	app := s.movePondApp("")
 	req := httptest.NewRequest("POST", "/api/v1/pond/1/move", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
 
+	// WHEN — POST /api/v1/pond/1/move is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-
+	// THEN — auth error with code 500022
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
 	if errObj, ok := result["error"].(map[string]any); ok && errObj["code"] != nil {
-		assert.Equal(s.T(), "500022", errObj["code"]) // ErrAuthTokenInvalid
+		assert.Equal(s.T(), "500022", errObj["code"])
 	}
 }
 
 func (s *PondHandlerTestSuite) TestMovePond_ServiceError_ErrPondNotFound() {
+	// GIVEN — pond 999; service returns ErrPondNotFound
 	username := "user"
 	s.pondService.On("MovePond", mock.Anything, 999, mock.Anything, username).Return((*dto.PondMoveResponse)(nil), apperrors.ErrPondNotFound)
-
 	app := s.movePondApp(username)
 	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"activityDate":"2024-06-01"}`)
 	req := httptest.NewRequest("POST", "/api/v1/pond/999/move", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/pond/999/move is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — response code 500070
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
-	assert.Equal(s.T(), "500070", result["code"]) // ErrPondNotFound
+	assert.Equal(s.T(), "500070", result["code"])
 	s.pondService.AssertExpectations(s.T())
 }
 
 func (s *PondHandlerTestSuite) TestMovePond_ServiceError_ErrPondSourceNotActive() {
+	// GIVEN — pond 1; service returns ErrPondSourceNotActive
 	username := "user"
 	s.pondService.On("MovePond", mock.Anything, 1, mock.Anything, username).Return((*dto.PondMoveResponse)(nil), apperrors.ErrPondSourceNotActive)
-
 	app := s.movePondApp(username)
 	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"activityDate":"2024-06-01"}`)
 	req := httptest.NewRequest("POST", "/api/v1/pond/1/move", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/pond/1/move is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — response code 500074
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
-	assert.Equal(s.T(), "500074", result["code"]) // ErrPondSourceNotActive
+	assert.Equal(s.T(), "500074", result["code"])
 	s.pondService.AssertExpectations(s.T())
 }
 
@@ -362,22 +384,23 @@ func (s *PondHandlerTestSuite) updatePondApp(username string) *fiber.App {
 }
 
 func (s *PondHandlerTestSuite) TestUpdatePond_Success() {
+	// GIVEN — valid body; service returns nil
 	pondId := 1
 	username := "admin"
 	body := dto.UpdatePondBody{Name: "Updated Pond", Status: "active"}
-
 	s.pondService.On("Update", mock.Anything, dto.UpdatePondRequest{
 		Id: pondId, FarmId: body.FarmId, Name: body.Name, Status: body.Status,
 	}, username).Return(nil)
-
 	app := s.updatePondApp(username)
 	reqBody, _ := json.Marshal(body)
 	req := httptest.NewRequest("PUT", "/api/v1/pond/1", bytes.NewBuffer(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/pond/1 is sent
 	resp, err := app.Test(req)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — result is true
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.True(s.T(), result["result"].(bool))
@@ -385,14 +408,17 @@ func (s *PondHandlerTestSuite) TestUpdatePond_Success() {
 }
 
 func (s *PondHandlerTestSuite) TestUpdatePond_InvalidPondID() {
+	// GIVEN — invalid pond id "abc"
 	body := []byte(`{"name":"Pond"}`)
 	app := s.updatePondApp("user")
 	req := httptest.NewRequest("PUT", "/api/v1/pond/abc", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/pond/abc is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — error with code 500010
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	require.NotNil(s.T(), result["error"])
@@ -401,36 +427,40 @@ func (s *PondHandlerTestSuite) TestUpdatePond_InvalidPondID() {
 }
 
 func (s *PondHandlerTestSuite) TestUpdatePond_MissingUsername() {
+	// GIVEN — valid body; no username in context
 	body := []byte(`{"name":"Pond"}`)
-	app := s.updatePondApp("") // no username
+	app := s.updatePondApp("")
 	req := httptest.NewRequest("PUT", "/api/v1/pond/1", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/pond/1 is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — error with code 500022
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
 	errObj := result["error"].(map[string]any)
-	assert.Equal(s.T(), "500022", errObj["code"]) // ErrAuthTokenInvalid
+	assert.Equal(s.T(), "500022", errObj["code"])
 }
 
 func (s *PondHandlerTestSuite) TestUpdatePond_ServiceError() {
+	// GIVEN — pond 999; service returns ErrPondNotFound
 	username := "user"
 	s.pondService.On("Update", mock.Anything, mock.AnythingOfType("dto.UpdatePondRequest"), username).Return(apperrors.ErrPondNotFound)
-
 	app := s.updatePondApp(username)
 	req := httptest.NewRequest("PUT", "/api/v1/pond/999", bytes.NewBuffer([]byte(`{}`)))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/pond/999 is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — response code 500070
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
-	// http.NewError returns { "code": "...", "message": "..." } at top level
-	assert.Equal(s.T(), "500070", result["code"]) // ErrPondNotFound
+	assert.Equal(s.T(), "500070", result["code"])
 	s.pondService.AssertExpectations(s.T())
 }
 
@@ -447,17 +477,18 @@ func (s *PondHandlerTestSuite) deletePondApp(username string) *fiber.App {
 }
 
 func (s *PondHandlerTestSuite) TestDeletePond_Success() {
+	// GIVEN — pond 1; service returns nil
 	pondId := 1
 	username := "admin"
-
 	s.pondService.On("Delete", pondId, username).Return(nil)
-
 	app := s.deletePondApp(username)
 	req := httptest.NewRequest("DELETE", "/api/v1/pond/1", nil)
 
+	// WHEN — DELETE /api/v1/pond/1 is sent
 	resp, err := app.Test(req)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — result is true
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.True(s.T(), result["result"].(bool))
@@ -465,12 +496,15 @@ func (s *PondHandlerTestSuite) TestDeletePond_Success() {
 }
 
 func (s *PondHandlerTestSuite) TestDeletePond_InvalidPondID() {
+	// GIVEN — invalid pond id "not-a-number"
 	app := s.deletePondApp("user")
 	req := httptest.NewRequest("DELETE", "/api/v1/pond/not-a-number", nil)
 
+	// WHEN — DELETE /api/v1/pond/not-a-number is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — error with code 500010
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	require.NotNil(s.T(), result["error"])
@@ -479,12 +513,15 @@ func (s *PondHandlerTestSuite) TestDeletePond_InvalidPondID() {
 }
 
 func (s *PondHandlerTestSuite) TestDeletePond_MissingUsername() {
+	// GIVEN — no username in context
 	app := s.deletePondApp("")
 	req := httptest.NewRequest("DELETE", "/api/v1/pond/1", nil)
 
+	// WHEN — DELETE /api/v1/pond/1 is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — error with code 500022
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
@@ -493,15 +530,17 @@ func (s *PondHandlerTestSuite) TestDeletePond_MissingUsername() {
 }
 
 func (s *PondHandlerTestSuite) TestDeletePond_ServiceError() {
+	// GIVEN — pond 1; service returns ErrGeneric
 	username := "user"
 	s.pondService.On("Delete", 1, username).Return(apperrors.ErrGeneric)
-
 	app := s.deletePondApp(username)
 	req := httptest.NewRequest("DELETE", "/api/v1/pond/1", nil)
 
+	// WHEN — DELETE /api/v1/pond/1 is sent
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — response has message
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotEmpty(s.T(), result["message"])
@@ -511,31 +550,41 @@ func (s *PondHandlerTestSuite) TestDeletePond_ServiceError() {
 // TestPondFillRequest_Validation ensures PondFillRequest validation rejects invalid input (handler uses validateAndParse).
 func TestPondFillRequest_Validation(t *testing.T) {
 	t.Run("missing required fields", func(t *testing.T) {
+		// GIVEN — empty PondFillRequest
 		req := &dto.PondFillRequest{}
+		// WHEN — ValidateStruct is called
 		err := utils.ValidateStruct(req)
+		// THEN — validation fails
 		require.Error(t, err)
 	})
 	t.Run("amount less than 1", func(t *testing.T) {
+		// GIVEN — request with Amount 0
 		req := &dto.PondFillRequest{
 			FishType:     "nil",
 			Amount:       0,
 			PricePerUnit: decimal.NewFromFloat(10.5),
 			ActivityDate: "2024-01-15",
 		}
+		// WHEN — ValidateStruct is called
 		err := utils.ValidateStruct(req)
+		// THEN — validation fails
 		require.Error(t, err)
 	})
 	t.Run("pricePerUnit zero", func(t *testing.T) {
+		// GIVEN — request with PricePerUnit zero
 		req := &dto.PondFillRequest{
 			FishType:     "nil",
 			Amount:       100,
 			PricePerUnit: decimal.Zero,
 			ActivityDate: "2024-01-15",
 		}
+		// WHEN — ValidateStruct is called
 		err := utils.ValidateStruct(req)
+		// THEN — validation fails
 		require.Error(t, err)
 	})
 	t.Run("fishWeight zero when provided", func(t *testing.T) {
+		// GIVEN — request with FishWeight zero
 		req := &dto.PondFillRequest{
 			FishType:     "nil",
 			Amount:       100,
@@ -543,17 +592,22 @@ func TestPondFillRequest_Validation(t *testing.T) {
 			PricePerUnit: decimal.NewFromFloat(10.5),
 			ActivityDate: "2024-01-15",
 		}
+		// WHEN — ValidateStruct is called
 		err := utils.ValidateStruct(req)
+		// THEN — validation fails
 		require.Error(t, err)
 	})
 	t.Run("valid request", func(t *testing.T) {
+		// GIVEN — request with required fields and valid values
 		req := &dto.PondFillRequest{
 			FishType:     "nil",
 			Amount:       100,
 			PricePerUnit: decimal.NewFromFloat(10.5),
 			ActivityDate: "2024-01-15",
 		}
+		// WHEN — ValidateStruct is called
 		err := utils.ValidateStruct(req)
+		// THEN — validation passes
 		require.NoError(t, err)
 	})
 }

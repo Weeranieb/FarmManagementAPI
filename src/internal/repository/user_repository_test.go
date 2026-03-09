@@ -59,6 +59,7 @@ func TestUserRepositorySuite(t *testing.T) {
 
 // Test Create operations
 func (s *UserRepositoryTestSuite) TestCreate_Success() {
+	// GIVEN — a new user model
 	user := &model.User{
 		Username:      "testuser",
 		Password:      "hashed_password",
@@ -69,8 +70,10 @@ func (s *UserRepositoryTestSuite) TestCreate_Success() {
 		ClientId:      lo.ToPtr(1),
 	}
 
-	err := s.userRepository.Create(context.Background(),user)
+	// WHEN — Create is called
+	err := s.userRepository.Create(context.Background(), user)
 
+	// THEN — no error and id/timestamps/fields set
 	assert.NoError(s.T(), err)
 	assert.NotZero(s.T(), user.Id)
 	assert.NotZero(s.T(), user.CreatedAt)
@@ -80,6 +83,7 @@ func (s *UserRepositoryTestSuite) TestCreate_Success() {
 }
 
 func (s *UserRepositoryTestSuite) TestCreate_DuplicateUsername() {
+	// GIVEN — one user already created with username "testuser"
 	user1 := &model.User{
 		Username:      "testuser",
 		Password:      "password1",
@@ -88,7 +92,7 @@ func (s *UserRepositoryTestSuite) TestCreate_DuplicateUsername() {
 		ContactNumber: "1234567890",
 		ClientId:      lo.ToPtr(1),
 	}
-	err := s.userRepository.Create(context.Background(),user1)
+	err := s.userRepository.Create(context.Background(), user1)
 	assert.NoError(s.T(), err)
 
 	user2 := &model.User{
@@ -100,10 +104,11 @@ func (s *UserRepositoryTestSuite) TestCreate_DuplicateUsername() {
 		ClientId:      lo.ToPtr(1),
 	}
 
-	err = s.userRepository.Create(context.Background(),user2)
+	// WHEN — Create is called again with same username
+	err = s.userRepository.Create(context.Background(), user2)
 
+	// THEN — error and only one user with that username
 	assert.Error(s.T(), err)
-	// Verify the duplicate wasn't created
 	count := int64(0)
 	s.db.Model(&model.User{}).Where("username = ?", "testuser").Count(&count)
 	assert.Equal(s.T(), int64(1), count)
@@ -111,6 +116,7 @@ func (s *UserRepositoryTestSuite) TestCreate_DuplicateUsername() {
 
 // Test GetByID operations
 func (s *UserRepositoryTestSuite) TestGetByID_Success() {
+	// GIVEN — a user created in DB
 	user := &model.User{
 		Username:      "testuser",
 		Password:      "password",
@@ -119,11 +125,13 @@ func (s *UserRepositoryTestSuite) TestGetByID_Success() {
 		ContactNumber: "1234567890",
 		ClientId:      lo.ToPtr(1),
 	}
-	err := s.userRepository.Create(context.Background(),user)
+	err := s.userRepository.Create(context.Background(), user)
 	assert.NoError(s.T(), err)
 
+	// WHEN — GetByID is called
 	result, err := s.userRepository.GetByID(user.Id)
 
+	// THEN — user is returned
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
 	assert.Equal(s.T(), user.Id, result.Id)
@@ -133,17 +141,18 @@ func (s *UserRepositoryTestSuite) TestGetByID_Success() {
 }
 
 func (s *UserRepositoryTestSuite) TestGetByID_NotFound() {
+	// GIVEN — no user with id 999
+	// WHEN — GetByID(999) is called
 	result, err := s.userRepository.GetByID(999)
 
-	// Repository returns nil, nil when record not found (not an error)
+	// THEN — nil, nil (no error)
 	assert.NoError(s.T(), err)
 	assert.Nil(s.T(), result)
 }
 
 // Test GetByEmail operations - Note: Email field doesn't exist in new model
-// These tests are skipped since Email field is not available in the new User model
-// If GetByEmail is still needed, the repository implementation needs to be updated
 func (s *UserRepositoryTestSuite) TestGetByEmail_Success() {
+	// GIVEN/WHEN/THEN — skipped (email not in model)
 	s.T().Skip("Email field not available in new model - GetByEmail needs to be updated or removed")
 }
 
@@ -157,6 +166,7 @@ func (s *UserRepositoryTestSuite) TestGetByEmail_CaseSensitive() {
 
 // Test GetByUsername operations
 func (s *UserRepositoryTestSuite) TestGetByUsername_Success() {
+	// GIVEN — a user created with username "testuser"
 	user := &model.User{
 		Username:      "testuser",
 		Password:      "password",
@@ -165,11 +175,13 @@ func (s *UserRepositoryTestSuite) TestGetByUsername_Success() {
 		ContactNumber: "1234567890",
 		ClientId:      lo.ToPtr(1),
 	}
-	err := s.userRepository.Create(context.Background(),user)
+	err := s.userRepository.Create(context.Background(), user)
 	assert.NoError(s.T(), err)
 
+	// WHEN — GetByUsername("testuser") is called
 	result, err := s.userRepository.GetByUsername("testuser")
 
+	// THEN — user is returned
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
 	assert.Equal(s.T(), user.Username, result.Username)
@@ -178,15 +190,18 @@ func (s *UserRepositoryTestSuite) TestGetByUsername_Success() {
 }
 
 func (s *UserRepositoryTestSuite) TestGetByUsername_NotFound() {
+	// GIVEN — no user "nonexistent"
+	// WHEN — GetByUsername("nonexistent") is called
 	result, err := s.userRepository.GetByUsername("nonexistent")
 
-	// GetByUsername returns (nil, nil) when not found, not an error
+	// THEN — nil, nil
 	assert.NoError(s.T(), err)
 	assert.Nil(s.T(), result)
 }
 
 // Test Update operations
 func (s *UserRepositoryTestSuite) TestUpdate_Success() {
+	// GIVEN — a user created in DB
 	user := &model.User{
 		Username:      "olduser",
 		Password:      "password",
@@ -195,7 +210,7 @@ func (s *UserRepositoryTestSuite) TestUpdate_Success() {
 		ContactNumber: "1234567890",
 		ClientId:      lo.ToPtr(1),
 	}
-	err := s.userRepository.Create(context.Background(),user)
+	err := s.userRepository.Create(context.Background(), user)
 	assert.NoError(s.T(), err)
 	originalUpdatedAt := user.UpdatedAt
 
@@ -204,11 +219,11 @@ func (s *UserRepositoryTestSuite) TestUpdate_Success() {
 
 	user.Username = "newuser"
 	user.FirstName = "New"
-	err = s.userRepository.Update(context.Background(),user)
+	// WHEN — Update is called
+	err = s.userRepository.Update(context.Background(), user)
 
+	// THEN — no error and GetByID returns updated fields
 	assert.NoError(s.T(), err)
-
-	// Verify update
 	updated, err := s.userRepository.GetByID(user.Id)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), "newuser", updated.Username)
@@ -217,6 +232,7 @@ func (s *UserRepositoryTestSuite) TestUpdate_Success() {
 }
 
 func (s *UserRepositoryTestSuite) TestUpdate_PartialFields() {
+	// GIVEN — a user created in DB
 	user := &model.User{
 		Username:      "testuser",
 		Password:      "password",
@@ -225,23 +241,23 @@ func (s *UserRepositoryTestSuite) TestUpdate_PartialFields() {
 		ContactNumber: "1234567890",
 		ClientId:      lo.ToPtr(1),
 	}
-	err := s.userRepository.Create(context.Background(),user)
+	err := s.userRepository.Create(context.Background(), user)
 	assert.NoError(s.T(), err)
 
-	// Update only username
 	user.Username = "updateduser"
-	err = s.userRepository.Update(context.Background(),user)
+	// WHEN — Update is called (only username changed)
+	err = s.userRepository.Update(context.Background(), user)
 
+	// THEN — only username changed
 	assert.NoError(s.T(), err)
-
-	// Verify only username changed
 	updated, err := s.userRepository.GetByID(user.Id)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), "updateduser", updated.Username)
-	assert.Equal(s.T(), "Test", updated.FirstName) // FirstName unchanged
+	assert.Equal(s.T(), "Test", updated.FirstName)
 }
 
 func (s *UserRepositoryTestSuite) TestUpdate_NonExistent() {
+	// GIVEN — user with id 999 not in DB
 	user := &model.User{
 		Id:            999,
 		Username:      "testuser",
@@ -252,10 +268,10 @@ func (s *UserRepositoryTestSuite) TestUpdate_NonExistent() {
 		ClientId:      lo.ToPtr(1),
 	}
 
-	// GORM Save will create if not found, so this might not error
-	err := s.userRepository.Update(context.Background(),user)
+	// WHEN — Update is called
+	err := s.userRepository.Update(context.Background(), user)
 
-	// GORM Save creates if ID doesn't exist, so we verify it was created
+	// THEN — GORM Save creates; GetByID returns record
 	assert.NoError(s.T(), err)
 	result, err := s.userRepository.GetByID(999)
 	assert.NoError(s.T(), err)
@@ -264,6 +280,7 @@ func (s *UserRepositoryTestSuite) TestUpdate_NonExistent() {
 
 // Test Delete operations
 func (s *UserRepositoryTestSuite) TestDelete_Success() {
+	// GIVEN — a user created in DB
 	user := &model.User{
 		Username:      "testuser",
 		Password:      "password",
@@ -272,48 +289,47 @@ func (s *UserRepositoryTestSuite) TestDelete_Success() {
 		ContactNumber: "1234567890",
 		ClientId:      lo.ToPtr(1),
 	}
-	err := s.userRepository.Create(context.Background(),user)
+	err := s.userRepository.Create(context.Background(), user)
 	assert.NoError(s.T(), err)
 	userID := user.Id
 
+	// WHEN — Delete is called
 	err = s.userRepository.Delete(userID)
 
+	// THEN — no error; GetByID returns nil; record soft-deleted
 	assert.NoError(s.T(), err)
-
-	// Verify soft delete (User model has DeletedAt field)
-	// After soft delete, GetByID should return nil, nil (not found)
 	result, err := s.userRepository.GetByID(userID)
 	assert.NoError(s.T(), err)
 	assert.Nil(s.T(), result)
-
-	// Verify it's soft deleted (still in DB but with DeletedAt set)
 	var deletedUser model.User
 	s.db.Unscoped().First(&deletedUser, userID)
 	assert.NotZero(s.T(), deletedUser.DeletedAt)
 }
 
 func (s *UserRepositoryTestSuite) TestDelete_NotFound() {
+	// GIVEN — no user with id 999
+	// WHEN — Delete(999) is called
 	err := s.userRepository.Delete(999)
 
-	// GORM Delete doesn't error on non-existent records
+	// THEN — no error (GORM behavior)
 	assert.NoError(s.T(), err)
 }
 
 func (s *UserRepositoryTestSuite) TestDelete_MultipleUsers() {
-	// Create multiple users
+	// GIVEN — multiple users created
 	user1 := &model.User{Username: "user1", Password: "pass1", FirstName: "User1", UserLevel: 1, ContactNumber: "111", ClientId: lo.ToPtr(1)}
 	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: lo.ToPtr(1)}
 	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: lo.ToPtr(1)}
 
-	s.userRepository.Create(context.Background(),user1)
-	s.userRepository.Create(context.Background(),user2)
-	s.userRepository.Create(context.Background(),user3)
+	s.userRepository.Create(context.Background(), user1)
+	s.userRepository.Create(context.Background(), user2)
+	s.userRepository.Create(context.Background(), user3)
 
-	// Delete one user
+	// WHEN — Delete(user2.Id) is called
 	err := s.userRepository.Delete(user2.Id)
 	assert.NoError(s.T(), err)
 
-	// Verify only user2 is deleted
+	// THEN — only user2 is deleted
 	result1, err := s.userRepository.GetByID(user1.Id)
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result1)
@@ -329,8 +345,8 @@ func (s *UserRepositoryTestSuite) TestDelete_MultipleUsers() {
 
 // Test ListByClientId operations
 func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
+	// GIVEN — 5 users for client 1, 3 for client 2
 	clientId := 1
-	// Create multiple users for clientId 1
 	for i := 0; i < 5; i++ {
 		user := &model.User{
 			Username:      "user" + strconv.Itoa(i),
@@ -340,7 +356,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 			ContactNumber: "123456789" + strconv.Itoa(i),
 			ClientId:      &clientId,
 		}
-		s.userRepository.Create(context.Background(),user)
+		s.userRepository.Create(context.Background(), user)
 	}
 
 	// Create users for different clientId
@@ -353,78 +369,81 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 			ContactNumber: "987654321" + strconv.Itoa(i),
 			ClientId:      lo.ToPtr(2),
 		}
-		s.userRepository.Create(context.Background(),user)
+		s.userRepository.Create(context.Background(), user)
 	}
 
 	ctx := context.Background()
 	clientIdPtr := &clientId
+	// WHEN — ListByClientId(ctx, 1) is called
 	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
 
+	// THEN — 5 users for client 1
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), users, 5)
-	// Verify all users belong to the correct clientId
 	for _, user := range users {
 		assert.Equal(s.T(), &clientId, user.ClientId)
 	}
 }
 
 func (s *UserRepositoryTestSuite) TestListByClientId_Empty() {
+	// GIVEN — no users for client 999
 	ctx := context.Background()
 	clientId := 999
 	clientIdPtr := &clientId
+	// WHEN — ListByClientId is called
 	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
 
+	// THEN — empty list
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), users)
 	assert.Len(s.T(), users, 0)
 }
 
 func (s *UserRepositoryTestSuite) TestListByClientId_ExcludesSoftDeleted() {
+	// GIVEN — 3 users for client 1; one is soft-deleted
 	clientId := 1
-	// Create users
 	user1 := &model.User{Username: "user1", Password: "pass1", FirstName: "User1", UserLevel: 1, ContactNumber: "111", ClientId: &clientId}
 	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: &clientId}
 	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: &clientId}
 
-	s.userRepository.Create(context.Background(),user1)
-	s.userRepository.Create(context.Background(),user2)
-	s.userRepository.Create(context.Background(),user3)
+	s.userRepository.Create(context.Background(), user1)
+	s.userRepository.Create(context.Background(), user2)
+	s.userRepository.Create(context.Background(), user3)
 
-	// Delete one user
 	s.userRepository.Delete(user2.Id)
 
-	// List should only return non-deleted users
 	ctx := context.Background()
 	clientIdPtr := &clientId
+	// WHEN — ListByClientId is called
 	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
 
+	// THEN — 2 users (soft-deleted excluded)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), users, 2)
-	// Verify user2 is not in the list
 	for _, user := range users {
 		assert.NotEqual(s.T(), user2.Id, user.Id)
 	}
 }
 
 func (s *UserRepositoryTestSuite) TestListByClientId_FiltersByClientId() {
-	// Create users for different clientIds
+	// GIVEN — 2 users for client 1, 1 for client 2
 	user1 := &model.User{Username: "user1", Password: "pass1", FirstName: "User1", UserLevel: 1, ContactNumber: "111", ClientId: lo.ToPtr(1)}
 	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: lo.ToPtr(1)}
 	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: lo.ToPtr(2)}
 
-	s.userRepository.Create(context.Background(),user1)
-	s.userRepository.Create(context.Background(),user2)
-	s.userRepository.Create(context.Background(),user3)
+	s.userRepository.Create(context.Background(), user1)
+	s.userRepository.Create(context.Background(), user2)
+	s.userRepository.Create(context.Background(), user3)
 
-	// List users for clientId 1
 	ctx := context.Background()
 	clientId := 1
 	clientIdPtr := &clientId
+	// WHEN — ListByClientId(ctx, 1) is called
 	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
 
+	// THEN — 2 users for client 1
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), users, 2)
-	// Verify all users belong to clientId 1
 	for _, user := range users {
 		assert.Equal(s.T(), lo.ToPtr(1), user.ClientId)
 		assert.NotEqual(s.T(), user3.Id, user.Id)
@@ -433,6 +452,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_FiltersByClientId() {
 
 // Test edge cases and data integrity
 func (s *UserRepositoryTestSuite) TestCreate_RequiredFields() {
+	// GIVEN — user with empty/minimal fields (SQLite may allow)
 	// Note: SQLite is more lenient with NOT NULL constraints than PostgreSQL
 	// This test verifies behavior with empty strings
 	// For strict NOT NULL enforcement, use PostgreSQL in integration tests
@@ -447,18 +467,17 @@ func (s *UserRepositoryTestSuite) TestCreate_RequiredFields() {
 		ClientId:      nil,
 	}
 
-	err := s.userRepository.Create(context.Background(),user)
+	// WHEN — Create is called
+	err := s.userRepository.Create(context.Background(), user)
 
-	// SQLite allows empty strings, so this may succeed
-	// We just verify the behavior is consistent
+	// THEN — behavior consistent (may succeed or fail depending on DB)
 	if err == nil {
-		// If it succeeds, verify the record was created
 		assert.NotZero(s.T(), user.Id)
 	}
-	// If it fails, that's also acceptable - depends on database configuration
 }
 
 func (s *UserRepositoryTestSuite) TestGetByID_AfterDelete() {
+	// GIVEN — a user created then soft-deleted
 	user := &model.User{
 		Username:      "testuser",
 		Password:      "password",
@@ -467,14 +486,15 @@ func (s *UserRepositoryTestSuite) TestGetByID_AfterDelete() {
 		ContactNumber: "1234567890",
 		ClientId:      lo.ToPtr(1),
 	}
-	s.userRepository.Create(context.Background(),user)
+	s.userRepository.Create(context.Background(), user)
 	userID := user.Id
 
-	// Delete the user
 	s.userRepository.Delete(userID)
 
-	// Try to get it - should return nil, nil (not found)
+	// WHEN — GetByID is called
 	result, err := s.userRepository.GetByID(userID)
+
+	// THEN — nil, nil (not found)
 	assert.NoError(s.T(), err)
 	assert.Nil(s.T(), result)
 }
@@ -484,7 +504,8 @@ func (s *UserRepositoryTestSuite) TestGetByEmail_AfterDelete() {
 }
 
 func (s *UserRepositoryTestSuite) TestMultipleOperations() {
-	// Create
+	// GIVEN — empty DB
+	// WHEN/THEN — create, get, update, delete flow
 	user := &model.User{
 		Username:      "testuser",
 		Password:      "password",
@@ -493,7 +514,7 @@ func (s *UserRepositoryTestSuite) TestMultipleOperations() {
 		ContactNumber: "1234567890",
 		ClientId:      lo.ToPtr(1),
 	}
-	err := s.userRepository.Create(context.Background(),user)
+	err := s.userRepository.Create(context.Background(), user)
 	assert.NoError(s.T(), err)
 
 	// Get by ID
@@ -509,7 +530,7 @@ func (s *UserRepositoryTestSuite) TestMultipleOperations() {
 
 	// Update
 	user.Username = "updateduser"
-	err = s.userRepository.Update(context.Background(),user)
+	err = s.userRepository.Update(context.Background(), user)
 	assert.NoError(s.T(), err)
 
 	// Verify update
@@ -526,4 +547,3 @@ func (s *UserRepositoryTestSuite) TestMultipleOperations() {
 	assert.NoError(s.T(), err)
 	assert.Nil(s.T(), deletedResult)
 }
-

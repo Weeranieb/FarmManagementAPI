@@ -25,3 +25,19 @@ func CalculateMoveCost(amount int, pricePerUnit, fishWeight decimal.Decimal, add
 	additionalCost = CalculateAdditionalCostsTotal(additionalCosts)
 	return fishCost, additionalCost
 }
+
+// CalculateSellRevenue sums amount * pricePerUnit for each sell detail line.
+func CalculateSellRevenue(details []dto.PondSellDetailItem) decimal.Decimal {
+	total := decimal.Zero
+	for _, d := range details {
+		total = total.Add(d.Amount.Mul(d.PricePerUnit))
+	}
+	return total
+}
+
+// CalculateSellTotals returns revenue from sell details and total of additional costs.
+func CalculateSellTotals(details []dto.PondSellDetailItem, additionalCosts []dto.AdditionalCostItem) (revenue, additionalCostTotal decimal.Decimal) {
+	revenue = CalculateSellRevenue(details)
+	additionalCostTotal = CalculateAdditionalCostsTotal(additionalCosts)
+	return revenue, additionalCostTotal
+}

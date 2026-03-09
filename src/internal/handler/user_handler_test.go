@@ -73,6 +73,7 @@ func setLocalsMiddleware(locals map[string]any) fiber.Handler {
 
 // Test AddUser handler
 func (s *UserHandlerTestSuite) TestAddUser_Success() {
+	// GIVEN — valid CreateUserRequest; service returns success
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -114,14 +115,17 @@ func (s *UserHandlerTestSuite) TestAddUser_Success() {
 	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/user is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_InvalidBody() {
+	// GIVEN — invalid JSON body
 	// Invalid JSON might still parse to empty struct and call service, so we need a mock
 	emptyReq := dto.CreateUserRequest{}
 	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), emptyReq, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
@@ -132,15 +136,17 @@ func (s *UserHandlerTestSuite) TestAddUser_InvalidBody() {
 	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer([]byte("invalid json")))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST with invalid JSON is sent
 	resp, err := app.Test(req)
 
+	// THEN — error or non-success response
 	assert.NoError(s.T(), err)
-	// Invalid body should return an error response
 	assert.True(s.T(), resp.StatusCode == fiber.StatusOK || resp.StatusCode >= 400)
 	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_ValidationError() {
+	// GIVEN — request with too-short username/password
 	req := &dto.CreateUserRequest{
 		Username: "ab",  // Too short
 		Password: "123", // Too short
@@ -156,15 +162,17 @@ func (s *UserHandlerTestSuite) TestAddUser_ValidationError() {
 	reqHTTP := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer(body))
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST with validation errors is sent
 	resp, err := app.Test(reqHTTP)
 
+	// THEN — error or non-success response
 	assert.NoError(s.T(), err)
-	// Validation error should return an error response
 	assert.True(s.T(), resp.StatusCode == fiber.StatusOK || resp.StatusCode >= 400)
 	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_MissingUsername() {
+	// GIVEN — valid body; no username in context
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -183,14 +191,17 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingUsername() {
 	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/user is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 (handler may still call service)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
+	// GIVEN — valid body; no clientId in context
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -217,6 +228,7 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
+	// GIVEN — valid body; service returns error (e.g. user already exists)
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
@@ -224,8 +236,6 @@ func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
 		UserLevel:     1,
 		ContactNumber: "1234567890",
 	}
-
-	// When no JWT is present, handler uses "system" as username and nil clientId
 	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "system", (*int)(nil)).Return(nil, errors.New("user already exist"))
 
 	app := fiber.New()
@@ -235,8 +245,10 @@ func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
 	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — POST /api/v1/user is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
@@ -244,6 +256,7 @@ func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
 
 // Test GetUser handler
 func (s *UserHandlerTestSuite) TestGetUser_Success() {
+	// GIVEN — userId in context; service returns user
 	userID := 1
 	expectedResponse := &dto.UserResponse{
 		Id:            userID,
@@ -269,26 +282,32 @@ func (s *UserHandlerTestSuite) TestGetUser_Success() {
 
 	req := httptest.NewRequest("GET", "/api/v1/user", nil)
 
+	// WHEN — GET /api/v1/user is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestGetUser_MissingUserId() {
+	// GIVEN — no userId in context
 	app := fiber.New()
 	app.Get("/api/v1/user", s.userHandler.GetUser)
 
 	req := httptest.NewRequest("GET", "/api/v1/user", nil)
 
+	// WHEN — GET /api/v1/user is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 (handler may return error in body)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
+	// GIVEN — service returns error
 	userID := 1
 	s.userService.On("GetUser", userID).Return(nil, errors.New("user not found"))
 
@@ -300,8 +319,10 @@ func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
 
 	req := httptest.NewRequest("GET", "/api/v1/user", nil)
 
+	// WHEN — GET /api/v1/user is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
@@ -309,6 +330,7 @@ func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
 
 // Test UpdateUser handler
 func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
+	// GIVEN — valid update body; service returns nil
 	updateUser := &model.User{
 		Id:            1,
 		ClientId:      lo.ToPtr(1),
@@ -332,27 +354,33 @@ func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
 	req := httptest.NewRequest("PUT", "/api/v1/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/user is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestUpdateUser_InvalidBody() {
+	// GIVEN — invalid JSON body
 	app := fiber.New()
 	app.Put("/api/v1/user", s.userHandler.UpdateUser)
 
 	req := httptest.NewRequest("PUT", "/api/v1/user", bytes.NewBuffer([]byte("invalid json")))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT with invalid JSON is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 (handler may return error in body)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestUpdateUser_MissingUsername() {
+	// GIVEN — valid body; no username in context
 	updateUser := &model.User{
 		Id:        1,
 		Username:  "updateduser",
@@ -366,13 +394,16 @@ func (s *UserHandlerTestSuite) TestUpdateUser_MissingUsername() {
 	req := httptest.NewRequest("PUT", "/api/v1/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/user is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
+	// GIVEN — service returns error
 	updateUser := &model.User{
 		Id:        1,
 		Username:  "updateduser",
@@ -392,8 +423,10 @@ func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
 	req := httptest.NewRequest("PUT", "/api/v1/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	// WHEN — PUT /api/v1/user is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
@@ -401,6 +434,7 @@ func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
 
 // Test GetUserList handler
 func (s *UserHandlerTestSuite) TestGetUserList_Success() {
+	// GIVEN — super admin; service returns list
 	clientId := 1
 
 	expectedUsers := []*dto.UserResponse{
@@ -446,27 +480,32 @@ func (s *UserHandlerTestSuite) TestGetUserList_Success() {
 
 	req := httptest.NewRequest("GET", "/api/v1/user/list", nil)
 
+	// WHEN — GET /api/v1/user/list is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestGetUserList_MissingClientId() {
+	// GIVEN — no clientId in context
 	app := fiber.New()
 	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
 
 	req := httptest.NewRequest("GET", "/api/v1/user/list", nil)
 
+	// WHEN — GET /api/v1/user/list is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestGetUserList_ServiceError() {
-	// Super admin can pass nil clientId
+	// GIVEN — service returns error
 	s.userService.On("GetUserList", mock.MatchedBy(func(ctx any) bool {
 		_, ok := ctx.(context.Context)
 		return ok
@@ -480,8 +519,10 @@ func (s *UserHandlerTestSuite) TestGetUserList_ServiceError() {
 
 	req := httptest.NewRequest("GET", "/api/v1/user/list", nil)
 
+	// WHEN — GET /api/v1/user/list is sent
 	resp, err := app.Test(req)
 
+	// THEN — 200 and expectations met
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())

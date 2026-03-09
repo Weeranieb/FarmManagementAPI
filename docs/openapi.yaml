@@ -1698,11 +1698,24 @@ components:
           items:
             $ref: '#/components/schemas/PondSellDetailItem'
           description: Per-species sell lines
-        buyer:
-          type: string
+        merchantId:
+          type: integer
+          nullable: true
         markToClose:
           type: boolean
           description: If true, close active pond after transaction and set pond to maintenance
+        additionalCosts:
+          type: array
+          items:
+            type: object
+            required: [title, cost]
+            properties:
+              title:
+                type: string
+              cost:
+                type: number
+                format: double
+          description: Optional extra costs (e.g. transport, packaging)
 
     DropdownItem:
       type: object
