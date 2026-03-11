@@ -3,7 +3,12 @@ DB_USER := user
 DB_PASS := password
 DB_NAME := boonmafarm
 
+# Live reload with air (install: go install github.com/air-verse/air@latest)
 run:
+	PATH="$(shell go env GOPATH)/bin:$$PATH" air
+
+# One-off run without air
+run-once:
 	go run src/cmd/api/main.go
 
 gen-mocks:

@@ -15,6 +15,7 @@ type MerchantRepository interface {
 	GetByID(id int) (*model.Merchant, error)
 	GetByContactNumberAndName(contactNumber, name string) (*model.Merchant, error)
 	Update(ctx context.Context, merchant *model.Merchant) error
+	Delete(ctx context.Context, id int) error
 	List() ([]*model.Merchant, error)
 }
 
@@ -56,6 +57,10 @@ func (r *merchantRepository) GetByContactNumberAndName(contactNumber, name strin
 
 func (r *merchantRepository) Update(ctx context.Context, merchant *model.Merchant) error {
 	return r.db.WithContext(ctx).Save(merchant).Error
+}
+
+func (r *merchantRepository) Delete(ctx context.Context, id int) error {
+	return r.db.WithContext(ctx).Delete(&model.Merchant{}, id).Error
 }
 
 func (r *merchantRepository) List() ([]*model.Merchant, error) {

@@ -1,0 +1,10 @@
+# Air live-reload config. Run from backend/ with: make (or air)
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/main ./src/cmd/api"
+  bin = "./tmp/main"
+
+[log]
+  main_only = true

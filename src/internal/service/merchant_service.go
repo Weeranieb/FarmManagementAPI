@@ -13,7 +13,8 @@ import (
 type MerchantService interface {
 	Create(ctx context.Context, request dto.CreateMerchantRequest, username string) (*dto.MerchantResponse, error)
 	Get(id int) (*dto.MerchantResponse, error)
-	Update(ctx context.Context, request *model.Merchant, username string) error
+	Update(ctx context.Context, request dto.UpdateMerchantRequest, username string) error
+	Delete(ctx context.Context, id int) error
 	GetList() ([]*dto.MerchantResponse, error)
 }
 
@@ -66,12 +67,32 @@ func (s *merchantService) Get(id int) (*dto.MerchantResponse, error) {
 	return s.toMerchantResponse(merchant), nil
 }
 
-func (s *merchantService) Update(ctx context.Context, request *model.Merchant, username string) error {
-	// Update merchant (UpdatedBy set via BaseModel hook from ctx)
-	if err := s.merchantRepo.Update(ctx, request); err != nil {
+func (s *merchantService) Update(ctx context.Context, request dto.UpdateMerchantRequest, username string) error {
+	existing, err := s.merchantRepo.GetByID(request.Id)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existing == nil {
+		return errors.ErrMerchantNotFound
+	}
+	existing.Name = request.Name
+	existing.ContactNumber = request.ContactNumber
+	existing.Location = request.Location
+	if err := s.merchantRepo.Update(ctx, existing); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil
+}
+
+func (s *merchantService) Delete(ctx context.Context, id int) error {
+	existing, err := s.merchantRepo.GetByID(id)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existing == nil {
+		return errors.ErrMerchantNotFound
+	}
+	return s.merchantRepo.Delete(ctx, id)
 }
 
 func (s *merchantService) GetList() ([]*dto.MerchantResponse, error) {
@@ -100,4 +121,3 @@ func (s *merchantService) toMerchantResponse(merchant *model.Merchant) *dto.Merc
 		UpdatedBy:     merchant.UpdatedBy,
 	}
 }
-
