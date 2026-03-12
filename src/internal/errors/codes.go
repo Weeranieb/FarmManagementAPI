@@ -142,6 +142,11 @@ var (
 		Code:    500075,
 		Message: "Pond has no active cycle",
 	}
+
+	ErrPondInMaintenance = &AppError{
+		Code:    500076,
+		Message: "Pond is in maintenance; move and sell are not allowed",
+	}
 )
 
 // Worker errors (500080-500089)

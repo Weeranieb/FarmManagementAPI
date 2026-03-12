@@ -277,6 +277,9 @@ func (s *pondService) validatePondWithFarmAndActivePondSource(data *repository.P
 	if data == nil || data.Pond == nil {
 		return errors.ErrPondNotFound
 	}
+	if data.Pond.Status == constants.FarmStatusMaintenance {
+		return errors.ErrPondInMaintenance
+	}
 	if data.ActivePond == nil {
 		return errors.ErrPondSourceNotActive
 	}
@@ -451,6 +454,9 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 func (s *pondService) validatePondForSell(data *repository.PondWithFarmAndActivePond) error {
 	if data == nil || data.Pond == nil {
 		return errors.ErrPondNotFound
+	}
+	if data.Pond.Status == constants.FarmStatusMaintenance {
+		return errors.ErrPondInMaintenance
 	}
 	if data.ActivePond == nil {
 		return errors.ErrPondNotActive
@@ -635,6 +641,7 @@ func (s *pondService) toPondResponseFromPondWithActive(pa *repository.PondWithFa
 		resp.TotalFish = &totalFish
 		resp.FishTypes = ap.FishTypes
 		if !ap.StartDate.IsZero() {
+			resp.StartDate = &ap.StartDate
 			// Start date = day 1; each full day after adds 1
 			daysSince := int(time.Since(ap.StartDate).Hours() / 24)
 			ageDays := daysSince + 1

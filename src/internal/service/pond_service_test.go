@@ -524,10 +524,10 @@ func (s *PondServiceTestSuite) TestMovePond_SourceNotActive() {
 	// WHEN — MovePond is called
 	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
 
-	// THEN — ErrPondSourceNotActive; no response
+	// THEN — ErrPondInMaintenance (maintenance ponds cannot be source for move)
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), resp)
-	assert.ErrorIs(s.T(), err, errors.ErrPondSourceNotActive)
+	assert.ErrorIs(s.T(), err, errors.ErrPondInMaintenance)
 	s.pondRepo.AssertExpectations(s.T())
 }
 
@@ -869,10 +869,10 @@ func (s *PondServiceTestSuite) TestSellPond_PondNotActive() {
 	// WHEN — SellPond is called
 	resp, err := s.pondService.SellPond(fillPondCtx(), pondId, req, "user")
 
-	// THEN — ErrPondNotActive; no response
+	// THEN — ErrPondInMaintenance (maintenance ponds cannot sell)
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), resp)
-	assert.ErrorIs(s.T(), err, errors.ErrPondNotActive)
+	assert.ErrorIs(s.T(), err, errors.ErrPondInMaintenance)
 	s.pondRepo.AssertExpectations(s.T())
 }
 
