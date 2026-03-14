@@ -110,3 +110,68 @@ type PondSellResponse struct {
 	ActivityId   int64 `json:"activityId"`
 	ActivePondId int64 `json:"activePondId"`
 }
+
+// --- Preview (Review & Confirm) DTOs ---
+
+// AdditionalCostLine is a single row in the additional-costs summary.
+type AdditionalCostLine struct {
+	Title string  `json:"title"`
+	Cost  float64 `json:"cost"`
+}
+
+// PondFillPreviewResponse is returned by POST /pond/:pondId/fill/preview.
+type PondFillPreviewResponse struct {
+	Valid           bool                 `json:"valid"`
+	Species         string               `json:"species"`
+	Quantity        int                  `json:"quantity"`
+	AvgWeightKg     float64              `json:"avgWeightKg"`
+	TotalWeight     float64              `json:"totalWeight"`
+	CostPerUnit     float64              `json:"costPerUnit"`
+	BaseStockCost   float64              `json:"baseStockCost"`
+	AdditionalCosts []AdditionalCostLine `json:"additionalCosts"`
+	TotalCost       float64              `json:"totalCost"`
+	StockBefore     int                  `json:"stockBefore"`
+	StockAfter      int                  `json:"stockAfter"`
+	StockDelta      int                  `json:"stockDelta"`
+	ValidationError string               `json:"validationError,omitempty"`
+}
+
+// PondMovePreviewResponse is returned by POST /pond/:pondId/move/preview.
+type PondMovePreviewResponse struct {
+	Valid            bool                 `json:"valid"`
+	Species          string               `json:"species"`
+	Quantity         int                  `json:"quantity"`
+	AvgWeightKg      float64              `json:"avgWeightKg"`
+	TotalWeight      float64              `json:"totalWeight"`
+	CostPerUnit      float64              `json:"costPerUnit"`
+	BaseTransferCost float64              `json:"baseTransferCost"`
+	AdditionalCosts  []AdditionalCostLine `json:"additionalCosts"`
+	TotalCost        float64              `json:"totalCost"`
+	StockBefore      int                  `json:"stockBefore"`
+	StockAfter       int                  `json:"stockAfter"`
+	StockDelta       int                  `json:"stockDelta"`
+	ValidationError  string               `json:"validationError,omitempty"`
+}
+
+// PondSellPreviewItem is one row in the sale details summary.
+type PondSellPreviewItem struct {
+	FishType    string  `json:"fishType"`
+	Quantity    float64 `json:"quantity"`
+	AvgWeightKg float64 `json:"avgWeightKg"`
+	PricePerKg  float64 `json:"pricePerKg"`
+	Subtotal    float64 `json:"subtotal"`
+	TotalWeight float64 `json:"totalWeight"`
+}
+
+// PondSellPreviewResponse is returned by POST /pond/:pondId/sell/preview.
+type PondSellPreviewResponse struct {
+	Valid           bool                  `json:"valid"`
+	Items           []PondSellPreviewItem `json:"items"`
+	TotalRevenue    float64               `json:"totalRevenue"`
+	TotalQuantity   float64               `json:"totalQuantity"`
+	TotalWeight     float64               `json:"totalWeight"`
+	StockBefore     int                   `json:"stockBefore"`
+	StockAfter      int                   `json:"stockAfter"`
+	StockDelta      int                   `json:"stockDelta"`
+	ValidationError string                `json:"validationError,omitempty"`
+}

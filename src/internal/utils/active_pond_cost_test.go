@@ -5,6 +5,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 )
 
@@ -57,5 +58,85 @@ func TestCalculateMoveCost(t *testing.T) {
 		// THEN — fishCost 30, additionalCost 20
 		assert.True(t, fishCost.Equal(decimal.RequireFromString("30")), "fishCost: 3 * 0.5 * 20 = 30")
 		assert.True(t, additionalCost.Equal(decimal.RequireFromString("20")), "additionalCost: 15 + 5 = 20")
+	})
+}
+
+func TestCalculateAdditionalCostsTotal(t *testing.T) {
+	t.Run("nil returns zero", func(t *testing.T) {
+		got := CalculateAdditionalCostsTotal(nil)
+		assert.True(t, got.Equal(decimal.Zero))
+	})
+	t.Run("empty returns zero", func(t *testing.T) {
+		got := CalculateAdditionalCostsTotal([]dto.AdditionalCostItem{})
+		assert.True(t, got.Equal(decimal.Zero))
+	})
+	t.Run("sums costs with titles", func(t *testing.T) {
+		got := CalculateAdditionalCostsTotal([]dto.AdditionalCostItem{
+			{Title: "transport", Cost: decimal.RequireFromString("100.50")},
+			{Title: "labour", Cost: decimal.RequireFromString("50.25")},
+		})
+		assert.True(t, got.Equal(decimal.RequireFromString("150.75")))
+	})
+}
+
+func TestCalculateSellRevenue(t *testing.T) {
+	t.Run("empty details returns zero", func(t *testing.T) {
+		got := CalculateSellRevenue(nil)
+		assert.True(t, got.Equal(decimal.Zero))
+	})
+	t.Run("single line amount * pricePerUnit", func(t *testing.T) {
+		got := CalculateSellRevenue([]dto.PondSellDetailItem{
+			{FishType: "CATFISH", Amount: decimal.RequireFromString("30"), PricePerUnit: decimal.RequireFromString("50")},
+		})
+		assert.True(t, got.Equal(decimal.RequireFromString("1500")), "30 * 50 = 1500")
+	})
+	t.Run("multiple lines sum subtotals", func(t *testing.T) {
+		got := CalculateSellRevenue([]dto.PondSellDetailItem{
+			{FishType: "CATFISH", Amount: decimal.RequireFromString("10"), PricePerUnit: decimal.RequireFromString("20")},
+			{FishType: "TILAPIA", Amount: decimal.RequireFromString("5"), PricePerUnit: decimal.RequireFromString("40")},
+		})
+		assert.True(t, got.Equal(decimal.RequireFromString("400")), "200 + 200 = 400")
+	})
+}
+
+func TestCalculateSellTotals(t *testing.T) {
+	t.Run("revenue and additional cost total", func(t *testing.T) {
+		revenue, addCost := CalculateSellTotals(
+			[]dto.PondSellDetailItem{
+				{FishType: "CATFISH", Amount: decimal.RequireFromString("100"), PricePerUnit: decimal.RequireFromString("2")},
+			},
+			[]dto.AdditionalCostItem{{Title: "fee", Cost: decimal.RequireFromString("10")}},
+		)
+		assert.True(t, revenue.Equal(decimal.RequireFromString("200")), "100 * 2 = 200")
+		assert.True(t, addCost.Equal(decimal.RequireFromString("10")))
+	})
+}
+
+func TestCalculateSellDetailLines(t *testing.T) {
+	t.Run("empty details returns empty slice", func(t *testing.T) {
+		got := CalculateSellDetailLines(nil)
+		assert.Empty(t, got)
+	})
+	t.Run("single detail line", func(t *testing.T) {
+		got := CalculateSellDetailLines([]dto.PondSellDetailItem{
+			{FishType: "CATFISH", Amount: decimal.RequireFromString("30"), PricePerUnit: decimal.RequireFromString("50")},
+		})
+		require.Len(t, got, 1)
+		assert.Equal(t, "CATFISH", got[0].FishType)
+		assert.Equal(t, 30.0, got[0].Amount)
+		assert.Equal(t, 50.0, got[0].PricePerUnit)
+		assert.Equal(t, 1500.0, got[0].Subtotal)
+	})
+	t.Run("multiple lines match CalculateSellRevenue sum", func(t *testing.T) {
+		details := []dto.PondSellDetailItem{
+			{FishType: "A", Amount: decimal.RequireFromString("10"), PricePerUnit: decimal.RequireFromString("2.5")},
+			{FishType: "B", Amount: decimal.RequireFromString("4"), PricePerUnit: decimal.RequireFromString("10")},
+		}
+		lines := CalculateSellDetailLines(details)
+		require.Len(t, lines, 2)
+		assert.Equal(t, 25.0, lines[0].Subtotal, "10 * 2.5")
+		assert.Equal(t, 40.0, lines[1].Subtotal, "4 * 10")
+		revenue := CalculateSellRevenue(details)
+		assert.True(t, revenue.Equal(decimal.RequireFromString("65")), "25 + 40 = 65")
 	})
 }

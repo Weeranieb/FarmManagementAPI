@@ -14,6 +14,8 @@ import (
 	_ "github.com/weeranieb/boonmafarm-backend/docs"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"go.uber.org/dig"
 )
 
@@ -68,6 +70,9 @@ func setupAndStartServer(conf *config.Config, container *dig.Container) {
 		ReadBufferSize: 60 * 1024,
 		BodyLimit:      10 * 1024 * 1024, // 10MB
 	})
+
+	app.Use(logger.New())
+	app.Use(recover.New())
 
 	// Construct the Handler using DI container
 	var handlers *handler.Handler

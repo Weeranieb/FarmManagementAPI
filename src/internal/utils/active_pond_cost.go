@@ -41,3 +41,28 @@ func CalculateSellTotals(details []dto.PondSellDetailItem, additionalCosts []dto
 	additionalCostTotal = CalculateAdditionalCostsTotal(additionalCosts)
 	return revenue, additionalCostTotal
 }
+
+// SellDetailLine holds per-line sell calculation (same math as CalculateSellRevenue).
+// Used by PreviewSellPond to build itemized breakdown.
+type SellDetailLine struct {
+	FishType     string
+	Amount       float64
+	PricePerUnit float64
+	Subtotal     float64
+}
+
+// CalculateSellDetailLines returns per-line breakdown using the same logic as CalculateSellRevenue.
+func CalculateSellDetailLines(details []dto.PondSellDetailItem) []SellDetailLine {
+	lines := make([]SellDetailLine, 0, len(details))
+	for _, d := range details {
+		amt, _ := d.Amount.Float64()
+		ppu, _ := d.PricePerUnit.Float64()
+		lines = append(lines, SellDetailLine{
+			FishType:     d.FishType,
+			Amount:       amt,
+			PricePerUnit: ppu,
+			Subtotal:     amt * ppu,
+		})
+	}
+	return lines
+}

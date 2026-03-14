@@ -928,7 +928,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Merchant"
+                            "$ref": "#/definitions/dto.UpdateMerchantRequest"
                         }
                     }
                 ],
@@ -1019,6 +1019,62 @@ const docTemplate = `{
                     "merchant"
                 ],
                 "summary": "Get a merchant by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Merchant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Soft-delete a merchant by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "merchant"
+                ],
+                "summary": "Soft-delete a merchant",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1384,6 +1440,67 @@ const docTemplate = `{
                 }
             }
         },
+        "/pond/{pondId}/fill/preview": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Validate and compute fill summary (costs, stock impact) without persisting. For Review \u0026 Confirm flow.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Preview fill pond",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "fishType, amount, activityDate, pricePerUnit, additionalCosts",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondFillRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/pond/{pondId}/move": {
             "post": {
                 "security": [
@@ -1451,6 +1568,67 @@ const docTemplate = `{
                 }
             }
         },
+        "/pond/{pondId}/move/preview": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Validate and compute transfer summary (costs, stock impact) without persisting. For Review \u0026 Confirm flow.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Preview move pond",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Source pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "toPondId, fishType, amount, activityDate, pricePerUnit, additionalCosts",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondMoveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/pond/{pondId}/sell": {
             "post": {
                 "security": [
@@ -1505,6 +1683,67 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/{pondId}/sell/preview": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Validate and compute sell summary (revenue, items, stock impact) without persisting. For Review \u0026 Confirm flow.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Preview sell pond",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "activityDate, details[], merchantId, markToClose, additionalCosts",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondSellRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -2249,6 +2488,12 @@ const docTemplate = `{
                 "activityDate": {
                     "type": "string"
                 },
+                "additionalCosts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdditionalCostItem"
+                    }
+                },
                 "details": {
                     "type": "array",
                     "minItems": 1,
@@ -2299,6 +2544,26 @@ const docTemplate = `{
         "dto.UpdateFarmBody": {
             "type": "object",
             "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UpdateMerchantRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "contactNumber": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "location": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 }
@@ -2396,35 +2661,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "unit": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.Merchant": {
-            "type": "object",
-            "properties": {
-                "contactNumber": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "name": {
                     "type": "string"
                 },
                 "updated_at": {

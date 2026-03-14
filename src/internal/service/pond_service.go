@@ -27,6 +27,9 @@ type PondService interface {
 	FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error)
 	MovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest, username string) (*dto.PondMoveResponse, error)
 	SellPond(ctx context.Context, pondId int, request dto.PondSellRequest, username string) (*dto.PondSellResponse, error)
+	PreviewFillPond(ctx context.Context, pondId int, request dto.PondFillRequest) (*dto.PondFillPreviewResponse, error)
+	PreviewMovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest) (*dto.PondMovePreviewResponse, error)
+	PreviewSellPond(ctx context.Context, pondId int, request dto.PondSellRequest) (*dto.PondSellPreviewResponse, error)
 }
 
 type PondServiceParams struct {
@@ -618,6 +621,171 @@ func (s *pondService) createActivityWithAdditionalCosts(
 		}
 	}
 	return nil
+}
+
+// --- Preview (Review & Confirm) methods ---
+
+func buildAdditionalCostLines(costs []dto.AdditionalCostItem) []dto.AdditionalCostLine {
+	lines := make([]dto.AdditionalCostLine, 0, len(costs))
+	for _, c := range costs {
+		f, _ := c.Cost.Float64()
+		lines = append(lines, dto.AdditionalCostLine{Title: c.Title, Cost: f})
+	}
+	return lines
+}
+
+func (s *pondService) PreviewFillPond(ctx context.Context, pondId int, request dto.PondFillRequest) (*dto.PondFillPreviewResponse, error) {
+	data, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, pondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if data == nil || data.Pond == nil {
+		return &dto.PondFillPreviewResponse{Valid: false, ValidationError: errors.ErrPondNotFound.Message}, nil
+	}
+	if data.ClientId == 0 {
+		return &dto.PondFillPreviewResponse{Valid: false, ValidationError: errors.ErrFarmNotFound.Message}, nil
+	}
+	ok, err := utils.CanAccessClient(ctx, data.ClientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return &dto.PondFillPreviewResponse{Valid: false, ValidationError: errors.ErrAuthPermissionDenied.Message}, nil
+	}
+	if !constants.IsValidFishType(request.FishType) {
+		return &dto.PondFillPreviewResponse{Valid: false, ValidationError: errors.ErrInvalidFishType.Message}, nil
+	}
+
+	stockBefore := 0
+	if data.ActivePond != nil {
+		stockBefore = data.ActivePond.TotalFish
+	}
+
+	// Reuse same calculation as FillPond
+	fillCost := utils.CalculateFillCost(request.Amount, request.PricePerUnit, request.AdditionalCosts)
+	additionalTotal := utils.CalculateAdditionalCostsTotal(request.AdditionalCosts)
+	baseCost := fillCost.Sub(additionalTotal)
+	totalCost, _ := fillCost.Float64()
+	baseCostF, _ := baseCost.Float64()
+	pricePerUnit, _ := request.PricePerUnit.Float64()
+	fishWeight, _ := request.FishWeight.Float64()
+	totalWeight := float64(request.Amount) * fishWeight
+	additionalLines := buildAdditionalCostLines(request.AdditionalCosts)
+
+	return &dto.PondFillPreviewResponse{
+		Valid:           true,
+		Species:         request.FishType,
+		Quantity:        request.Amount,
+		AvgWeightKg:     fishWeight,
+		TotalWeight:     totalWeight,
+		CostPerUnit:     pricePerUnit,
+		BaseStockCost:   baseCostF,
+		AdditionalCosts: additionalLines,
+		TotalCost:       totalCost,
+		StockBefore:     stockBefore,
+		StockAfter:      stockBefore + request.Amount,
+		StockDelta:      request.Amount,
+	}, nil
+}
+
+func (s *pondService) PreviewMovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest) (*dto.PondMovePreviewResponse, error) {
+	sourceData, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, sourcePondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if err := s.validatePondWithFarmAndActivePondSource(sourceData); err != nil {
+		return &dto.PondMovePreviewResponse{Valid: false, ValidationError: err.Error()}, nil
+	}
+	ok, err := utils.CanAccessClient(ctx, sourceData.ClientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return &dto.PondMovePreviewResponse{Valid: false, ValidationError: errors.ErrAuthPermissionDenied.Message}, nil
+	}
+	if sourcePondId == request.ToPondId {
+		return &dto.PondMovePreviewResponse{Valid: false, ValidationError: errors.ErrPondInvalidInput.Message}, nil
+	}
+	if !constants.IsValidFishType(request.FishType) {
+		return &dto.PondMovePreviewResponse{Valid: false, ValidationError: errors.ErrInvalidFishType.Message}, nil
+	}
+
+	stockBefore := sourceData.ActivePond.TotalFish
+
+	fishCost, additionalCost := utils.CalculateMoveCost(request.Amount, request.PricePerUnit, request.FishWeight, request.AdditionalCosts)
+	baseCost, _ := fishCost.Float64()
+	additionalTotal, _ := additionalCost.Float64()
+	pricePerUnit, _ := request.PricePerUnit.Float64()
+	fishWeight, _ := request.FishWeight.Float64()
+	totalWeight := float64(request.Amount) * fishWeight
+	additionalLines := buildAdditionalCostLines(request.AdditionalCosts)
+
+	return &dto.PondMovePreviewResponse{
+		Valid:            true,
+		Species:          request.FishType,
+		Quantity:         request.Amount,
+		AvgWeightKg:      fishWeight,
+		TotalWeight:      totalWeight,
+		CostPerUnit:      pricePerUnit,
+		BaseTransferCost: baseCost,
+		AdditionalCosts:  additionalLines,
+		TotalCost:        baseCost + additionalTotal,
+		StockBefore:      stockBefore,
+		StockAfter:       max(stockBefore-request.Amount, 0),
+		StockDelta:       -request.Amount,
+	}, nil
+}
+
+func (s *pondService) PreviewSellPond(ctx context.Context, pondId int, request dto.PondSellRequest) (*dto.PondSellPreviewResponse, error) {
+	data, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, pondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if err := s.validatePondForSell(data); err != nil {
+		return &dto.PondSellPreviewResponse{Valid: false, ValidationError: err.Error()}, nil
+	}
+	ok, err := utils.CanAccessClient(ctx, data.ClientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return &dto.PondSellPreviewResponse{Valid: false, ValidationError: errors.ErrAuthPermissionDenied.Message}, nil
+	}
+	if err := s.validateSellMerchantIfSet(request.MerchantId); err != nil {
+		return &dto.PondSellPreviewResponse{Valid: false, ValidationError: err.Error()}, nil
+	}
+
+	stockBefore := data.ActivePond.TotalFish
+
+	detailLines := utils.CalculateSellDetailLines(request.Details)
+	items := make([]dto.PondSellPreviewItem, 0, len(detailLines))
+	var totalRevenue, totalQty, totalWeight float64
+	for _, line := range detailLines {
+		items = append(items, dto.PondSellPreviewItem{
+			FishType:    line.FishType,
+			Quantity:    line.Amount,
+			AvgWeightKg: line.Amount, // amount is weight in kg for sell
+			PricePerKg:  line.PricePerUnit,
+			Subtotal:    line.Subtotal,
+			TotalWeight: line.Amount,
+		})
+		totalRevenue += line.Subtotal
+		totalQty += line.Amount
+		totalWeight += line.Amount
+	}
+
+	delta := int(totalQty)
+
+	return &dto.PondSellPreviewResponse{
+		Valid:         true,
+		Items:         items,
+		TotalRevenue:  totalRevenue,
+		TotalQuantity: totalQty,
+		TotalWeight:   totalWeight,
+		StockBefore:   stockBefore,
+		StockAfter:    max(stockBefore-delta, 0),
+		StockDelta:    -delta,
+	}, nil
 }
 
 func (s *pondService) toPondResponseFromPondWithActive(pa *repository.PondWithFarmAndActivePond) *dto.PondResponse {

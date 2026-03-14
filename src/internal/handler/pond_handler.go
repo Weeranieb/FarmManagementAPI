@@ -23,6 +23,9 @@ type PondHandler interface {
 	FillPond(c *fiber.Ctx) error
 	MovePond(c *fiber.Ctx) error
 	SellPond(c *fiber.Ctx) error
+	FillPondPreview(c *fiber.Ctx) error
+	MovePondPreview(c *fiber.Ctx) error
+	SellPondPreview(c *fiber.Ctx) error
 }
 
 type pondHandlerImpl struct {
@@ -365,6 +368,123 @@ func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
 	}
 
 	response, err := h.pondService.SellPond(c.UserContext(), pondId, request, username)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return http.Success(c, response)
+}
+
+// POST /pond/:pondId/fill/preview
+// Preview add-stock summary (Review & Confirm). Does not persist.
+// @Summary      Preview fill pond
+// @Description  Validate and compute fill summary (costs, stock impact) without persisting. For Review & Confirm flow.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        pondId path int true "Pond ID"
+// @Param        body   body dto.PondFillRequest true "fishType, amount, activityDate, pricePerUnit, additionalCosts"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/fill/preview [post]
+func (h *pondHandlerImpl) FillPondPreview(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	pondId, err := strconv.Atoi(c.Params("pondId"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+	}
+
+	var request dto.PondFillRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+
+	response, err := h.pondService.PreviewFillPond(c.UserContext(), pondId, request)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return http.Success(c, response)
+}
+
+// POST /pond/:pondId/move/preview
+// Preview transfer summary (Review & Confirm). Does not persist.
+// @Summary      Preview move pond
+// @Description  Validate and compute transfer summary (costs, stock impact) without persisting. For Review & Confirm flow.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        pondId path int true "Source pond ID"
+// @Param        body   body dto.PondMoveRequest true "toPondId, fishType, amount, activityDate, pricePerUnit, additionalCosts"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/move/preview [post]
+func (h *pondHandlerImpl) MovePondPreview(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	pondId, err := strconv.Atoi(c.Params("pondId"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+	}
+
+	var request dto.PondMoveRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+
+	response, err := h.pondService.PreviewMovePond(c.UserContext(), pondId, request)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return http.Success(c, response)
+}
+
+// POST /pond/:pondId/sell/preview
+// Preview sell summary (Review & Confirm). Does not persist.
+// @Summary      Preview sell pond
+// @Description  Validate and compute sell summary (revenue, items, stock impact) without persisting. For Review & Confirm flow.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        pondId path int true "Pond ID"
+// @Param        body   body dto.PondSellRequest true "activityDate, details[], merchantId, markToClose, additionalCosts"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/sell/preview [post]
+func (h *pondHandlerImpl) SellPondPreview(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	pondId, err := strconv.Atoi(c.Params("pondId"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+	}
+
+	var request dto.PondSellRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+
+	response, err := h.pondService.PreviewSellPond(c.UserContext(), pondId, request)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

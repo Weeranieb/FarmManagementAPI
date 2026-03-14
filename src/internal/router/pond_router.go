@@ -11,6 +11,9 @@ func (r *Router) setupPondRoutes(group fiber.Router) {
 	// Pond CRUD operations
 	// Note: More specific routes (e.g. /:pondId/fill) before param routes (/:id) so /pond/1/fill is not matched as id
 	pond.Post("", r.handlers.PondHandler.AddPonds)
+	pond.Post("/:pondId/fill/preview", r.handlers.PondHandler.FillPondPreview)
+	pond.Post("/:pondId/move/preview", r.handlers.PondHandler.MovePondPreview)
+	pond.Post("/:pondId/sell/preview", r.handlers.PondHandler.SellPondPreview)
 	pond.Post("/:pondId/fill", r.handlers.PondHandler.FillPond)
 	pond.Post("/:pondId/move", r.handlers.PondHandler.MovePond)
 	pond.Post("/:pondId/sell", r.handlers.PondHandler.SellPond)
