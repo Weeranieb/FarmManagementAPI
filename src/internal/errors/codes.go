@@ -203,6 +203,14 @@ var (
 	}
 )
 
+// FishSizeGrade errors (500120-500129)
+var (
+	ErrFishSizeGradeNotFound = &AppError{
+		Code:    500120,
+		Message: "Fish size grade not found",
+	}
+)
+
 // Client errors (500110-500119)
 var (
 	ErrClientNotFound = &AppError{

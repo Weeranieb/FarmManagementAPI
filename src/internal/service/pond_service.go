@@ -42,6 +42,7 @@ type PondServiceParams struct {
 	AdditionalCostRepo repository.AdditionalCostRepository
 	SellDetailRepo     repository.SellDetailRepository
 	MerchantRepo       repository.MerchantRepository
+	FishSizeGradeRepo  repository.FishSizeGradeRepository
 	TxManager          transaction.Manager
 }
 
@@ -53,6 +54,7 @@ type pondService struct {
 	additionalCostRepo repository.AdditionalCostRepository
 	sellDetailRepo     repository.SellDetailRepository
 	merchantRepo       repository.MerchantRepository
+	fishSizeGradeRepo  repository.FishSizeGradeRepository
 	txManager          transaction.Manager
 }
 
@@ -65,6 +67,7 @@ func NewPondService(params PondServiceParams) PondService {
 		additionalCostRepo: params.AdditionalCostRepo,
 		sellDetailRepo:     params.SellDetailRepo,
 		merchantRepo:       params.MerchantRepo,
+		fishSizeGradeRepo:  params.FishSizeGradeRepo,
 		txManager:          params.TxManager,
 	}
 }
@@ -489,12 +492,11 @@ func buildSellDetailModels(activityId int, details []dto.PondSellDetailItem) []*
 	out := make([]*model.SellDetail, 0, len(details))
 	for _, d := range details {
 		out = append(out, &model.SellDetail{
-			SellId:       activityId,
-			FishType:     d.FishType,
-			Size:         d.Size,
-			Amount:       d.Amount,
-			FishUnit:     d.FishUnit,
-			PricePerUnit: d.PricePerUnit,
+			SellId:          activityId,
+			FishSizeGradeId: d.FishSizeGradeId,
+			Weight:          d.Weight,
+			PricePerUnit:    d.PricePerUnit,
+			FishCount:       d.FishCount,
 		})
 	}
 	return out
@@ -516,6 +518,9 @@ func (s *pondService) SellPond(ctx context.Context, pondId int, request dto.Pond
 		return nil, errors.ErrAuthPermissionDenied
 	}
 	if err := s.validateSellMerchantIfSet(request.MerchantId); err != nil {
+		return nil, err
+	}
+	if err := s.validateSellGradeIDs(request.Details); err != nil {
 		return nil, err
 	}
 	activityDate, err := time.Parse("2006-01-02", request.ActivityDate)
@@ -755,37 +760,75 @@ func (s *pondService) PreviewSellPond(ctx context.Context, pondId int, request d
 		return &dto.PondSellPreviewResponse{Valid: false, ValidationError: err.Error()}, nil
 	}
 
-	stockBefore := data.ActivePond.TotalFish
+	gradeMap, err := s.buildGradeNameMap(request.Details)
+	if err != nil {
+		return &dto.PondSellPreviewResponse{Valid: false, ValidationError: errors.ErrFishSizeGradeNotFound.Message}, nil
+	}
 
 	detailLines := utils.CalculateSellDetailLines(request.Details)
 	items := make([]dto.PondSellPreviewItem, 0, len(detailLines))
-	var totalRevenue, totalQty, totalWeight float64
+	var totalRevenue, totalWeight float64
 	for _, line := range detailLines {
 		items = append(items, dto.PondSellPreviewItem{
-			FishType:    line.FishType,
-			Quantity:    line.Amount,
-			AvgWeightKg: line.Amount, // amount is weight in kg for sell
-			PricePerKg:  line.PricePerUnit,
-			Subtotal:    line.Subtotal,
-			TotalWeight: line.Amount,
+			FishSizeGradeId:   line.FishSizeGradeId,
+			FishSizeGradeName: gradeMap[line.FishSizeGradeId],
+			Weight:            line.Weight,
+			PricePerKg:        line.PricePerUnit,
+			Subtotal:          line.Subtotal,
+			FishCount:         line.FishCount,
 		})
 		totalRevenue += line.Subtotal
-		totalQty += line.Amount
-		totalWeight += line.Amount
+		totalWeight += line.Weight
 	}
 
-	delta := int(totalQty)
-
 	return &dto.PondSellPreviewResponse{
-		Valid:         true,
-		Items:         items,
-		TotalRevenue:  totalRevenue,
-		TotalQuantity: totalQty,
-		TotalWeight:   totalWeight,
-		StockBefore:   stockBefore,
-		StockAfter:    max(stockBefore-delta, 0),
-		StockDelta:    -delta,
+		Valid:        true,
+		Items:        items,
+		TotalRevenue: totalRevenue,
+		TotalWeight:  totalWeight,
 	}, nil
+}
+
+// validateSellGradeIDs checks that all FishSizeGradeId values in the details exist.
+func (s *pondService) validateSellGradeIDs(details []dto.PondSellDetailItem) error {
+	ids := collectGradeIDs(details)
+	grades, err := s.fishSizeGradeRepo.GetByIDs(ids)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if len(grades) != len(ids) {
+		return errors.ErrFishSizeGradeNotFound
+	}
+	return nil
+}
+
+// buildGradeNameMap returns a map of gradeId -> gradeName for preview display.
+func (s *pondService) buildGradeNameMap(details []dto.PondSellDetailItem) (map[int]string, error) {
+	ids := collectGradeIDs(details)
+	grades, err := s.fishSizeGradeRepo.GetByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+	if len(grades) != len(ids) {
+		return nil, errors.ErrFishSizeGradeNotFound
+	}
+	m := make(map[int]string, len(grades))
+	for _, g := range grades {
+		m[g.Id] = g.Name
+	}
+	return m, nil
+}
+
+func collectGradeIDs(details []dto.PondSellDetailItem) []int {
+	seen := make(map[int]struct{}, len(details))
+	ids := make([]int, 0, len(details))
+	for _, d := range details {
+		if _, ok := seen[d.FishSizeGradeId]; !ok {
+			seen[d.FishSizeGradeId] = struct{}{}
+			ids = append(ids, d.FishSizeGradeId)
+		}
+	}
+	return ids
 }
 
 func (s *pondService) toPondResponseFromPondWithActive(pa *repository.PondWithFarmAndActivePond) *dto.PondResponse {

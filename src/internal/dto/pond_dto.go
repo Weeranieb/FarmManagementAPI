@@ -87,13 +87,12 @@ type PondMoveResponse struct {
 	ToActivePondId int64 `json:"toActivePondId"`
 }
 
-// PondSellDetailItem represents a single per-species line in a sell request.
+// PondSellDetailItem represents a single fish-size-grade line in a sell request.
 type PondSellDetailItem struct {
-	FishType     string          `json:"fishType" validate:"required"`
-	Size         string          `json:"size" validate:"required"`
-	Amount       decimal.Decimal `json:"amount" validate:"required,decimal_gt0" swaggertype:"number"`
-	FishUnit     string          `json:"fishUnit" validate:"required"`
-	PricePerUnit decimal.Decimal `json:"pricePerUnit" validate:"required,decimal_gt0" swaggertype:"number"`
+	FishSizeGradeId int             `json:"fishSizeGradeId" validate:"required"`
+	Weight          decimal.Decimal `json:"weight" validate:"required,decimal_gt0" swaggertype:"number"`
+	PricePerUnit    decimal.Decimal `json:"pricePerUnit" validate:"required,decimal_gt0" swaggertype:"number"`
+	FishCount       *int            `json:"fishCount,omitempty"`
 }
 
 // PondSellRequest is the body for POST /pond/:pondId/sell.
@@ -155,12 +154,12 @@ type PondMovePreviewResponse struct {
 
 // PondSellPreviewItem is one row in the sale details summary.
 type PondSellPreviewItem struct {
-	FishType    string  `json:"fishType"`
-	Quantity    float64 `json:"quantity"`
-	AvgWeightKg float64 `json:"avgWeightKg"`
-	PricePerKg  float64 `json:"pricePerKg"`
-	Subtotal    float64 `json:"subtotal"`
-	TotalWeight float64 `json:"totalWeight"`
+	FishSizeGradeId   int     `json:"fishSizeGradeId"`
+	FishSizeGradeName string  `json:"fishSizeGradeName"`
+	Weight            float64 `json:"weight"`
+	PricePerKg        float64 `json:"pricePerKg"`
+	Subtotal          float64 `json:"subtotal"`
+	FishCount         *int    `json:"fishCount,omitempty"`
 }
 
 // PondSellPreviewResponse is returned by POST /pond/:pondId/sell/preview.
@@ -168,10 +167,6 @@ type PondSellPreviewResponse struct {
 	Valid           bool                  `json:"valid"`
 	Items           []PondSellPreviewItem `json:"items"`
 	TotalRevenue    float64               `json:"totalRevenue"`
-	TotalQuantity   float64               `json:"totalQuantity"`
 	TotalWeight     float64               `json:"totalWeight"`
-	StockBefore     int                   `json:"stockBefore"`
-	StockAfter      int                   `json:"stockAfter"`
-	StockDelta      int                   `json:"stockDelta"`
 	ValidationError string                `json:"validationError,omitempty"`
 }

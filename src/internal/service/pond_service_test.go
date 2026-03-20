@@ -31,6 +31,7 @@ type PondServiceTestSuite struct {
 	additionalCostRepo *mocks.MockAdditionalCostRepository
 	sellDetailRepo     *mocks.MockSellDetailRepository
 	merchantRepo       *mocks.MockMerchantRepository
+	fishSizeGradeRepo  *mocks.MockFishSizeGradeRepository
 	db                 *gorm.DB
 	pondService        PondService
 }
@@ -43,6 +44,7 @@ func (s *PondServiceTestSuite) SetupTest() {
 	s.additionalCostRepo = mocks.NewMockAdditionalCostRepository(s.T())
 	s.sellDetailRepo = mocks.NewMockSellDetailRepository(s.T())
 	s.merchantRepo = mocks.NewMockMerchantRepository(s.T())
+	s.fishSizeGradeRepo = mocks.NewMockFishSizeGradeRepository(s.T())
 	var err error
 	s.db, err = gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	s.Require().NoError(err)
@@ -56,6 +58,7 @@ func (s *PondServiceTestSuite) SetupTest() {
 		AdditionalCostRepo: s.additionalCostRepo,
 		SellDetailRepo:     s.sellDetailRepo,
 		MerchantRepo:       s.merchantRepo,
+		FishSizeGradeRepo:  s.fishSizeGradeRepo,
 		TxManager:          transaction.NewManager(s.db),
 	})
 }
@@ -85,6 +88,14 @@ func (s *PondServiceTestSuite) TearDownTest() {
 	s.additionalCostRepo.ExpectedCalls = nil
 	s.sellDetailRepo.ExpectedCalls = nil
 	s.merchantRepo.ExpectedCalls = nil
+	s.fishSizeGradeRepo.ExpectedCalls = nil
+}
+
+// mockFishSizeGradesForValidRequest mocks FishSizeGradeRepo.GetByIDs for the grade ID(s) used in validPondSellRequest (e.g. 1).
+func (s *PondServiceTestSuite) mockFishSizeGradesForValidRequest() {
+	s.fishSizeGradeRepo.On("GetByIDs", []int{1}).Return([]*model.FishSizeGrade{
+		{Id: 1, Name: "6โล", SortIndex: 1},
+	}, nil)
 }
 
 // setupReposWithTxForTransaction mocks WithTx to return the same mock; Create/Update assign IDs and return nil. Use Maybe() so tests that only Create or only Update still pass.
@@ -790,6 +801,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success_WithAdditionalCosts() {
 		Pond: pond, ClientId: 1, ActivePond: activePond,
 	}
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.mockFishSizeGradesForValidRequest()
 	s.setupReposWithTxForTransaction()
 
 	// WHEN — SellPond is called
@@ -809,11 +821,9 @@ func validPondSellRequest() dto.PondSellRequest {
 		ActivityDate: "2025-07-01",
 		Details: []dto.PondSellDetailItem{
 			{
-				FishType:     constants.FishTypeNil,
-				Size:         "medium",
-				Amount:       decimal.RequireFromString("100"),
-				FishUnit:     constants.FishUnitKg,
-				PricePerUnit: decimal.RequireFromString("50"),
+				FishSizeGradeId: 1,
+				Weight:          decimal.RequireFromString("100"),
+				PricePerUnit:    decimal.RequireFromString("50"),
 			},
 		},
 	}
@@ -822,8 +832,8 @@ func validPondSellRequest() dto.PondSellRequest {
 func TestBuildSellDetailModels(t *testing.T) {
 	// GIVEN — activity id and two detail items
 	details := []dto.PondSellDetailItem{
-		{FishType: "nil", Size: "s", Amount: decimal.RequireFromString("10"), FishUnit: "kg", PricePerUnit: decimal.RequireFromString("5")},
-		{FishType: "kaphong", Size: "m", Amount: decimal.RequireFromString("20"), FishUnit: "kg", PricePerUnit: decimal.RequireFromString("10")},
+		{FishSizeGradeId: 1, Weight: decimal.RequireFromString("10"), PricePerUnit: decimal.RequireFromString("5")},
+		{FishSizeGradeId: 2, Weight: decimal.RequireFromString("20"), PricePerUnit: decimal.RequireFromString("10")},
 	}
 
 	// WHEN — buildSellDetailModels is called
@@ -832,11 +842,12 @@ func TestBuildSellDetailModels(t *testing.T) {
 	// THEN — two models with correct SellId and fields
 	require.Len(t, out, 2)
 	assert.Equal(t, 99, out[0].SellId)
-	assert.Equal(t, "nil", out[0].FishType)
-	assert.Equal(t, "s", out[0].Size)
-	assert.True(t, out[0].Amount.Equal(decimal.RequireFromString("10")))
+	assert.Equal(t, 1, out[0].FishSizeGradeId)
+	assert.True(t, out[0].Weight.Equal(decimal.RequireFromString("10")))
+	assert.True(t, out[0].PricePerUnit.Equal(decimal.RequireFromString("5")))
 	assert.Equal(t, 99, out[1].SellId)
-	assert.Equal(t, "kaphong", out[1].FishType)
+	assert.Equal(t, 2, out[1].FishSizeGradeId)
+	assert.True(t, out[1].Weight.Equal(decimal.RequireFromString("20")))
 }
 
 func (s *PondServiceTestSuite) TestSellPond_PondNotFound() {
@@ -930,6 +941,7 @@ func (s *PondServiceTestSuite) TestSellPond_MerchantNotFound() {
 		ActivePond: &model.ActivePond{Id: 10, PondId: pondId, IsActive: true},
 	}
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.mockFishSizeGradesForValidRequest()
 	s.merchantRepo.On("GetByID", merchantId).Return(nil, nil)
 
 	// WHEN — SellPond is called
@@ -954,6 +966,7 @@ func (s *PondServiceTestSuite) TestSellPond_InvalidActivityDate() {
 		ActivePond: &model.ActivePond{Id: 10, PondId: pondId, IsActive: true},
 	}
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.mockFishSizeGradesForValidRequest()
 
 	// WHEN — SellPond is called
 	resp, err := s.pondService.SellPond(fillPondCtx(), pondId, req, "user")
@@ -983,6 +996,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success() {
 		Pond: pond, ClientId: 1, ActivePond: activePond,
 	}
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.mockFishSizeGradesForValidRequest()
 	s.setupReposWithTxForTransaction()
 
 	// WHEN — SellPond is called
@@ -1021,6 +1035,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success_MarkToClose() {
 			updatedPond = p
 		}
 	}).Return(nil)
+	s.mockFishSizeGradesForValidRequest()
 	s.setupReposWithTxForTransaction()
 
 	// WHEN — SellPond is called

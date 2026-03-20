@@ -18,6 +18,7 @@ type Handler struct {
 	WorkerHandler           WorkerHandler
 	FeedCollectionHandler   FeedCollectionHandler
 	FeedPriceHistoryHandler FeedPriceHistoryHandler
+	FishSizeGradeHandler    FishSizeGradeHandler
 }
 
 type HandlerParams struct {
@@ -32,6 +33,7 @@ type HandlerParams struct {
 	WorkerHandler           WorkerHandler
 	FeedCollectionHandler   FeedCollectionHandler
 	FeedPriceHistoryHandler FeedPriceHistoryHandler
+	FishSizeGradeHandler    FishSizeGradeHandler
 }
 
 func NewHandler(params HandlerParams) *Handler {
@@ -45,6 +47,7 @@ func NewHandler(params HandlerParams) *Handler {
 		WorkerHandler:           params.WorkerHandler,
 		FeedCollectionHandler:   params.FeedCollectionHandler,
 		FeedPriceHistoryHandler: params.FeedPriceHistoryHandler,
+		FishSizeGradeHandler:    params.FishSizeGradeHandler,
 	}
 }
 

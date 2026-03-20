@@ -84,16 +84,16 @@ func TestCalculateSellRevenue(t *testing.T) {
 		got := CalculateSellRevenue(nil)
 		assert.True(t, got.Equal(decimal.Zero))
 	})
-	t.Run("single line amount * pricePerUnit", func(t *testing.T) {
+	t.Run("single line weight * pricePerUnit", func(t *testing.T) {
 		got := CalculateSellRevenue([]dto.PondSellDetailItem{
-			{FishType: "CATFISH", Amount: decimal.RequireFromString("30"), PricePerUnit: decimal.RequireFromString("50")},
+			{FishSizeGradeId: 1, Weight: decimal.RequireFromString("6.5"), PricePerUnit: decimal.RequireFromString("240")},
 		})
-		assert.True(t, got.Equal(decimal.RequireFromString("1500")), "30 * 50 = 1500")
+		assert.True(t, got.Equal(decimal.RequireFromString("1560")), "6.5 * 240 = 1560")
 	})
 	t.Run("multiple lines sum subtotals", func(t *testing.T) {
 		got := CalculateSellRevenue([]dto.PondSellDetailItem{
-			{FishType: "CATFISH", Amount: decimal.RequireFromString("10"), PricePerUnit: decimal.RequireFromString("20")},
-			{FishType: "TILAPIA", Amount: decimal.RequireFromString("5"), PricePerUnit: decimal.RequireFromString("40")},
+			{FishSizeGradeId: 1, Weight: decimal.RequireFromString("10"), PricePerUnit: decimal.RequireFromString("20")},
+			{FishSizeGradeId: 2, Weight: decimal.RequireFromString("5"), PricePerUnit: decimal.RequireFromString("40")},
 		})
 		assert.True(t, got.Equal(decimal.RequireFromString("400")), "200 + 200 = 400")
 	})
@@ -103,7 +103,7 @@ func TestCalculateSellTotals(t *testing.T) {
 	t.Run("revenue and additional cost total", func(t *testing.T) {
 		revenue, addCost := CalculateSellTotals(
 			[]dto.PondSellDetailItem{
-				{FishType: "CATFISH", Amount: decimal.RequireFromString("100"), PricePerUnit: decimal.RequireFromString("2")},
+				{FishSizeGradeId: 1, Weight: decimal.RequireFromString("100"), PricePerUnit: decimal.RequireFromString("2")},
 			},
 			[]dto.AdditionalCostItem{{Title: "fee", Cost: decimal.RequireFromString("10")}},
 		)
@@ -119,18 +119,18 @@ func TestCalculateSellDetailLines(t *testing.T) {
 	})
 	t.Run("single detail line", func(t *testing.T) {
 		got := CalculateSellDetailLines([]dto.PondSellDetailItem{
-			{FishType: "CATFISH", Amount: decimal.RequireFromString("30"), PricePerUnit: decimal.RequireFromString("50")},
+			{FishSizeGradeId: 1, Weight: decimal.RequireFromString("6.5"), PricePerUnit: decimal.RequireFromString("240")},
 		})
 		require.Len(t, got, 1)
-		assert.Equal(t, "CATFISH", got[0].FishType)
-		assert.Equal(t, 30.0, got[0].Amount)
-		assert.Equal(t, 50.0, got[0].PricePerUnit)
-		assert.Equal(t, 1500.0, got[0].Subtotal)
+		assert.Equal(t, 1, got[0].FishSizeGradeId)
+		assert.Equal(t, 6.5, got[0].Weight)
+		assert.Equal(t, 240.0, got[0].PricePerUnit)
+		assert.Equal(t, 1560.0, got[0].Subtotal)
 	})
 	t.Run("multiple lines match CalculateSellRevenue sum", func(t *testing.T) {
 		details := []dto.PondSellDetailItem{
-			{FishType: "A", Amount: decimal.RequireFromString("10"), PricePerUnit: decimal.RequireFromString("2.5")},
-			{FishType: "B", Amount: decimal.RequireFromString("4"), PricePerUnit: decimal.RequireFromString("10")},
+			{FishSizeGradeId: 1, Weight: decimal.RequireFromString("10"), PricePerUnit: decimal.RequireFromString("2.5")},
+			{FishSizeGradeId: 2, Weight: decimal.RequireFromString("4"), PricePerUnit: decimal.RequireFromString("10")},
 		}
 		lines := CalculateSellDetailLines(details)
 		require.Len(t, lines, 2)
