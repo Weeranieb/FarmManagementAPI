@@ -167,6 +167,24 @@ var (
 	}
 )
 
+// FarmGroup errors (500130-500139)
+var (
+	ErrFarmGroupNotFound = &AppError{
+		Code:    500130,
+		Message: "Farm group not found",
+	}
+
+	ErrFarmGroupAlreadyExists = &AppError{
+		Code:    500131,
+		Message: "Farm group already exists",
+	}
+
+	ErrFarmGroupInvalidInput = &AppError{
+		Code:    500132,
+		Message: "Invalid farm group input",
+	}
+)
+
 // FeedCollection errors (500090-500099)
 var (
 	ErrFeedCollectionNotFound = &AppError{

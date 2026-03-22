@@ -23,29 +23,17 @@ type WorkerHandler interface {
 }
 
 type workerHandlerImpl struct {
-	workerService service.WorkerService
+	workerService    service.WorkerService
+	farmGroupService service.FarmGroupService
 }
 
-func NewWorkerHandler(workerService service.WorkerService) WorkerHandler {
+func NewWorkerHandler(workerService service.WorkerService, farmGroupService service.FarmGroupService) WorkerHandler {
 	return &workerHandlerImpl{
-		workerService: workerService,
+		workerService:    workerService,
+		farmGroupService: farmGroupService,
 	}
 }
 
-// POST /worker
-// Add a new worker.
-// @Summary      Add a new worker
-// @Description  Add a new worker with the provided details
-// @Tags         worker
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Security     CookieAuth
-// @Param        body body dto.CreateWorkerRequest true "Worker data"
-// @Success      200  {object}  http.ResponseModel
-// @Failure      400  {object}  http.ErrorResponseModel
-// @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /worker [post]
 func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
 	var createWorkerRequest dto.CreateWorkerRequest
 
@@ -59,19 +47,22 @@ func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Get username
+	isAdmin, err := utils.IsClientAdminOrAbove(c.UserContext())
+	if err != nil || !isAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
 	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	// Get client id
-	clientIdPtr := utils.GetClientId(c.UserContext())
-	if clientIdPtr == nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	clientId, err := h.resolveClientId(c, createWorkerRequest.FarmGroupId)
+	if err != nil {
+		return err
 	}
 
-	newWorker, err := h.workerService.Create(c.UserContext(), createWorkerRequest, username, *clientIdPtr)
+	newWorker, err := h.workerService.Create(c.UserContext(), createWorkerRequest, username, clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -79,19 +70,6 @@ func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
 	return http.Success(c, newWorker)
 }
 
-// GET /worker/:id
-// Get a worker by ID.
-// @Summary      Get a worker by ID
-// @Description  Retrieve a worker by its ID
-// @Tags         worker
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Worker ID"
-// @Success      200  {object}  http.ResponseModel
-// @Failure      400  {object}  http.ErrorResponseModel
-// @Failure      404  {object}  http.ErrorResponseModel
-// @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /worker/{id} [get]
 func (h *workerHandlerImpl) GetWorker(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -99,7 +77,6 @@ func (h *workerHandlerImpl) GetWorker(c *fiber.Ctx) error {
 		}
 	}()
 
-	// Get id from param
 	idStr := c.Params("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -111,23 +88,14 @@ func (h *workerHandlerImpl) GetWorker(c *fiber.Ctx) error {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
+	canAccess, accessErr := utils.CanAccessClient(c.UserContext(), worker.ClientId)
+	if accessErr != nil || !canAccess {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
 	return http.Success(c, worker)
 }
 
-// PUT /worker
-// Update a worker.
-// @Summary      Update a worker
-// @Description  Update an existing worker with new details
-// @Tags         worker
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Security     CookieAuth
-// @Param        body body model.Worker true "Updated worker data"
-// @Success      200  {object}  http.ResponseModel
-// @Failure      400  {object}  http.ErrorResponseModel
-// @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /worker [put]
 func (h *workerHandlerImpl) UpdateWorker(c *fiber.Ctx) error {
 	var updateWorker *model.Worker
 
@@ -141,7 +109,21 @@ func (h *workerHandlerImpl) UpdateWorker(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Get username
+	isAdmin, err := utils.IsClientAdminOrAbove(c.UserContext())
+	if err != nil || !isAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
+	existing, getErr := h.workerService.Get(updateWorker.Id)
+	if getErr != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, getErr)
+	}
+
+	canAccess, accessErr := utils.CanAccessClient(c.UserContext(), existing.ClientId)
+	if accessErr != nil || !canAccess {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
 	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
@@ -155,21 +137,6 @@ func (h *workerHandlerImpl) UpdateWorker(c *fiber.Ctx) error {
 	return http.SuccessWithoutData(c)
 }
 
-// GET /worker
-// Get a list of workers with pagination.
-// @Summary      Get a list of workers with pagination
-// @Description  Retrieve a paginated list of workers for the current client
-// @Tags         worker
-// @Accept       json
-// @Produce      json
-// @Param        page query int true "Page number"
-// @Param        pageSize query int true "Page size"
-// @Param        orderBy query string false "Order by field"
-// @Param        keyword query string false "Search keyword"
-// @Success      200  {object}  http.ResponseModel
-// @Failure      400  {object}  http.ErrorResponseModel
-// @Failure      500  {object}  http.ErrorResponseModel
-// @Router       /worker [get]
 func (h *workerHandlerImpl) ListWorker(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -177,7 +144,6 @@ func (h *workerHandlerImpl) ListWorker(c *fiber.Ctx) error {
 		}
 	}()
 
-	// Get query parameters
 	sPage := c.Query("page")
 	sPageSize := c.Query("pageSize")
 	orderBy := c.Query("orderBy")
@@ -193,16 +159,54 @@ func (h *workerHandlerImpl) ListWorker(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid page size")
 	}
 
-	// Get client id
-	clientIdPtr := utils.GetClientId(c.UserContext())
-	if clientIdPtr == nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	var clientId int
+
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	workerList, err := h.workerService.GetPage(*clientIdPtr, page, pageSize, orderBy, keyword)
+	if isSuperAdmin {
+		clientIdStr := c.Query("clientId")
+		if clientIdStr != "" {
+			clientIdVal, err := strconv.Atoi(clientIdStr)
+			if err != nil {
+				return http.Error(c, errors.ErrValidationFailed.Code, "Invalid clientId parameter")
+			}
+			clientId = clientIdVal
+		}
+	} else {
+		clientIdPtr := utils.GetClientId(c.UserContext())
+		if clientIdPtr == nil {
+			return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+		}
+		clientId = *clientIdPtr
+	}
+
+	workerList, err := h.workerService.GetPage(clientId, page, pageSize, orderBy, keyword)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
 	return http.Success(c, workerList)
+}
+
+// resolveClientId derives the clientId: from the JWT token for regular users,
+// or from the farmGroupId for super admins who may not have clientId in their token.
+func (h *workerHandlerImpl) resolveClientId(c *fiber.Ctx, farmGroupId int) (int, error) {
+	clientIdPtr := utils.GetClientId(c.UserContext())
+	if clientIdPtr != nil {
+		return *clientIdPtr, nil
+	}
+
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil || !isSuperAdmin {
+		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
+
+	clientId, fgErr := h.farmGroupService.GetClientIdByFarmGroupId(farmGroupId)
+	if fgErr != nil {
+		return 0, http.NewError(c, errors.ErrGeneric.Code, fgErr)
+	}
+	return clientId, nil
 }

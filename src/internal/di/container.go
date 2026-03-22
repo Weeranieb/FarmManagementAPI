@@ -27,6 +27,7 @@ func NewContainer(conf *config.Config) *dig.Container {
 	c.Provide(repository.NewSellDetailRepository)
 	c.Provide(repository.NewFishSizeGradeRepository)
 	c.Provide(repository.NewWorkerRepository)
+	c.Provide(repository.NewFarmGroupRepository)
 	c.Provide(repository.NewFeedCollectionRepository)
 	c.Provide(repository.NewFeedPriceHistoryRepository)
 
@@ -41,6 +42,7 @@ func NewContainer(conf *config.Config) *dig.Container {
 	c.Provide(service.NewMerchantService)
 	c.Provide(service.NewPondService)
 	c.Provide(service.NewWorkerService)
+	c.Provide(service.NewFarmGroupService)
 	c.Provide(service.NewFeedCollectionService)
 	c.Provide(service.NewFeedPriceHistoryService)
 	c.Provide(service.NewFishSizeGradeService)
@@ -53,6 +55,7 @@ func NewContainer(conf *config.Config) *dig.Container {
 	c.Provide(handler.NewMerchantHandler)
 	c.Provide(handler.NewPondHandler)
 	c.Provide(handler.NewWorkerHandler)
+	c.Provide(handler.NewFarmGroupHandler)
 	c.Provide(handler.NewFeedCollectionHandler)
 	c.Provide(handler.NewFeedPriceHistoryHandler)
 	c.Provide(handler.NewFishSizeGradeHandler)

@@ -68,6 +68,7 @@ func (r *Router) setupProtectedRoutes(api fiber.Router) {
 	r.setupMerchantRoutes(protected)
 	r.setupPondRoutes(protected)
 	r.setupFishSizeGradeRoutes(protected)
+	r.setupFarmGroupRoutes(protected)
 	r.setupWorkerRoutes(protected)
 	r.setupFeedCollectionRoutes(protected)
 	r.setupFeedPriceHistoryRoutes(protected)

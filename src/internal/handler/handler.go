@@ -13,6 +13,7 @@ type Handler struct {
 	AuthHandler             AuthHandler
 	ClientHandler           ClientHandler
 	FarmHandler             FarmHandler
+	FarmGroupHandler        FarmGroupHandler
 	MerchantHandler         MerchantHandler
 	PondHandler             PondHandler
 	WorkerHandler           WorkerHandler
@@ -28,6 +29,7 @@ type HandlerParams struct {
 	AuthHandler             AuthHandler
 	ClientHandler           ClientHandler
 	FarmHandler             FarmHandler
+	FarmGroupHandler        FarmGroupHandler
 	MerchantHandler         MerchantHandler
 	PondHandler             PondHandler
 	WorkerHandler           WorkerHandler
@@ -42,6 +44,7 @@ func NewHandler(params HandlerParams) *Handler {
 		AuthHandler:             params.AuthHandler,
 		ClientHandler:           params.ClientHandler,
 		FarmHandler:             params.FarmHandler,
+		FarmGroupHandler:        params.FarmGroupHandler,
 		MerchantHandler:         params.MerchantHandler,
 		PondHandler:             params.PondHandler,
 		WorkerHandler:           params.WorkerHandler,
