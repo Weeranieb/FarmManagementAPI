@@ -24,11 +24,13 @@ type FeedPriceHistoryHandler interface {
 
 type feedPriceHistoryHandlerImpl struct {
 	feedPriceHistoryService service.FeedPriceHistoryService
+	feedCollectionService   service.FeedCollectionService
 }
 
-func NewFeedPriceHistoryHandler(feedPriceHistoryService service.FeedPriceHistoryService) FeedPriceHistoryHandler {
+func NewFeedPriceHistoryHandler(feedPriceHistoryService service.FeedPriceHistoryService, feedCollectionService service.FeedCollectionService) FeedPriceHistoryHandler {
 	return &feedPriceHistoryHandlerImpl{
 		feedPriceHistoryService: feedPriceHistoryService,
+		feedCollectionService:   feedCollectionService,
 	}
 }
 
@@ -116,6 +118,16 @@ func (h *feedPriceHistoryHandlerImpl) GetAllFeedPriceHistory(c *fiber.Ctx) error
 	feedCollectionId, err := strconv.Atoi(feedCollectionIdStr)
 	if err != nil {
 		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid feed collection ID")
+	}
+
+	feedCollection, err := h.feedCollectionService.Get(feedCollectionId)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	canAccess, accessErr := utils.CanAccessClient(c.UserContext(), feedCollection.ClientId)
+	if accessErr != nil || !canAccess {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
 	result, err := h.feedPriceHistoryService.GetAll(feedCollectionId)

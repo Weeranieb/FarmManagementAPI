@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@latest --name=FeedPriceHistoryRepository --output=./mocks --outpkg=mocks --filename=feed_price_history_repository.go --structname=MockFeedPriceHistoryRepository --with-expecter=false
 type FeedPriceHistoryRepository interface {
 	Create(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error
 	CreateBatch(ctx context.Context, feedPriceHistories []*model.FeedPriceHistory) error

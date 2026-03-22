@@ -5,6 +5,7 @@ import "time"
 type CreateFeedCollectionRequest struct {
 	Name               string                              `json:"name" validate:"required"`
 	Unit               string                              `json:"unit" validate:"required"`
+	ClientId           *int                                `json:"clientId,omitempty"` // when JWT has no clientId (e.g. super admin), required for create
 	FeedPriceHistories []CreateFeedPriceHistoryItemRequest `json:"feedPriceHistories"`
 }
 

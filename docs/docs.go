@@ -867,6 +867,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/fish-size-grade/dropdown": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Returns dropdown items for fish size grades sorted by sort_index",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fish-size-grade"
+                ],
+                "summary": "Get fish size grade dropdown",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/merchant": {
             "get": {
                 "description": "Retrieve a list of all merchants",
@@ -1950,223 +1984,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/worker": {
-            "get": {
-                "description": "Retrieve a paginated list of workers for the current client",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "worker"
-                ],
-                "summary": "Get a list of workers with pagination",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Page size",
-                        "name": "pageSize",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Order by field",
-                        "name": "orderBy",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search keyword",
-                        "name": "keyword",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Update an existing worker with new details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "worker"
-                ],
-                "summary": "Update a worker",
-                "parameters": [
-                    {
-                        "description": "Updated worker data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.Worker"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Add a new worker with the provided details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "worker"
-                ],
-                "summary": "Add a new worker",
-                "parameters": [
-                    {
-                        "description": "Worker data",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.CreateWorkerRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
-        },
-        "/worker/{id}": {
-            "get": {
-                "description": "Retrieve a worker by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "worker"
-                ],
-                "summary": "Get a worker by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Worker ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ErrorResponseModel"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -2226,6 +2043,10 @@ const docTemplate = `{
                 "unit"
             ],
             "properties": {
+                "clientId": {
+                    "description": "when JWT has no clientId (e.g. super admin), required for create",
+                    "type": "integer"
+                },
                 "feedPriceHistories": {
                     "type": "array",
                     "items": {
@@ -2319,38 +2140,6 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
-                }
-            }
-        },
-        "dto.CreateWorkerRequest": {
-            "type": "object",
-            "required": [
-                "farmGroupId",
-                "firstName",
-                "nationality",
-                "salary"
-            ],
-            "properties": {
-                "contactNumber": {
-                    "type": "string"
-                },
-                "farmGroupId": {
-                    "type": "integer"
-                },
-                "firstName": {
-                    "type": "string"
-                },
-                "hireDate": {
-                    "type": "string"
-                },
-                "lastName": {
-                    "type": "string"
-                },
-                "nationality": {
-                    "type": "string"
-                },
-                "salary": {
-                    "type": "number"
                 }
             }
         },
@@ -2454,27 +2243,22 @@ const docTemplate = `{
         "dto.PondSellDetailItem": {
             "type": "object",
             "required": [
-                "amount",
-                "fishType",
-                "fishUnit",
+                "fishSizeGradeId",
                 "pricePerUnit",
-                "size"
+                "weight"
             ],
             "properties": {
-                "amount": {
-                    "type": "number"
+                "fishCount": {
+                    "type": "integer"
                 },
-                "fishType": {
-                    "type": "string"
-                },
-                "fishUnit": {
-                    "type": "string"
+                "fishSizeGradeId": {
+                    "type": "integer"
                 },
                 "pricePerUnit": {
                     "type": "number"
                 },
-                "size": {
-                    "type": "string"
+                "weight": {
+                    "type": "number"
                 }
             }
         },
@@ -2705,53 +2489,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.Worker": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "type": "integer"
-                },
-                "contactNumber": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "farmGroupId": {
-                    "type": "integer"
-                },
-                "firstName": {
-                    "type": "string"
-                },
-                "hireDate": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "isActive": {
-                    "type": "boolean"
-                },
-                "lastName": {
-                    "type": "string"
-                },
-                "nationality": {
-                    "type": "string"
-                },
-                "salary": {
-                    "type": "number"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "updated_by": {
                     "type": "string"
                 }
             }

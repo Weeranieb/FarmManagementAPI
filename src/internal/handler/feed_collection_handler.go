@@ -65,13 +65,12 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	// Get client id
-	clientIdPtr := utils.GetClientId(c.UserContext())
-	if clientIdPtr == nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	clientId, err := resolveClientIdForFeedCollectionWrite(c, createFeedCollectionRequest.ClientId)
+	if err != nil {
+		return err
 	}
 
-	result, err := h.feedCollectionService.Create(c.UserContext(), createFeedCollectionRequest, username, *clientIdPtr)
+	result, err := h.feedCollectionService.Create(c.UserContext(), createFeedCollectionRequest, username, clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -109,6 +108,11 @@ func (h *feedCollectionHandlerImpl) GetFeedCollection(c *fiber.Ctx) error {
 	feedCollection, err := h.feedCollectionService.Get(id)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	canAccess, accessErr := utils.CanAccessClient(c.UserContext(), feedCollection.ClientId)
+	if accessErr != nil || !canAccess {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
 	return http.Success(c, feedCollection)
@@ -193,16 +197,70 @@ func (h *feedCollectionHandlerImpl) ListFeedCollection(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid page size")
 	}
 
-	// Get client id
-	clientIdPtr := utils.GetClientId(c.UserContext())
-	if clientIdPtr == nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	clientId, err := resolveClientIdForFeedCollectionList(c, c.Query("clientId"))
+	if err != nil {
+		return err
 	}
 
-	feedCollectionList, err := h.feedCollectionService.GetPage(*clientIdPtr, page, pageSize, orderBy, keyword)
+	feedCollectionList, err := h.feedCollectionService.GetPage(clientId, page, pageSize, orderBy, keyword)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
 	return http.Success(c, feedCollectionList)
+}
+
+// resolveClientIdForFeedCollectionList uses JWT client id when present; otherwise optional
+// clientId query param for super admin (same pattern as worker list).
+func resolveClientIdForFeedCollectionList(c *fiber.Ctx, clientIdQuery string) (int, error) {
+	clientIdPtr := utils.GetClientId(c.UserContext())
+	if clientIdPtr != nil {
+		return *clientIdPtr, nil
+	}
+
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil {
+		return 0, http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	if !isSuperAdmin {
+		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
+	if clientIdQuery == "" {
+		return 0, http.Error(c, errors.ErrValidationFailed.Code, "clientId query parameter is required when your account has no client in token")
+	}
+	qid, err := strconv.Atoi(clientIdQuery)
+	if err != nil || qid <= 0 {
+		return 0, http.Error(c, errors.ErrValidationFailed.Code, "Invalid clientId query parameter")
+	}
+	canAccess, accessErr := utils.CanAccessClient(c.UserContext(), qid)
+	if accessErr != nil || !canAccess {
+		return 0, http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+	return qid, nil
+}
+
+// resolveClientIdForFeedCollectionWrite uses JWT client id when present; otherwise requires
+// super admin with clientId in body (UI "มุมมองลูกค้า" selection).
+func resolveClientIdForFeedCollectionWrite(c *fiber.Ctx, bodyClientId *int) (int, error) {
+	clientIdPtr := utils.GetClientId(c.UserContext())
+	if clientIdPtr != nil {
+		return *clientIdPtr, nil
+	}
+
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil {
+		return 0, http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	if !isSuperAdmin {
+		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
+	if bodyClientId == nil || *bodyClientId <= 0 {
+		return 0, http.Error(c, errors.ErrValidationFailed.Code, "clientId is required when your account has no client in token (select a client in the header)")
+	}
+
+	canAccess, accessErr := utils.CanAccessClient(c.UserContext(), *bodyClientId)
+	if accessErr != nil || !canAccess {
+		return 0, http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+	return *bodyClientId, nil
 }
