@@ -14,7 +14,7 @@ import (
 type FeedPriceHistoryService interface {
 	Create(ctx context.Context, request dto.CreateFeedPriceHistoryRequest, username string) (*dto.FeedPriceHistoryResponse, error)
 	Get(id int) (*dto.FeedPriceHistoryResponse, error)
-	Update(ctx context.Context, request *model.FeedPriceHistory, username string) error
+	Update(ctx context.Context, request dto.UpdateFeedPriceHistoryRequest, username string) error
 	GetAll(feedCollectionId int) ([]*dto.FeedPriceHistoryResponse, error)
 }
 
@@ -67,9 +67,27 @@ func (s *feedPriceHistoryService) Get(id int) (*dto.FeedPriceHistoryResponse, er
 	return s.toFeedPriceHistoryResponse(feedPriceHistory), nil
 }
 
-func (s *feedPriceHistoryService) Update(ctx context.Context, request *model.FeedPriceHistory, username string) error {
+func (s *feedPriceHistoryService) Update(ctx context.Context, request dto.UpdateFeedPriceHistoryRequest, username string) error {
+	existingFeedPriceHistory, err := s.feedPriceHistoryRepo.GetByID(request.Id)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existingFeedPriceHistory == nil {
+		return errors.ErrFeedPriceHistoryNotFound
+	}
+
+	if request.FeedCollectionId != 0 {
+		existingFeedPriceHistory.FeedCollectionId = request.FeedCollectionId
+	}
+	if request.Price != 0 {
+		existingFeedPriceHistory.Price = decimal.NewFromFloat(request.Price)
+	}
+	if !request.PriceUpdatedDate.IsZero() {
+		existingFeedPriceHistory.PriceUpdatedDate = request.PriceUpdatedDate
+	}
+
 	// UpdatedBy set via BaseModel hook from ctx
-	if err := s.feedPriceHistoryRepo.Update(ctx, request); err != nil {
+	if err := s.feedPriceHistoryRepo.Update(ctx, existingFeedPriceHistory); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

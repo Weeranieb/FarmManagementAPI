@@ -32,3 +32,8 @@ type DailyFeedTableResponse struct {
 	FeedUnit           string                   `json:"feedUnit"`
 	Entries            []DailyFeedEntryResponse `json:"entries"`
 }
+
+type DailyFeedExcelUploadResponse struct {
+	RowsImported int    `json:"rowsImported"`
+	SavedPath    string `json:"savedPath"`
+}

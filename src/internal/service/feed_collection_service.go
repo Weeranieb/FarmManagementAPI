@@ -16,7 +16,7 @@ import (
 type FeedCollectionService interface {
 	Create(ctx context.Context, request dto.CreateFeedCollectionRequest, username string, clientId int) (*dto.CreateFeedCollectionResponse, error)
 	Get(id int) (*dto.FeedCollectionResponse, error)
-	Update(ctx context.Context, request *model.FeedCollection, username string) error
+	Update(ctx context.Context, request dto.UpdateFeedCollectionRequest, username string) error
 	GetPage(clientId, page, pageSize int, orderBy, keyword string) (*dto.PageResponse, error)
 }
 
@@ -122,9 +122,24 @@ func (s *feedCollectionService) Get(id int) (*dto.FeedCollectionResponse, error)
 	return s.toFeedCollectionResponse(feedCollection), nil
 }
 
-func (s *feedCollectionService) Update(ctx context.Context, request *model.FeedCollection, username string) error {
+func (s *feedCollectionService) Update(ctx context.Context, request dto.UpdateFeedCollectionRequest, username string) error {
+	existingFeedCollection, err := s.feedCollectionRepo.GetByID(request.Id)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existingFeedCollection == nil {
+		return errors.ErrFeedCollectionNotFound
+	}
+
+	if request.Name != "" {
+		existingFeedCollection.Name = request.Name
+	}
+	if request.Unit != "" {
+		existingFeedCollection.Unit = request.Unit
+	}
+
 	// Update feed collection (UpdatedBy set via BaseModel hook from ctx)
-	if err := s.feedCollectionRepo.Update(ctx, request); err != nil {
+	if err := s.feedCollectionRepo.Update(ctx, existingFeedCollection); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

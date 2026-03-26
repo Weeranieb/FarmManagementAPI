@@ -14,6 +14,7 @@ app:
   environment: 'development'
   log_level: 'info'
   debug: false
+  daily_feed_upload_path: './data/uploads/daily-feed'
 
 authentication:
   jwt_secret: 'FarmSecretKey'

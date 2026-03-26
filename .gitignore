@@ -7,6 +7,9 @@ configuration/config.env
 bin/
 tmp/
 
+# Uploaded daily-feed Excel files (see app.daily_feed_upload_path)
+data/
+
 **/mocks/
 src/internal/handler/mocks/
 src/internal/service/mocks/

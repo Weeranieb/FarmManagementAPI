@@ -13,6 +13,8 @@ import (
 func NewContainer(conf *config.Config) *dig.Container {
 	c := dig.New()
 
+	c.Provide(func() *config.Config { return conf })
+
 	c.Provide(conf.ConnectDB)
 
 	// Repository

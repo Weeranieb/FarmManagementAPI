@@ -6,7 +6,6 @@ import (
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -82,7 +81,7 @@ func (h *feedPriceHistoryHandlerImpl) GetFeedPriceHistory(c *fiber.Ctx) error {
 }
 
 func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c *fiber.Ctx) error {
-	var updateFeedPriceHistory *model.FeedPriceHistory
+	var updateFeedPriceHistory dto.UpdateFeedPriceHistoryRequest
 
 	defer func() {
 		if r := recover(); r != nil {

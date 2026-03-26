@@ -18,6 +18,7 @@ type DailyFeedService interface {
 	GetMonth(ctx context.Context, pondId int, month string) ([]*dto.DailyFeedTableResponse, error)
 	BulkUpsert(ctx context.Context, pondId int, request dto.DailyFeedBulkUpsertRequest, username string) error
 	DeleteTable(ctx context.Context, pondId int, feedCollectionId int) error
+	ImportFromExcelFile(ctx context.Context, pondId int, feedCollectionId int, month string, filePath string, username string) (int, error)
 }
 
 type dailyFeedService struct {
@@ -215,4 +216,20 @@ func (s *dailyFeedService) DeleteTable(ctx context.Context, pondId int, feedColl
 		return err
 	}
 	return s.dailyFeedRepo.SoftDeleteByActivePondAndFeedCollection(ctx, activePondId, feedCollectionId)
+}
+
+func (s *dailyFeedService) ImportFromExcelFile(ctx context.Context, pondId int, feedCollectionId int, month string, filePath string, username string) (int, error) {
+	entries, err := parseDailyFeedExcelFile(filePath, month)
+	if err != nil {
+		return 0, err
+	}
+	req := dto.DailyFeedBulkUpsertRequest{
+		FeedCollectionId: feedCollectionId,
+		Month:            month,
+		Entries:          entries,
+	}
+	if err := s.BulkUpsert(ctx, pondId, req, username); err != nil {
+		return 0, err
+	}
+	return len(entries), nil
 }

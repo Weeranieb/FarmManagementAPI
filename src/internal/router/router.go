@@ -14,6 +14,7 @@ import (
 
 type Router struct {
 	handlers *handler.Handler
+	conf     *config.Config
 }
 
 func NewRouter() *fiber.App {
@@ -33,7 +34,10 @@ func NewRouter() *fiber.App {
 }
 
 func SetupRoutes(app *fiber.App, conf *config.Config, handlers *handler.Handler) {
-	r := &Router{handlers: handlers}
+	r := &Router{
+		handlers: handlers,
+		conf:     conf,
+	}
 
 	r.setupPublicRoutes(app)
 
@@ -60,7 +64,7 @@ func (r *Router) setupPublicAPIRoutes(api fiber.Router) {
 
 func (r *Router) setupProtectedRoutes(api fiber.Router) {
 	// Protected routes (require JWT authentication)
-	protected := api.Group("", middleware.JWTAuthMiddleware())
+	protected := api.Group("", middleware.JWTAuthMiddleware(r.conf.Authentication.JWTSecret))
 
 	r.setupUserRoutes(protected)
 	r.setupClientRoutes(protected)

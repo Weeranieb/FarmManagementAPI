@@ -6,7 +6,6 @@ import (
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -133,7 +132,7 @@ func (h *feedCollectionHandlerImpl) GetFeedCollection(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /feed-collection [put]
 func (h *feedCollectionHandlerImpl) UpdateFeedCollection(c *fiber.Ctx) error {
-	var updateFeedCollection *model.FeedCollection
+	var updateFeedCollection dto.UpdateFeedCollectionRequest
 
 	defer func() {
 		if r := recover(); r != nil {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -34,11 +33,12 @@ func NewUserHandler(userService service.UserService) UserHandler {
 // POST /api/v1/user
 // Add a new user.
 // @Summary      Add a new user
-// @Description  Create a new user with the provided details. For system setup, this endpoint is public and allows creating users without authentication. When authenticated, uses JWT context for creator and clientId.
+// @Description  Create a new user with the provided details. Only super admin can create users.
 // @Tags         user
 // @Accept       json
 // @Produce      json
-// @Param        Authorization header string false "Bearer token (optional for system setup)"
+// @Security     BearerAuth
+// @Security     CookieAuth
 // @Param        body body dto.CreateUserRequest true "User data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
@@ -57,27 +57,15 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	var username string
-	var clientId *int
+	username, err := utils.GetUsername(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+	clientId := utils.GetClientId(c.UserContext())
 
-	// Try to get username and clientId from JWT context (for authenticated requests)
-	jwtUsername, jwtErr := utils.GetUsername(c.UserContext())
-	jwtClientId := utils.GetClientId(c.UserContext())
-
-	// Check if user is super admin (only if we have JWT context)
-	if jwtErr == nil {
-		// Authenticated request - check permissions
-		isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-		if err != nil || !isSuperAdmin {
-			return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
-		}
-		// Use JWT context values
-		username = jwtUsername
-		clientId = jwtClientId
-	} else {
-		// System setup - bypass authentication
-		// Use "system" as the creator for setup operations
-		username = "system"
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil || !isSuperAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
 	newUser, err := h.userService.Create(c.UserContext(), addUser, username, clientId)
@@ -138,7 +126,7 @@ func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user [put]
 func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
-	var updateUser *model.User
+	var updateUser dto.UpdateUserRequest
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -156,7 +144,12 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
 	}
 
-	err = h.userService.Update(c.UserContext(), updateUser, username)
+	userId, err := utils.GetUserId(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	err = h.userService.Update(c.UserContext(), userId, updateUser, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

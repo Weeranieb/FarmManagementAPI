@@ -3,6 +3,8 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"mime/multipart"
 	"net/http/httptest"
 	"testing"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/service/mocks"
 )
@@ -24,7 +27,12 @@ type DailyFeedHandlerTestSuite struct {
 
 func (s *DailyFeedHandlerTestSuite) SetupTest() {
 	s.dailyFeedService = mocks.NewMockDailyFeedService(s.T())
-	s.handler = NewDailyFeedHandler(s.dailyFeedService)
+	s.handler = NewDailyFeedHandler(DailyFeedHandlerParams{
+		Config: &config.Config{
+			App: config.AppConfig{DailyFeedUploadPath: s.T().TempDir()},
+		},
+		DailyFeedService: s.dailyFeedService,
+	})
 }
 
 func (s *DailyFeedHandlerTestSuite) TearDownTest() {
@@ -168,4 +176,41 @@ func (s *DailyFeedHandlerTestSuite) TestDeleteTable_InvalidPondId() {
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
 	s.dailyFeedService.AssertNotCalled(s.T(), "DeleteTable")
+}
+
+func (s *DailyFeedHandlerTestSuite) TestUploadExcel_Success() {
+	s.dailyFeedService.On(
+		"ImportFromExcelFile",
+		mock.Anything,
+		3,
+		9,
+		"2024-01",
+		mock.AnythingOfType("string"),
+		"u",
+	).Return(2, nil)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(s.T(), writer.WriteField("month", "2024-01"))
+	require.NoError(s.T(), writer.WriteField("feedCollectionId", "9"))
+	part, err := writer.CreateFormFile("file", "test.xlsx")
+	require.NoError(s.T(), err)
+	_, err = io.WriteString(part, "dummy")
+	require.NoError(s.T(), err)
+	require.NoError(s.T(), writer.Close())
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{"username": "u", "userLevel": 1}))
+	app.Post("/api/v1/pond/:pondId/daily-feed/upload", s.handler.UploadExcel)
+
+	req := httptest.NewRequest("POST", "/api/v1/pond/3/daily-feed/upload", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := app.Test(req)
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
+	assert.Equal(s.T(), true, result["result"])
+	s.dailyFeedService.AssertExpectations(s.T())
 }
