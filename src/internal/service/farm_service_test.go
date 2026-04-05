@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/repository/mocks"
@@ -124,6 +125,7 @@ func (s *FarmServiceTestSuite) TestGet_Success() {
 	assert.Equal(s.T(), 2, result.Summary.TotalPonds)
 	assert.Equal(s.T(), 2, result.Summary.ActivePonds)
 	assert.Len(s.T(), result.Ponds, 2)
+	assert.Equal(s.T(), constants.FarmStatusActive, result.Status)
 	s.farmRepo.AssertExpectations(s.T())
 	s.pondRepo.AssertExpectations(s.T())
 }
@@ -201,6 +203,9 @@ func (s *FarmServiceTestSuite) TestGetList_Success() {
 	assert.Equal(s.T(), 2, result.TotalActive)
 	assert.Equal(s.T(), 3, result.Farms[0].PondCount)
 	assert.Equal(s.T(), 0, result.Farms[1].PondCount)
+	// Stored farm.status may differ; API status follows pond-derived rule (empty pond status → not active).
+	assert.Equal(s.T(), constants.FarmStatusMaintenance, result.Farms[0].Status)
+	assert.Equal(s.T(), constants.FarmStatusMaintenance, result.Farms[1].Status)
 	s.farmRepo.AssertExpectations(s.T())
 }
 
@@ -231,9 +236,11 @@ func (s *FarmServiceTestSuite) TestGetHierarchy_Success() {
 	assert.Len(s.T(), result[0].Ponds, 2)
 	assert.Equal(s.T(), "Pond A1", result[0].Ponds[0].Name)
 	assert.Equal(s.T(), "maintenance", result[0].Ponds[1].Status)
+	assert.Equal(s.T(), constants.FarmStatusActive, result[0].Status)
 	assert.Equal(s.T(), 2, result[1].Id)
 	assert.Equal(s.T(), "Delta Farm", result[1].Name)
 	assert.Len(s.T(), result[1].Ponds, 0)
+	assert.Equal(s.T(), constants.FarmStatusMaintenance, result[1].Status)
 	s.farmRepo.AssertExpectations(s.T())
 }
 

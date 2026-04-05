@@ -2698,6 +2698,9 @@ const docTemplate = `{
                 "isActive": {
                     "type": "boolean"
                 },
+                "isTouristFishingEnabled": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 },

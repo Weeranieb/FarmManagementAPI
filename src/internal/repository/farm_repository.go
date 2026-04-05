@@ -12,6 +12,7 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=FarmRepository --output=./mocks --outpkg=mocks --filename=farm_repository.go --structname=MockFarmRepository --with-expecter=false
 type FarmRepository interface {
+	WithTx(tx *gorm.DB) FarmRepository
 	Create(ctx context.Context, farm *model.Farm) error
 	GetByID(id int) (*model.Farm, error)
 	GetByNameAndClientId(name string, clientId int) (*model.Farm, error)
@@ -27,6 +28,10 @@ type farmRepository struct {
 
 func NewFarmRepository(db *gorm.DB) FarmRepository {
 	return &farmRepository{db: db}
+}
+
+func (r *farmRepository) WithTx(tx *gorm.DB) FarmRepository {
+	return &farmRepository{db: tx}
 }
 
 func (r *farmRepository) Create(ctx context.Context, farm *model.Farm) error {

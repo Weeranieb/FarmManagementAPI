@@ -1,0 +1,1 @@
+-- Cannot restore previous farm.status without a snapshot; no-op.

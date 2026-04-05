@@ -65,17 +65,12 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
-	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
 	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
 	if err != nil || !isSuperAdmin {
 		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
-	if err := h.pondService.CreatePonds(c.UserContext(), createPondsRequest, username); err != nil {
+	if err := h.pondService.CreatePonds(c.UserContext(), createPondsRequest); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return http.Success(c, nil)
@@ -108,7 +103,7 @@ func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
 	}
 
-	pond, err := h.pondService.Get(id)
+	pond, err := h.pondService.Get(c.UserContext(), id)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -142,7 +137,7 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid farm ID")
 	}
 
-	pondList, err := h.pondService.GetList(farmId)
+	pondList, err := h.pondService.GetList(c.UserContext(), farmId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -182,13 +177,12 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
-	if err != nil {
+	if _, err := utils.GetUsername(c.UserContext()); err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
 	req := dto.UpdatePondRequest{Id: id, FarmId: body.FarmId, Name: body.Name, Status: body.Status}
-	err = h.pondService.Update(c.UserContext(), req, username)
+	err = h.pondService.Update(c.UserContext(), req)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -224,13 +218,11 @@ func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
 	}
 
-	// Get username
-	username, err := utils.GetUsername(c.UserContext())
-	if err != nil {
+	if _, err := utils.GetUsername(c.UserContext()); err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.pondService.Delete(id, username)
+	err = h.pondService.Delete(c.UserContext(), id)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

@@ -162,7 +162,7 @@ func (s *PondRepositoryTestSuite) TestDelete_Success() {
 	s.pondRepo.Create(context.Background(), pond)
 
 	// WHEN — Delete is called
-	err := s.pondRepo.Delete(pond.Id)
+	err := s.pondRepo.Delete(context.Background(), pond.Id)
 
 	// THEN — no error and GetByID returns nil
 	assert.NoError(s.T(), err)

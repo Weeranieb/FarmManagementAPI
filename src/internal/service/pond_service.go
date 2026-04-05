@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -19,11 +20,11 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=PondService --output=./mocks --outpkg=service --filename=pond_service.go --structname=MockPondService --with-expecter=false
 type PondService interface {
-	CreatePonds(ctx context.Context, request dto.CreatePondsRequest, username string) error
-	Get(id int) (*dto.PondResponse, error)
-	Update(ctx context.Context, request dto.UpdatePondRequest, username string) error
-	GetList(farmId int) ([]*dto.PondResponse, error)
-	Delete(id int, username string) error
+	CreatePonds(ctx context.Context, request dto.CreatePondsRequest) error
+	Get(ctx context.Context, id int) (*dto.PondResponse, error)
+	Update(ctx context.Context, request dto.UpdatePondRequest) error
+	GetList(ctx context.Context, farmId int) ([]*dto.PondResponse, error)
+	Delete(ctx context.Context, id int) error
 	FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error)
 	MovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest, username string) (*dto.PondMoveResponse, error)
 	SellPond(ctx context.Context, pondId int, request dto.PondSellRequest, username string) (*dto.PondSellResponse, error)
@@ -72,19 +73,40 @@ func NewPondService(params PondServiceParams) PondService {
 	}
 }
 
-func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest, username string) error {
+// syncFarmStatusFromPonds updates farms.status from current ponds using pondRepo.WithTx(tx) and
+// farmRepo.WithTx(tx). tx must be the active GORM transaction from txManager.WithTransaction.
+func (s *pondService) syncFarmStatusFromPonds(ctx context.Context, tx *gorm.DB, farmId int) error {
+	if tx == nil {
+		return errors.ErrGeneric.Wrap(fmt.Errorf("syncFarmStatusFromPonds: transaction required"))
+	}
+	if farmId == 0 {
+		return nil
+	}
+	pondRepo := s.pondRepo.WithTx(tx)
+	farmRepo := s.farmRepo.WithTx(tx)
+	ponds, err := pondRepo.ListByFarmId(farmId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	desired := utils.DeriveFarmStatusFromPonds(ponds)
+	farm, err := farmRepo.GetByID(farmId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if farm == nil {
+		return nil
+	}
+	if farm.Status == desired {
+		return nil
+	}
+	farm.Status = desired
+	return farmRepo.Update(ctx, farm)
+}
+
+func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest) error {
 	normalizedNames := make([]string, 0, len(request.Names))
 	for _, name := range request.Names {
 		normalizedNames = append(normalizedNames, utils.NormalizePondNameForStore(name))
-	}
-	for _, name := range normalizedNames {
-		checkPond, err := s.pondRepo.GetByFarmIdAndName(request.FarmId, name)
-		if err != nil {
-			return errors.ErrGeneric.Wrap(err)
-		}
-		if checkPond != nil {
-			return errors.ErrPondAlreadyExists
-		}
 	}
 
 	newPonds := make([]*model.Pond, 0, len(normalizedNames))
@@ -96,12 +118,27 @@ func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRe
 		})
 	}
 
-	// CreatedBy/UpdatedBy set via BaseModel hook from ctx
-	return s.pondRepo.CreateBatch(ctx, newPonds)
+	return s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
+		pondRepo := s.pondRepo.WithTx(tx)
+		for _, name := range normalizedNames {
+			checkPond, err := pondRepo.GetByFarmIdAndName(request.FarmId, name)
+			if err != nil {
+				return errors.ErrGeneric.Wrap(err)
+			}
+			if checkPond != nil {
+				return errors.ErrPondAlreadyExists
+			}
+		}
+		// CreatedBy/UpdatedBy set via BaseModel hook from ctx
+		if err := pondRepo.CreateBatch(ctx, newPonds); err != nil {
+			return errors.ErrGeneric.Wrap(err)
+		}
+		return s.syncFarmStatusFromPonds(ctx, tx, request.FarmId)
+	})
 }
 
-func (s *pondService) Get(id int) (*dto.PondResponse, error) {
-	pa, err := s.pondRepo.GetByIDWithFarmAndActivePond(context.Background(), id)
+func (s *pondService) Get(ctx context.Context, id int) (*dto.PondResponse, error) {
+	pa, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, id)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -111,7 +148,7 @@ func (s *pondService) Get(id int) (*dto.PondResponse, error) {
 	return s.toPondResponseFromPondWithActive(pa), nil
 }
 
-func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest, username string) error {
+func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest) error {
 	existing, err := s.pondRepo.GetByID(req.Id)
 	if err != nil {
 		return errors.ErrGeneric.Wrap(err)
@@ -119,6 +156,7 @@ func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest, use
 	if existing == nil {
 		return errors.ErrPondNotFound
 	}
+	oldFarmId := existing.FarmId
 
 	// Apply only provided fields (non-zero / non-empty so partial update is safe)
 	if req.FarmId != 0 {
@@ -142,15 +180,26 @@ func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest, use
 		}
 	}
 
-	// UpdatedBy set via BaseModel hook from ctx
-	if err := s.pondRepo.Update(ctx, existing); err != nil {
-		return errors.ErrGeneric.Wrap(err)
-	}
-	return nil
+	return s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
+		pondRepo := s.pondRepo.WithTx(tx)
+		// UpdatedBy set via BaseModel hook from ctx
+		if err := pondRepo.Update(ctx, existing); err != nil {
+			return errors.ErrGeneric.Wrap(err)
+		}
+		if err := s.syncFarmStatusFromPonds(ctx, tx, oldFarmId); err != nil {
+			return err
+		}
+		if existing.FarmId != oldFarmId {
+			if err := s.syncFarmStatusFromPonds(ctx, tx, existing.FarmId); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
-func (s *pondService) GetList(farmId int) ([]*dto.PondResponse, error) {
-	list, err := s.pondRepo.ListByFarmIdWithActivePond(context.Background(), farmId)
+func (s *pondService) GetList(ctx context.Context, farmId int) ([]*dto.PondResponse, error) {
+	list, err := s.pondRepo.ListByFarmIdWithActivePond(ctx, farmId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -161,12 +210,22 @@ func (s *pondService) GetList(farmId int) ([]*dto.PondResponse, error) {
 	return responses, nil
 }
 
-func (s *pondService) Delete(id int, username string) error {
-	// Delete pond (soft delete)
-	if err := s.pondRepo.Delete(id); err != nil {
+func (s *pondService) Delete(ctx context.Context, id int) error {
+	pond, err := s.pondRepo.GetByID(id)
+	if err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
-	return nil
+	if pond == nil {
+		return errors.ErrPondNotFound
+	}
+	farmId := pond.FarmId
+	return s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
+		pondRepo := s.pondRepo.WithTx(tx)
+		if err := pondRepo.Delete(ctx, id); err != nil {
+			return errors.ErrGeneric.Wrap(err)
+		}
+		return s.syncFarmStatusFromPonds(ctx, tx, farmId)
+	})
 }
 
 func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error) {
@@ -268,6 +327,9 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 		resp = &dto.PondFillResponse{
 			ActivityId:   int64(activity.Id),
 			ActivePondId: int64(activePond.Id),
+		}
+		if err := s.syncFarmStatusFromPonds(ctx, tx, data.Pond.FarmId); err != nil {
+			return err
 		}
 		return nil
 	})
@@ -448,6 +510,16 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 			ActivePondId:   int64(sourceActive.Id),
 			ToActivePondId: int64(destActive.Id),
 		}
+		srcFarmId := sourceData.Pond.FarmId
+		dstFarmId := destData.Pond.FarmId
+		if err := s.syncFarmStatusFromPonds(ctx, tx, srcFarmId); err != nil {
+			return err
+		}
+		if dstFarmId != srcFarmId {
+			if err := s.syncFarmStatusFromPonds(ctx, tx, dstFarmId); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 	if err != nil {
@@ -595,6 +667,9 @@ func (s *pondService) executeSellTransaction(
 		if err := pondRepo.Update(ctx, pond); err != nil {
 			return nil, err
 		}
+	}
+	if err := s.syncFarmStatusFromPonds(ctx, tx, pond.FarmId); err != nil {
+		return nil, err
 	}
 	return &dto.PondSellResponse{
 		ActivityId:   int64(activity.Id),

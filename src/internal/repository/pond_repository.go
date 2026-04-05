@@ -33,7 +33,7 @@ type PondRepository interface {
 	Update(ctx context.Context, pond *model.Pond) error
 	ListByFarmId(farmId int) ([]*model.Pond, error)
 	ListByFarmIdWithActivePond(ctx context.Context, farmId int) ([]*PondWithFarmAndActivePond, error)
-	Delete(id int) error
+	Delete(ctx context.Context, id int) error
 }
 
 type pondRepository struct {
@@ -229,6 +229,6 @@ func (r *pondRepository) ListByFarmId(farmId int) ([]*model.Pond, error) {
 	return ponds, err
 }
 
-func (r *pondRepository) Delete(id int) error {
-	return r.db.Delete(&model.Pond{}, id).Error
+func (r *pondRepository) Delete(ctx context.Context, id int) error {
+	return r.db.WithContext(ctx).Delete(&model.Pond{}, id).Error
 }

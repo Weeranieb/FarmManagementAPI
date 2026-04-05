@@ -17,6 +17,7 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/repository/mocks"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/transaction"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -61,6 +62,8 @@ func (s *PondServiceTestSuite) SetupTest() {
 		FishSizeGradeRepo:  s.fishSizeGradeRepo,
 		TxManager:          transaction.NewManager(s.db),
 	})
+	s.pondRepo.On("WithTx", mock.Anything).Maybe().Return(s.pondRepo)
+	s.farmRepo.On("WithTx", mock.Anything).Maybe().Return(s.farmRepo)
 }
 
 // fillPondCtx returns a context with super admin (userLevel 3) so CanAccessClient allows any client.
@@ -124,6 +127,20 @@ func (s *PondServiceTestSuite) setupReposWithTxForTransaction() {
 	s.sellDetailRepo.On("CreateBatch", mock.Anything, mock.Anything).Maybe().Return(nil)
 }
 
+// expectFarmStatusSyncAfterMutation mocks pondRepo.ListByFarmId and farmRepo for syncFarmStatusFromPonds.
+// pondsAfter is what ListByFarmId returns after the mutation; farmStoredStatus is the current farms.status row.
+func (s *PondServiceTestSuite) expectFarmStatusSyncAfterMutation(farmId int, pondsAfter []*model.Pond, farmStoredStatus string) {
+	s.pondRepo.On("ListByFarmId", farmId).Return(pondsAfter, nil)
+	farm := &model.Farm{Id: farmId, ClientId: 1, Name: "Farm", Status: farmStoredStatus}
+	s.farmRepo.On("GetByID", farmId).Return(farm, nil)
+	want := utils.DeriveFarmStatusFromPonds(pondsAfter)
+	if farmStoredStatus != want {
+		s.farmRepo.On("Update", mock.Anything, mock.MatchedBy(func(f *model.Farm) bool {
+			return f.Id == farmId && f.Status == want
+		})).Return(nil)
+	}
+}
+
 func TestPondServiceSuite(t *testing.T) {
 	suite.Run(t, new(PondServiceTestSuite))
 }
@@ -134,7 +151,6 @@ func (s *PondServiceTestSuite) TestCreatePonds_Success() {
 		FarmId: 1,
 		Names:  []string{"Pond 1", "Pond 2"},
 	}
-	username := "admin"
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 1").Return(nil, nil)
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 2").Return(nil, nil)
 	s.pondRepo.On("CreateBatch", mock.Anything, mock.AnythingOfType("[]*model.Pond")).Return(nil).Run(func(args mock.Arguments) {
@@ -145,13 +161,18 @@ func (s *PondServiceTestSuite) TestCreatePonds_Success() {
 			ponds[i].UpdatedAt = time.Now()
 		}
 	})
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{
+		{Id: 1, FarmId: 1, Status: constants.FarmStatusMaintenance},
+		{Id: 2, FarmId: 1, Status: constants.FarmStatusMaintenance},
+	}, constants.FarmStatusMaintenance)
 
 	// WHEN — CreatePonds is called
-	err := s.pondService.CreatePonds(context.Background(), req, username)
+	err := s.pondService.CreatePonds(context.Background(), req)
 
 	// THEN — no error; CreateBatch was used
 	assert.NoError(s.T(), err)
 	s.pondRepo.AssertExpectations(s.T())
+	s.farmRepo.AssertExpectations(s.T())
 }
 
 func (s *PondServiceTestSuite) TestCreatePonds_PondAlreadyExists() {
@@ -160,13 +181,12 @@ func (s *PondServiceTestSuite) TestCreatePonds_PondAlreadyExists() {
 		FarmId: 1,
 		Names:  []string{"Pond 1", "Pond 2"},
 	}
-	username := "admin"
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 1").Return(nil, nil)
 	existingPond := &model.Pond{Id: 99, FarmId: 1, Name: "Pond 2", Status: "active"}
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 2").Return(existingPond, nil)
 
 	// WHEN — CreatePonds is called
-	err := s.pondService.CreatePonds(context.Background(), req, username)
+	err := s.pondService.CreatePonds(context.Background(), req)
 
 	// THEN — ErrPondAlreadyExists; CreateBatch not called
 	assert.Error(s.T(), err)
@@ -191,7 +211,7 @@ func (s *PondServiceTestSuite) TestGet_Success() {
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(pa, nil)
 
 	// WHEN — Get is called
-	result, err := s.pondService.Get(pondId)
+	result, err := s.pondService.Get(context.Background(), pondId)
 
 	// THEN — result returned with same id
 	assert.NoError(s.T(), err)
@@ -206,7 +226,7 @@ func (s *PondServiceTestSuite) TestGet_NotFound() {
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(nil, nil)
 
 	// WHEN — Get is called
-	result, err := s.pondService.Get(pondId)
+	result, err := s.pondService.Get(context.Background(), pondId)
 
 	// THEN — ErrPondNotFound; no result
 	assert.Error(s.T(), err)
@@ -221,7 +241,7 @@ func (s *PondServiceTestSuite) TestGet_RepoError() {
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(nil, assert.AnError)
 
 	// WHEN — Get is called
-	result, err := s.pondService.Get(pondId)
+	result, err := s.pondService.Get(context.Background(), pondId)
 
 	// THEN — error propagated; no result
 	assert.Error(s.T(), err)
@@ -239,7 +259,7 @@ func (s *PondServiceTestSuite) TestGetList_Success() {
 	s.pondRepo.On("ListByFarmIdWithActivePond", mock.Anything, farmId).Return(list, nil)
 
 	// WHEN — GetList is called
-	result, err := s.pondService.GetList(farmId)
+	result, err := s.pondService.GetList(context.Background(), farmId)
 
 	// THEN — two ponds returned
 	assert.NoError(s.T(), err)
@@ -254,13 +274,17 @@ func (s *PondServiceTestSuite) TestUpdate_Success() {
 	s.pondRepo.On("GetByID", 1).Return(existing, nil)
 	s.pondRepo.On("GetByFarmIdAndName", 1, "New Name").Return(nil, nil)
 	s.pondRepo.On("Update", mock.Anything, mock.AnythingOfType("*model.Pond")).Return(nil)
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{
+		{Id: 1, FarmId: 1, Name: "New Name", Status: constants.FarmStatusActive},
+	}, constants.FarmStatusMaintenance)
 
 	// WHEN — Update is called
-	err := s.pondService.Update(context.Background(), req, "user")
+	err := s.pondService.Update(context.Background(), req)
 
 	// THEN — no error
 	assert.NoError(s.T(), err)
 	s.pondRepo.AssertExpectations(s.T())
+	s.farmRepo.AssertExpectations(s.T())
 }
 
 func (s *PondServiceTestSuite) TestUpdate_PondNotFound() {
@@ -269,7 +293,7 @@ func (s *PondServiceTestSuite) TestUpdate_PondNotFound() {
 	s.pondRepo.On("GetByID", 999).Return(nil, nil)
 
 	// WHEN — Update is called
-	err := s.pondService.Update(context.Background(), req, "user")
+	err := s.pondService.Update(context.Background(), req)
 
 	// THEN — ErrPondNotFound; Update not called
 	assert.Error(s.T(), err)
@@ -287,7 +311,7 @@ func (s *PondServiceTestSuite) TestUpdate_DuplicateName() {
 	s.pondRepo.On("GetByFarmIdAndName", 1, "New Name").Return(otherPond, nil)
 
 	// WHEN — Update is called
-	err := s.pondService.Update(context.Background(), req, "user")
+	err := s.pondService.Update(context.Background(), req)
 
 	// THEN — ErrPondAlreadyExists; Update not called
 	assert.Error(s.T(), err)
@@ -304,7 +328,7 @@ func (s *PondServiceTestSuite) TestUpdate_RepoError() {
 	s.pondRepo.On("Update", mock.Anything, mock.AnythingOfType("*model.Pond")).Return(assert.AnError)
 
 	// WHEN — Update is called
-	err := s.pondService.Update(context.Background(), req, "user")
+	err := s.pondService.Update(context.Background(), req)
 
 	// THEN — error propagated
 	assert.Error(s.T(), err)
@@ -440,6 +464,9 @@ func (s *PondServiceTestSuite) TestFillPond_Success_NewActivePond() {
 	}
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
 	s.setupReposWithTxForTransaction()
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{
+		{Id: pondId, FarmId: 1, Name: "Pond", Status: constants.FarmStatusActive},
+	}, constants.FarmStatusMaintenance)
 
 	// WHEN — FillPond is called
 	resp, err := s.pondService.FillPond(fillPondCtx(), pondId, req, "user")
@@ -450,6 +477,7 @@ func (s *PondServiceTestSuite) TestFillPond_Success_NewActivePond() {
 	assert.Greater(s.T(), resp.ActivePondId, int64(0))
 	assert.Greater(s.T(), resp.ActivityId, int64(0))
 	s.pondRepo.AssertExpectations(s.T())
+	s.farmRepo.AssertExpectations(s.T())
 }
 
 func (s *PondServiceTestSuite) TestFillPond_Success_ExistingActivePond() {
@@ -472,6 +500,9 @@ func (s *PondServiceTestSuite) TestFillPond_Success_ExistingActivePond() {
 	}
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
 	s.setupReposWithTxForTransaction()
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{
+		{Id: pondId, FarmId: 1, Name: "Pond", Status: constants.FarmStatusActive},
+	}, constants.FarmStatusActive)
 
 	// WHEN — FillPond is called
 	resp, err := s.pondService.FillPond(fillPondCtx(), pondId, req, "user")
@@ -482,6 +513,7 @@ func (s *PondServiceTestSuite) TestFillPond_Success_ExistingActivePond() {
 	assert.Equal(s.T(), int64(10), resp.ActivePondId)
 	assert.Greater(s.T(), resp.ActivityId, int64(0))
 	s.pondRepo.AssertExpectations(s.T())
+	s.farmRepo.AssertExpectations(s.T())
 }
 
 func validPondFillRequest() dto.PondFillRequest {
@@ -674,6 +706,7 @@ func (s *PondServiceTestSuite) TestMovePond_Success_BothActive() {
 		Pond: destPond, ClientId: 1, ActivePond: destActive,
 	}, nil)
 	s.setupReposWithTxForTransaction()
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{sourcePond, destPond}, constants.FarmStatusActive)
 
 	// WHEN — MovePond is called
 	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
@@ -685,6 +718,7 @@ func (s *PondServiceTestSuite) TestMovePond_Success_BothActive() {
 	assert.Equal(s.T(), int64(10), resp.ActivePondId)
 	assert.Equal(s.T(), int64(20), resp.ToActivePondId)
 	s.pondRepo.AssertExpectations(s.T())
+	s.farmRepo.AssertExpectations(s.T())
 }
 
 func (s *PondServiceTestSuite) TestMovePond_Success_DestInMaintenance() {
@@ -710,6 +744,8 @@ func (s *PondServiceTestSuite) TestMovePond_Success_DestInMaintenance() {
 		Pond: destPond, ClientId: 1, ActivePond: nil,
 	}, nil)
 	s.setupReposWithTxForTransaction()
+	destAfter := &model.Pond{Id: req.ToPondId, FarmId: 1, Name: "P2", Status: constants.FarmStatusActive}
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{sourcePond, destAfter}, constants.FarmStatusActive)
 
 	// WHEN — MovePond is called
 	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
@@ -721,6 +757,7 @@ func (s *PondServiceTestSuite) TestMovePond_Success_DestInMaintenance() {
 	assert.Equal(s.T(), int64(10), resp.ActivePondId)
 	assert.Greater(s.T(), resp.ToActivePondId, int64(0))
 	s.pondRepo.AssertExpectations(s.T())
+	s.farmRepo.AssertExpectations(s.T())
 }
 
 func (s *PondServiceTestSuite) TestMovePond_Success_MarkToClose() {
@@ -764,6 +801,8 @@ func (s *PondServiceTestSuite) TestMovePond_Success_MarkToClose() {
 		}
 	}).Return(nil)
 	s.setupReposWithTxForTransaction()
+	sourceAfter := &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusMaintenance}
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{sourceAfter, destPond}, constants.FarmStatusActive)
 
 	// WHEN — MovePond is called
 	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
@@ -777,6 +816,7 @@ func (s *PondServiceTestSuite) TestMovePond_Success_MarkToClose() {
 	assert.NotNil(s.T(), updatedPond, "pondRepo.Update should be called for source pond when MarkToClose is true")
 	assert.Equal(s.T(), constants.FarmStatusMaintenance, updatedPond.Status)
 	s.pondRepo.AssertExpectations(s.T())
+	s.farmRepo.AssertExpectations(s.T())
 }
 
 func (s *PondServiceTestSuite) TestSellPond_Success_WithAdditionalCosts() {
@@ -803,6 +843,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success_WithAdditionalCosts() {
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
 	s.mockFishSizeGradesForValidRequest()
 	s.setupReposWithTxForTransaction()
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{pond}, constants.FarmStatusActive)
 
 	// WHEN — SellPond is called
 	resp, err := s.pondService.SellPond(fillPondCtx(), pondId, req, "user")
@@ -814,6 +855,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success_WithAdditionalCosts() {
 	s.additionalCostRepo.AssertCalled(s.T(), "CreateBatch", mock.Anything, mock.MatchedBy(func(items []*model.AdditionalCost) bool {
 		return len(items) == 2 && items[0].Title == "Transport" && items[1].Title == "Packaging"
 	}))
+	s.farmRepo.AssertExpectations(s.T())
 }
 
 func validPondSellRequest() dto.PondSellRequest {
@@ -998,6 +1040,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success() {
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
 	s.mockFishSizeGradesForValidRequest()
 	s.setupReposWithTxForTransaction()
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{pond}, constants.FarmStatusActive)
 
 	// WHEN — SellPond is called
 	resp, err := s.pondService.SellPond(fillPondCtx(), pondId, req, "user")
@@ -1008,6 +1051,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success() {
 	assert.Greater(s.T(), resp.ActivityId, int64(0))
 	assert.Equal(s.T(), int64(10), resp.ActivePondId)
 	s.pondRepo.AssertExpectations(s.T())
+	s.farmRepo.AssertExpectations(s.T())
 }
 
 func (s *PondServiceTestSuite) TestSellPond_Success_MarkToClose() {
@@ -1037,6 +1081,8 @@ func (s *PondServiceTestSuite) TestSellPond_Success_MarkToClose() {
 	}).Return(nil)
 	s.mockFishSizeGradesForValidRequest()
 	s.setupReposWithTxForTransaction()
+	pondAfter := &model.Pond{Id: pondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusMaintenance}
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{pondAfter}, constants.FarmStatusActive)
 
 	// WHEN — SellPond is called
 	resp, err := s.pondService.SellPond(fillPondCtx(), pondId, req, "user")
@@ -1049,4 +1095,5 @@ func (s *PondServiceTestSuite) TestSellPond_Success_MarkToClose() {
 	assert.NotNil(s.T(), updatedPond, "pondRepo.Update should be called when MarkToClose is true")
 	assert.Equal(s.T(), constants.FarmStatusMaintenance, updatedPond.Status)
 	s.pondRepo.AssertExpectations(s.T())
+	s.farmRepo.AssertExpectations(s.T())
 }

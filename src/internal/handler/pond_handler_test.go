@@ -46,7 +46,7 @@ func (s *PondHandlerTestSuite) TestAddPonds_Success() {
 		Names:  []string{"Pond 1", "Pond 2"},
 	}
 	username := "admin"
-	s.pondService.On("CreatePonds", mock.Anything, *createReq, username).Return(nil)
+	s.pondService.On("CreatePonds", mock.Anything, *createReq).Return(nil)
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  username,
@@ -130,7 +130,7 @@ func (s *PondHandlerTestSuite) TestGetPond_Success() {
 		Status: "active",
 	}
 
-	s.pondService.On("Get", pondId).Return(expectedResponse, nil)
+	s.pondService.On("Get", mock.Anything, pondId).Return(expectedResponse, nil)
 
 	app := fiber.New()
 	app.Get("/api/v1/pond/:id", s.pondHandler.GetPond)
@@ -154,7 +154,7 @@ func (s *PondHandlerTestSuite) TestGetPondList_Success() {
 		{Id: 2, FarmId: farmId, Name: "Pond 2", Status: "active"},
 	}
 
-	s.pondService.On("GetList", farmId).Return(expectedResponse, nil)
+	s.pondService.On("GetList", mock.Anything, farmId).Return(expectedResponse, nil)
 
 	app := fiber.New()
 	app.Get("/api/v1/pond", s.pondHandler.GetPondList)
@@ -390,7 +390,7 @@ func (s *PondHandlerTestSuite) TestUpdatePond_Success() {
 	body := dto.UpdatePondBody{Name: "Updated Pond", Status: "active"}
 	s.pondService.On("Update", mock.Anything, dto.UpdatePondRequest{
 		Id: pondId, FarmId: body.FarmId, Name: body.Name, Status: body.Status,
-	}, username).Return(nil)
+	}).Return(nil)
 	app := s.updatePondApp(username)
 	reqBody, _ := json.Marshal(body)
 	req := httptest.NewRequest("PUT", "/api/v1/pond/1", bytes.NewBuffer(reqBody))
@@ -448,7 +448,7 @@ func (s *PondHandlerTestSuite) TestUpdatePond_MissingUsername() {
 func (s *PondHandlerTestSuite) TestUpdatePond_ServiceError() {
 	// GIVEN — pond 999; service returns ErrPondNotFound
 	username := "user"
-	s.pondService.On("Update", mock.Anything, mock.AnythingOfType("dto.UpdatePondRequest"), username).Return(apperrors.ErrPondNotFound)
+	s.pondService.On("Update", mock.Anything, mock.AnythingOfType("dto.UpdatePondRequest")).Return(apperrors.ErrPondNotFound)
 	app := s.updatePondApp(username)
 	req := httptest.NewRequest("PUT", "/api/v1/pond/999", bytes.NewBuffer([]byte(`{}`)))
 	req.Header.Set("Content-Type", "application/json")
@@ -480,7 +480,7 @@ func (s *PondHandlerTestSuite) TestDeletePond_Success() {
 	// GIVEN — pond 1; service returns nil
 	pondId := 1
 	username := "admin"
-	s.pondService.On("Delete", pondId, username).Return(nil)
+	s.pondService.On("Delete", mock.Anything, pondId).Return(nil)
 	app := s.deletePondApp(username)
 	req := httptest.NewRequest("DELETE", "/api/v1/pond/1", nil)
 
@@ -532,7 +532,7 @@ func (s *PondHandlerTestSuite) TestDeletePond_MissingUsername() {
 func (s *PondHandlerTestSuite) TestDeletePond_ServiceError() {
 	// GIVEN — pond 1; service returns ErrGeneric
 	username := "user"
-	s.pondService.On("Delete", 1, username).Return(apperrors.ErrGeneric)
+	s.pondService.On("Delete", mock.Anything, 1).Return(apperrors.ErrGeneric)
 	app := s.deletePondApp(username)
 	req := httptest.NewRequest("DELETE", "/api/v1/pond/1", nil)
 

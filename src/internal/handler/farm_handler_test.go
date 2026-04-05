@@ -78,7 +78,7 @@ func (s *FarmHandlerTestSuite) TestGetFarm_Success() {
 		Id:       farmId,
 		ClientId: clientId,
 		Name:     "Test Farm",
-		Status:   "active",
+		Status:   "maintenance",
 		Summary:  dto.FarmDetailSummary{TotalPonds: 0, ActivePonds: 0},
 		Ponds:    []dto.FarmDetailPondItem{},
 	}
@@ -134,7 +134,7 @@ func (s *FarmHandlerTestSuite) TestGetFarmHierarchy_Success() {
 	clientId := 1
 	expectedList := []*dto.FarmHierarchyItem{
 		{Id: 1, ClientId: clientId, Name: "River Farm", Status: "active", Ponds: []dto.FarmDetailPondItem{{Id: 1, Name: "Pond A1", Status: "active"}}},
-		{Id: 2, ClientId: clientId, Name: "Delta Farm", Status: "active", Ponds: []dto.FarmDetailPondItem{}},
+		{Id: 2, ClientId: clientId, Name: "Delta Farm", Status: "maintenance", Ponds: []dto.FarmDetailPondItem{}},
 	}
 	s.farmService.On("GetHierarchy", clientId).Return(expectedList, nil)
 	app := fiber.New()
