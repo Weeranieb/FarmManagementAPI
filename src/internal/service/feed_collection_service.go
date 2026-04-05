@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/shopspring/decimal"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
@@ -49,6 +51,20 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 		return nil, errors.ErrFeedCollectionAlreadyExists
 	}
 
+	feedType := request.FeedType
+	if feedType == "" {
+		feedType = constants.FeedTypePellet
+	}
+	if !constants.IsValidFeedType(feedType) {
+		return nil, errors.ErrValidationFailed.Wrap(fmt.Errorf("invalid feedType"))
+	}
+
+	var fcr *decimal.Decimal
+	if request.Fcr != nil {
+		d := decimal.NewFromFloat(*request.Fcr)
+		fcr = &d
+	}
+
 	// Start transaction (ctx used so BaseModel hooks can set CreatedBy/UpdatedBy)
 	tx := s.db.WithContext(ctx).Begin()
 	defer func() {
@@ -62,6 +78,8 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 		ClientId: clientId,
 		Name:     request.Name,
 		Unit:     request.Unit,
+		FeedType: feedType,
+		Fcr:      fcr,
 	}
 
 	if err := tx.Create(newFeedCollection).Error; err != nil {
@@ -137,6 +155,16 @@ func (s *feedCollectionService) Update(ctx context.Context, request dto.UpdateFe
 	if request.Unit != "" {
 		existingFeedCollection.Unit = request.Unit
 	}
+	if request.FeedType != "" {
+		if !constants.IsValidFeedType(request.FeedType) {
+			return errors.ErrValidationFailed.Wrap(fmt.Errorf("invalid feedType"))
+		}
+		existingFeedCollection.FeedType = request.FeedType
+	}
+	if request.Fcr != nil {
+		d := decimal.NewFromFloat(*request.Fcr)
+		existingFeedCollection.Fcr = &d
+	}
 
 	// Update feed collection (UpdatedBy set via BaseModel hook from ctx)
 	if err := s.feedCollectionRepo.Update(ctx, existingFeedCollection); err != nil {
@@ -173,14 +201,20 @@ func (s *feedCollectionService) GetPage(clientId, page, pageSize int, orderBy, k
 }
 
 func (s *feedCollectionService) toFeedCollectionResponse(feedCollection *model.FeedCollection) *dto.FeedCollectionResponse {
-	return &dto.FeedCollectionResponse{
+	resp := &dto.FeedCollectionResponse{
 		Id:        feedCollection.Id,
 		ClientId:  feedCollection.ClientId,
 		Name:      feedCollection.Name,
 		Unit:      feedCollection.Unit,
+		FeedType:  feedCollection.FeedType,
 		CreatedAt: feedCollection.CreatedAt,
 		CreatedBy: feedCollection.CreatedBy,
 		UpdatedAt: feedCollection.UpdatedAt,
 		UpdatedBy: feedCollection.UpdatedBy,
 	}
+	if feedCollection.Fcr != nil {
+		v := feedCollection.Fcr.InexactFloat64()
+		resp.Fcr = &v
+	}
+	return resp
 }

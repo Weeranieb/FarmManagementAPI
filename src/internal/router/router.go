@@ -76,5 +76,5 @@ func (r *Router) setupProtectedRoutes(api fiber.Router) {
 	r.setupWorkerRoutes(protected)
 	r.setupFeedCollectionRoutes(protected)
 	r.setupFeedPriceHistoryRoutes(protected)
-	r.setupDailyFeedRoutes(protected)
+	r.setupDailyLogRoutes(protected)
 }

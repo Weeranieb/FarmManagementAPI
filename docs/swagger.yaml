@@ -38,10 +38,17 @@ definitions:
       clientId:
         description: when JWT has no clientId (e.g. super admin), required for create
         type: integer
+      fcr:
+        type: number
       feedPriceHistories:
         items:
           $ref: '#/definitions/dto.CreateFeedPriceHistoryItemRequest'
         type: array
+      feedType:
+        enum:
+        - fresh
+        - pellet
+        type: string
       name:
         type: string
       unit:
@@ -104,6 +111,96 @@ definitions:
     - firstName
     - password
     - username
+    type: object
+  dto.DailyLogBulkUpsertRequest:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/dto.DailyLogEntryInput'
+        minItems: 1
+        type: array
+      freshFeedCollectionId:
+        type: integer
+      month:
+        description: YYYY-MM
+        type: string
+      pelletFeedCollectionId:
+        type: integer
+    required:
+    - entries
+    - month
+    type: object
+  dto.DailyLogEntryInput:
+    properties:
+      day:
+        maximum: 31
+        minimum: 1
+        type: integer
+      deathFishCount:
+        minimum: 0
+        type: integer
+      freshEvening:
+        type: number
+      freshMorning:
+        type: number
+      pelletEvening:
+        type: number
+      pelletMorning:
+        type: number
+      touristCatchCount:
+        minimum: 0
+        type: integer
+    required:
+    - day
+    type: object
+  dto.DailyLogEntryResponse:
+    properties:
+      day:
+        type: integer
+      deathFishCount:
+        type: integer
+      freshEvening:
+        type: number
+      freshMorning:
+        type: number
+      freshUnitPrice:
+        type: number
+      id:
+        type: integer
+      pelletEvening:
+        type: number
+      pelletMorning:
+        type: number
+      pelletUnitPrice:
+        type: number
+      touristCatchCount:
+        type: integer
+    type: object
+  dto.DailyLogExcelUploadResponse:
+    properties:
+      rowsImported:
+        type: integer
+      savedPath:
+        type: string
+    type: object
+  dto.DailyLogMonthResponse:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/dto.DailyLogEntryResponse'
+        type: array
+      freshFeedCollectionId:
+        type: integer
+      freshFeedCollectionName:
+        type: string
+      freshUnit:
+        type: string
+      pelletFeedCollectionId:
+        type: integer
+      pelletFeedCollectionName:
+        type: string
+      pelletUnit:
+        type: string
     type: object
   dto.LoginRequest:
     properties:
@@ -304,6 +401,10 @@ definitions:
       created_at:
         type: string
       created_by:
+        type: string
+      fcr:
+        type: number
+      feedType:
         type: string
       id:
         type: integer
@@ -1230,6 +1331,94 @@ paths:
       summary: Update a pond
       tags:
       - pond
+  /pond/{pondId}/daily-logs:
+    get:
+      description: Returns one sheet per month (fresh + pellet columns, deaths, tourist
+        catch).
+      parameters:
+      - description: Pond ID
+        in: path
+        name: pondId
+        required: true
+        type: integer
+      - description: YYYY-MM
+        in: query
+        name: month
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.ResponseModel'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DailyLogMonthResponse'
+              type: object
+      summary: Daily logs for a pond month
+      tags:
+      - pond
+    put:
+      parameters:
+      - description: Pond ID
+        in: path
+        name: pondId
+        required: true
+        type: integer
+      - description: Month + optional collection IDs + entries
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DailyLogBulkUpsertRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+      summary: Upsert daily logs for a month
+      tags:
+      - pond
+  /pond/{pondId}/daily-logs/upload:
+    post:
+      parameters:
+      - description: Pond ID
+        in: path
+        name: pondId
+        required: true
+        type: integer
+      - description: YYYY-MM
+        in: formData
+        name: month
+        required: true
+        type: string
+      - description: Fresh feed collection id
+        in: formData
+        name: freshFeedCollectionId
+        type: integer
+      - description: Pellet feed collection id
+        in: formData
+        name: pelletFeedCollectionId
+        type: integer
+      - description: xlsx file
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.ResponseModel'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DailyLogExcelUploadResponse'
+              type: object
+      summary: Upload Excel and import daily logs
+      tags:
+      - pond
   /pond/{pondId}/fill:
     post:
       consumes:
@@ -1514,14 +1703,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new user with the provided details. For system setup,
-        this endpoint is public and allows creating users without authentication.
-        When authenticated, uses JWT context for creator and clientId.
+      description: Create a new user with the provided details. Only super admin can
+        create users.
       parameters:
-      - description: Bearer token (optional for system setup)
-        in: header
-        name: Authorization
-        type: string
       - description: User data
         in: body
         name: body
@@ -1543,6 +1727,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
       summary: Add a new user
       tags:
       - user

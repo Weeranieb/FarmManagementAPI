@@ -34,7 +34,8 @@ type AppConfig struct {
 	Environment         string `mapstructure:"environment"`
 	LogLevel            string `mapstructure:"log_level"`
 	Debug               bool   `mapstructure:"debug"`
-	DailyFeedUploadPath string `mapstructure:"daily_feed_upload_path"`
+	DailyLogUploadPath  string `mapstructure:"daily_log_upload_path"`
+	DailyFeedUploadPath string `mapstructure:"daily_feed_upload_path"` // legacy alias, used if daily_log_upload_path is empty
 }
 
 type AuthenticationConfig struct {
@@ -92,6 +93,7 @@ func setDefaults() {
 	viper.SetDefault("app.environment", "development")
 	viper.SetDefault("app.log_level", "info")
 	viper.SetDefault("app.debug", false)
+	viper.SetDefault("app.daily_log_upload_path", "./data/uploads/daily-log")
 	viper.SetDefault("app.daily_feed_upload_path", "./data/uploads/daily-feed")
 
 	// Authentication defaults

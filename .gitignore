@@ -7,7 +7,7 @@ configuration/config.env
 bin/
 tmp/
 
-# Uploaded daily-feed Excel files (see app.daily_feed_upload_path)
+# Uploaded daily log Excel files (see app.daily_log_upload_path or legacy daily_feed_upload_path)
 data/
 
 **/mocks/
