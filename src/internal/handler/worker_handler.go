@@ -6,7 +6,6 @@ import (
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -97,7 +96,7 @@ func (h *workerHandlerImpl) GetWorker(c *fiber.Ctx) error {
 }
 
 func (h *workerHandlerImpl) UpdateWorker(c *fiber.Ctx) error {
-	var updateWorker *model.Worker
+	var updateWorker dto.UpdateWorkerRequest
 
 	defer func() {
 		if r := recover(); r != nil {

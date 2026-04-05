@@ -6,7 +6,6 @@ import (
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -106,7 +105,7 @@ func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
 	// Check if user can access this client
 	canAccess, err := utils.CanAccessClient(c.UserContext(), id)
 	if err != nil || !canAccess {
-		return http.Error(c, 403, "Access denied to this client")
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
 	client, err := h.clientService.Get(id)
@@ -167,7 +166,7 @@ func (h *clientHandlerImpl) GetClientList(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client [put]
 func (h *clientHandlerImpl) UpdateClient(c *fiber.Ctx) error {
-	var updateClient *model.Client
+	var updateClient dto.UpdateClientRequest
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -182,7 +181,7 @@ func (h *clientHandlerImpl) UpdateClient(c *fiber.Ctx) error {
 	// Check if user can access this client
 	canAccess, err := utils.CanAccessClient(c.UserContext(), updateClient.Id)
 	if err != nil || !canAccess {
-		return http.Error(c, 403, "Access denied to this client")
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
 	// Get username

@@ -13,7 +13,7 @@ import (
 type ClientService interface {
 	Create(ctx context.Context, request dto.CreateClientRequest, username string) (*dto.ClientResponse, error)
 	Get(id int) (*dto.ClientResponse, error)
-	Update(ctx context.Context, request *model.Client, username string) error
+	Update(ctx context.Context, request dto.UpdateClientRequest, username string) error
 	GetList() ([]*dto.ClientResponse, error)
 	GetClientDropdown() ([]*dto.DropdownItem, error)
 }
@@ -68,7 +68,7 @@ func (s *clientService) Get(id int) (*dto.ClientResponse, error) {
 	return s.toClientResponse(client), nil
 }
 
-func (s *clientService) Update(ctx context.Context, request *model.Client, username string) error {
+func (s *clientService) Update(ctx context.Context, request dto.UpdateClientRequest, username string) error {
 	// Check if client exists
 	existingClient, err := s.clientRepo.GetByID(request.Id)
 	if err != nil {
@@ -79,8 +79,21 @@ func (s *clientService) Update(ctx context.Context, request *model.Client, usern
 		return errors.ErrClientNotFound
 	}
 
+	if request.Name != "" {
+		existingClient.Name = request.Name
+	}
+	if request.OwnerName != "" {
+		existingClient.OwnerName = request.OwnerName
+	}
+	if request.ContactNumber != "" {
+		existingClient.ContactNumber = request.ContactNumber
+	}
+	if request.IsActive != nil {
+		existingClient.IsActive = *request.IsActive
+	}
+
 	// Update client (UpdatedBy set via BaseModel hook from ctx)
-	if err := s.clientRepo.Update(ctx, request); err != nil {
+	if err := s.clientRepo.Update(ctx, existingClient); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 

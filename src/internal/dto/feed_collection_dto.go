@@ -5,6 +5,8 @@ import "time"
 type CreateFeedCollectionRequest struct {
 	Name               string                              `json:"name" validate:"required"`
 	Unit               string                              `json:"unit" validate:"required"`
+	FeedType           string                              `json:"feedType" validate:"omitempty,oneof=fresh pellet"`
+	Fcr                *float64                            `json:"fcr,omitempty"`
 	ClientId           *int                                `json:"clientId,omitempty"` // when JWT has no clientId (e.g. super admin), required for create
 	FeedPriceHistories []CreateFeedPriceHistoryItemRequest `json:"feedPriceHistories"`
 }
@@ -15,9 +17,11 @@ type CreateFeedPriceHistoryItemRequest struct {
 }
 
 type UpdateFeedCollectionRequest struct {
-	Id   int    `json:"id" validate:"required"`
-	Name string `json:"name"`
-	Unit string `json:"unit"`
+	Id       int      `json:"id" validate:"required"`
+	Name     string   `json:"name"`
+	Unit     string   `json:"unit"`
+	FeedType string   `json:"feedType" validate:"omitempty,oneof=fresh pellet"`
+	Fcr      *float64 `json:"fcr,omitempty"`
 }
 
 type FeedCollectionResponse struct {
@@ -25,6 +29,8 @@ type FeedCollectionResponse struct {
 	ClientId  int       `json:"clientId"`
 	Name      string    `json:"name"`
 	Unit      string    `json:"unit"`
+	FeedType  string    `json:"feedType"`
+	Fcr       *float64  `json:"fcr,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 	CreatedBy string    `json:"createdBy"`
 	UpdatedAt time.Time `json:"updatedAt"`

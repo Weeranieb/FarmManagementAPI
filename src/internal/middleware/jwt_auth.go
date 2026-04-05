@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/spf13/viper"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -15,7 +14,7 @@ import (
 )
 
 // JWTAuthMiddleware validates JWT tokens and sets user context
-func JWTAuthMiddleware() fiber.Handler {
+func JWTAuthMiddleware(jwtSecret string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Public paths that don't require authentication
 		publicPaths := []string{
@@ -56,13 +55,12 @@ func JWTAuthMiddleware() fiber.Handler {
 		}
 
 		// Parse and validate the JWT token
-		secretKey := viper.GetString("authentication.jwt_secret")
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 			// Check the signing method
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return []byte(secretKey), nil
+			return []byte(jwtSecret), nil
 		})
 
 		if err != nil || !token.Valid {

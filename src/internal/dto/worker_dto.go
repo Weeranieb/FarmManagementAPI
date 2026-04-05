@@ -21,7 +21,7 @@ type UpdateWorkerRequest struct {
 	Nationality   string     `json:"nationality"`
 	Salary        float64    `json:"salary"`
 	HireDate      *time.Time `json:"hireDate"`
-	IsActive      bool       `json:"isActive"`
+	IsActive      *bool      `json:"isActive"`
 }
 
 type WorkerResponse struct {

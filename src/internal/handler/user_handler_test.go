@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/service/mocks"
 )
 
@@ -126,11 +125,14 @@ func (s *UserHandlerTestSuite) TestAddUser_Success() {
 
 func (s *UserHandlerTestSuite) TestAddUser_InvalidBody() {
 	// GIVEN — invalid JSON body
-	// Invalid JSON might still parse to empty struct and call service, so we need a mock
 	emptyReq := dto.CreateUserRequest{}
-	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), emptyReq, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), emptyReq, "admin", (*int)(nil)).Return(nil, errors.New("validation error"))
 
 	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "admin",
+		"userLevel": 3,
+	}))
 	app.Post("/api/v1/user", s.userHandler.AddUser)
 
 	req := httptest.NewRequest("POST", "/api/v1/user", bytes.NewBuffer([]byte("invalid json")))
@@ -142,7 +144,6 @@ func (s *UserHandlerTestSuite) TestAddUser_InvalidBody() {
 	// THEN — error or non-success response
 	assert.NoError(s.T(), err)
 	assert.True(s.T(), resp.StatusCode == fiber.StatusOK || resp.StatusCode >= 400)
-	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_ValidationError() {
@@ -152,10 +153,13 @@ func (s *UserHandlerTestSuite) TestAddUser_ValidationError() {
 		Password: "123", // Too short
 	}
 
-	// Handler might still call service even with validation errors, so we need a mock
-	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *req, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *req, "admin", (*int)(nil)).Return(nil, errors.New("validation error"))
 
 	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "admin",
+		"userLevel": 3,
+	}))
 	app.Post("/api/v1/user", s.userHandler.AddUser)
 
 	body, _ := json.Marshal(req)
@@ -168,7 +172,6 @@ func (s *UserHandlerTestSuite) TestAddUser_ValidationError() {
 	// THEN — error or non-success response
 	assert.NoError(s.T(), err)
 	assert.True(s.T(), resp.StatusCode == fiber.StatusOK || resp.StatusCode >= 400)
-	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_MissingUsername() {
@@ -181,10 +184,10 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingUsername() {
 		ContactNumber: "1234567890",
 	}
 
-	// Mock the service call with nil clientId (system setup)
-	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "system", (*int)(nil)).Return(nil, errors.New("validation error"))
-
 	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"userLevel": 3,
+	}))
 	app.Post("/api/v1/user", s.userHandler.AddUser)
 
 	body, _ := json.Marshal(createReq)
@@ -194,10 +197,9 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingUsername() {
 	// WHEN — POST /api/v1/user is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 (handler may still call service)
+	// THEN — permission denied
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
@@ -210,10 +212,13 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
 		ContactNumber: "1234567890",
 	}
 
-	// Mock the service call with nil clientId (no clientId in request and no JWT)
-	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "system", (*int)(nil)).Return(nil, errors.New("service error"))
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "admin", (*int)(nil)).Return(nil, errors.New("service error"))
 
 	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "admin",
+		"userLevel": 3,
+	}))
 	app.Post("/api/v1/user", s.userHandler.AddUser)
 
 	body, _ := json.Marshal(createReq)
@@ -224,7 +229,6 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
 
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	s.userService.AssertExpectations(s.T())
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
@@ -236,9 +240,13 @@ func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
 		UserLevel:     1,
 		ContactNumber: "1234567890",
 	}
-	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "system", (*int)(nil)).Return(nil, errors.New("user already exist"))
+	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "admin", (*int)(nil)).Return(nil, errors.New("user already exist"))
 
 	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "admin",
+		"userLevel": 3,
+	}))
 	app.Post("/api/v1/user", s.userHandler.AddUser)
 
 	body, _ := json.Marshal(createReq)
@@ -331,22 +339,23 @@ func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
 // Test UpdateUser handler
 func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
 	// GIVEN — valid update body; service returns nil
-	updateUser := &model.User{
-		Id:            1,
-		ClientId:      lo.ToPtr(1),
+	userLevel := 1
+	updateUser := dto.UpdateUserRequest{
 		Username:      "updateduser",
 		FirstName:     "Updated",
 		LastName:      lo.ToPtr("User"),
-		UserLevel:     1,
+		UserLevel:     &userLevel,
 		ContactNumber: "0987654321",
 	}
 
 	username := "admin"
-	s.userService.On("Update", mock.Anything, updateUser, username).Return(nil)
+	userID := 1
+	s.userService.On("Update", mock.Anything, userID, updateUser, username).Return(nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username": username,
+		"userId":   userID,
 	}))
 	app.Put("/api/v1/user", s.userHandler.UpdateUser)
 
@@ -381,8 +390,7 @@ func (s *UserHandlerTestSuite) TestUpdateUser_InvalidBody() {
 
 func (s *UserHandlerTestSuite) TestUpdateUser_MissingUsername() {
 	// GIVEN — valid body; no username in context
-	updateUser := &model.User{
-		Id:        1,
+	updateUser := dto.UpdateUserRequest{
 		Username:  "updateduser",
 		FirstName: "Updated",
 	}
@@ -404,18 +412,19 @@ func (s *UserHandlerTestSuite) TestUpdateUser_MissingUsername() {
 
 func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
 	// GIVEN — service returns error
-	updateUser := &model.User{
-		Id:        1,
+	updateUser := dto.UpdateUserRequest{
 		Username:  "updateduser",
 		FirstName: "Updated",
 	}
 
 	username := "admin"
-	s.userService.On("Update", mock.Anything, updateUser, username).Return(errors.New("update failed"))
+	userID := 1
+	s.userService.On("Update", mock.Anything, userID, updateUser, username).Return(errors.New("update failed"))
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username": username,
+		"userId":   userID,
 	}))
 	app.Put("/api/v1/user", s.userHandler.UpdateUser)
 

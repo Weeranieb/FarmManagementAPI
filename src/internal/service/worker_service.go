@@ -14,7 +14,7 @@ import (
 type WorkerService interface {
 	Create(ctx context.Context, request dto.CreateWorkerRequest, username string, clientId int) (*dto.WorkerResponse, error)
 	Get(id int) (*dto.WorkerResponse, error)
-	Update(ctx context.Context, request *model.Worker, username string) error
+	Update(ctx context.Context, request dto.UpdateWorkerRequest, username string) error
 	GetPage(clientId, page, pageSize int, orderBy, keyword string) (*dto.PageResponse, error)
 }
 
@@ -29,7 +29,7 @@ func NewWorkerService(workerRepo repository.WorkerRepository) WorkerService {
 }
 
 func (s *workerService) Create(ctx context.Context, request dto.CreateWorkerRequest, username string, clientId int) (*dto.WorkerResponse, error) {
-	// Check if worker already exists (by FarmGroupId - this seems odd but matches old logic)
+	// Business rule: at most one worker record per farm group (legacy schema).
 	checkWorker, err := s.workerRepo.GetByFarmGroupId(request.FarmGroupId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
@@ -73,9 +73,42 @@ func (s *workerService) Get(id int) (*dto.WorkerResponse, error) {
 	return s.toWorkerResponse(worker), nil
 }
 
-func (s *workerService) Update(ctx context.Context, request *model.Worker, username string) error {
+func (s *workerService) Update(ctx context.Context, request dto.UpdateWorkerRequest, username string) error {
+	existingWorker, err := s.workerRepo.GetByID(request.Id)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existingWorker == nil {
+		return errors.ErrWorkerNotFound
+	}
+
+	if request.FarmGroupId != 0 {
+		existingWorker.FarmGroupId = request.FarmGroupId
+	}
+	if request.FirstName != "" {
+		existingWorker.FirstName = request.FirstName
+	}
+	if request.LastName != nil {
+		existingWorker.LastName = request.LastName
+	}
+	if request.ContactNumber != nil {
+		existingWorker.ContactNumber = request.ContactNumber
+	}
+	if request.Nationality != "" {
+		existingWorker.Nationality = request.Nationality
+	}
+	if request.Salary != 0 {
+		existingWorker.Salary = decimal.NewFromFloat(request.Salary)
+	}
+	if request.HireDate != nil {
+		existingWorker.HireDate = request.HireDate
+	}
+	if request.IsActive != nil {
+		existingWorker.IsActive = *request.IsActive
+	}
+
 	// Update worker (UpdatedBy set via BaseModel hook from ctx)
-	if err := s.workerRepo.Update(ctx, request); err != nil {
+	if err := s.workerRepo.Update(ctx, existingWorker); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

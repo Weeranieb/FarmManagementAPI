@@ -31,9 +31,11 @@ type DatabaseConfig struct {
 }
 
 type AppConfig struct {
-	Environment string `mapstructure:"environment"`
-	LogLevel    string `mapstructure:"log_level"`
-	Debug       bool   `mapstructure:"debug"`
+	Environment         string `mapstructure:"environment"`
+	LogLevel            string `mapstructure:"log_level"`
+	Debug               bool   `mapstructure:"debug"`
+	DailyLogUploadPath  string `mapstructure:"daily_log_upload_path"`
+	DailyFeedUploadPath string `mapstructure:"daily_feed_upload_path"` // legacy alias, used if daily_log_upload_path is empty
 }
 
 type AuthenticationConfig struct {
@@ -67,6 +69,9 @@ func LoadConfig() *Config {
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Fatal("Failed to unmarshal config:", err)
 	}
+	if strings.TrimSpace(config.Authentication.JWTSecret) == "" {
+		log.Fatal("authentication.jwt_secret must not be empty")
+	}
 
 	return &config
 }
@@ -88,9 +93,11 @@ func setDefaults() {
 	viper.SetDefault("app.environment", "development")
 	viper.SetDefault("app.log_level", "info")
 	viper.SetDefault("app.debug", false)
+	viper.SetDefault("app.daily_log_upload_path", "./data/uploads/daily-log")
+	viper.SetDefault("app.daily_feed_upload_path", "./data/uploads/daily-feed")
 
 	// Authentication defaults
-	viper.SetDefault("authentication.jwt_secret", "FarmSecretKey")
+	viper.SetDefault("authentication.jwt_secret", "")
 	viper.SetDefault("authentication.jwt_expiry", "24h")
 }
 

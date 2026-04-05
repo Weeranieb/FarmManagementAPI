@@ -17,7 +17,7 @@ import (
 type UserService interface {
 	Create(ctx context.Context, request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error)
 	GetUser(id int) (*dto.UserResponse, error)
-	Update(ctx context.Context, request *model.User, userIdentity string) error
+	Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) error
 	GetUserList(ctx context.Context, clientId *int) ([]*dto.UserResponse, error)
 }
 
@@ -84,9 +84,33 @@ func (s *userService) GetUser(id int) (*dto.UserResponse, error) {
 	return s.toUserResponse(user), nil
 }
 
-func (s *userService) Update(ctx context.Context, request *model.User, userIdentity string) error {
+func (s *userService) Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) error {
+	existingUser, err := s.userRepo.GetByID(userId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existingUser == nil {
+		return errors.ErrUserNotFound
+	}
+
+	if request.Username != "" {
+		existingUser.Username = request.Username
+	}
+	if request.FirstName != "" {
+		existingUser.FirstName = request.FirstName
+	}
+	if request.LastName != nil {
+		existingUser.LastName = request.LastName
+	}
+	if request.UserLevel != nil {
+		existingUser.UserLevel = *request.UserLevel
+	}
+	if request.ContactNumber != "" {
+		existingUser.ContactNumber = request.ContactNumber
+	}
+
 	// update user (UpdatedBy set via BaseModel hook from ctx)
-	if err := s.userRepo.Update(ctx, request); err != nil {
+	if err := s.userRepo.Update(ctx, existingUser); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

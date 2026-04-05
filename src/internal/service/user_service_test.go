@@ -185,24 +185,30 @@ func (s *UserServiceTestSuite) TestGetUser_NotFound() {
 }
 
 func (s *UserServiceTestSuite) TestUpdate_Success() {
-	// GIVEN — update user model; repo returns nil
+	// GIVEN — existing user and valid update request
 	userIdentity := "admin"
-	updateUser := &model.User{
-		Id:            1,
+	userID := 1
+	existingUser := &model.User{
+		Id:            userID,
 		ClientId:      lo.ToPtr(1),
+		Username:      "olduser",
+		FirstName:     "Old",
+		LastName:      lo.ToPtr("Name"),
+		UserLevel:     1,
+		ContactNumber: "0000000000",
+	}
+	updateUser := dto.UpdateUserRequest{
 		Username:      "updateduser",
 		FirstName:     "Updated",
 		LastName:      lo.ToPtr("User"),
-		UserLevel:     1,
+		UserLevel:     lo.ToPtr(2),
 		ContactNumber: "0987654321",
-		BaseModel: model.BaseModel{
-			UpdatedBy: userIdentity,
-		},
 	}
-	s.userRepo.On("Update", mock.Anything, updateUser).Return(nil)
+	s.userRepo.On("GetByID", userID).Return(existingUser, nil)
+	s.userRepo.On("Update", mock.Anything, existingUser).Return(nil)
 
 	// WHEN — Update is called
-	err := s.userService.Update(context.Background(), updateUser, userIdentity)
+	err := s.userService.Update(context.Background(), userID, updateUser, userIdentity)
 
 	// THEN — no error
 	assert.NoError(s.T(), err)
@@ -212,15 +218,19 @@ func (s *UserServiceTestSuite) TestUpdate_Success() {
 func (s *UserServiceTestSuite) TestUpdate_Error() {
 	// GIVEN — repo returns error on Update
 	userIdentity := "admin"
-	updateUser := &model.User{
-		Id:        1,
-		Username:  "updateduser",
-		FirstName: "Updated",
+	userID := 1
+	existingUser := &model.User{
+		Id:       userID,
+		Username: "olduser",
 	}
-	s.userRepo.On("Update", mock.Anything, updateUser).Return(errors.New("update failed"))
+	updateUser := dto.UpdateUserRequest{
+		Username: "updateduser",
+	}
+	s.userRepo.On("GetByID", userID).Return(existingUser, nil)
+	s.userRepo.On("Update", mock.Anything, existingUser).Return(errors.New("update failed"))
 
 	// WHEN — Update is called
-	err := s.userService.Update(context.Background(), updateUser, userIdentity)
+	err := s.userService.Update(context.Background(), userID, updateUser, userIdentity)
 
 	// THEN — error
 	assert.Error(s.T(), err)

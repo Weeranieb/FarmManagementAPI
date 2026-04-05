@@ -16,7 +16,7 @@ type UpdateUserRequest struct {
 	Username      string  `json:"username"`
 	FirstName     string  `json:"firstName"`
 	LastName      *string `json:"lastName"`
-	UserLevel     int     `json:"userLevel"`
+	UserLevel     *int    `json:"userLevel"`
 	ContactNumber string  `json:"contactNumber"`
 }
 

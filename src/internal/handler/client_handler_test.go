@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/service/mocks"
 )
 
@@ -402,12 +401,13 @@ func (s *ClientHandlerTestSuite) TestGetClientList_EmptyDropdown() {
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_Success() {
 	// GIVEN — valid update body; service returns nil
-	updateReq := &model.Client{
+	isActive := true
+	updateReq := dto.UpdateClientRequest{
 		Id:            1,
 		Name:          "Updated Name",
 		OwnerName:     "Jane",
 		ContactNumber: "0898765432",
-		IsActive:      true,
+		IsActive:      &isActive,
 	}
 	username := "admin"
 	s.clientService.On("Update", mock.Anything, updateReq, username).Return(nil)
@@ -459,10 +459,11 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_InvalidBody() {
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_AccessDenied() {
 	// GIVEN — user client 1; update body for client 2
-	updateReq := &model.Client{
+	isActive := true
+	updateReq := dto.UpdateClientRequest{
 		Id:       2, // update client 2
 		Name:     "Updated",
-		IsActive: true,
+		IsActive: &isActive,
 	}
 	app := fiber.New()
 	app.Use(userContextFromRequest)
@@ -486,10 +487,11 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_AccessDenied() {
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_MissingUsername() {
 	// GIVEN — valid body; no username in context
-	updateReq := &model.Client{
+	isActive := true
+	updateReq := dto.UpdateClientRequest{
 		Id:       1,
 		Name:     "Updated",
-		IsActive: true,
+		IsActive: &isActive,
 	}
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
@@ -515,10 +517,11 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_MissingUsername() {
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_ServiceError() {
 	// GIVEN — valid body; service returns error
-	updateReq := &model.Client{
+	isActive := true
+	updateReq := dto.UpdateClientRequest{
 		Id:       1,
 		Name:     "Updated",
-		IsActive: true,
+		IsActive: &isActive,
 	}
 	username := "admin"
 	svcErr := errors.New("client not found")

@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/spf13/viper"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
+	"go.uber.org/dig"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -21,12 +22,21 @@ type AuthService interface {
 }
 
 type authService struct {
-	userRepo repository.UserRepository
+	userRepo  repository.UserRepository
+	jwtSecret string
 }
 
-func NewAuthService(userRepo repository.UserRepository) AuthService {
+type AuthServiceParams struct {
+	dig.In
+
+	UserRepo repository.UserRepository
+	Config   *config.Config
+}
+
+func NewAuthService(params AuthServiceParams) AuthService {
 	return &authService{
-		userRepo: userRepo,
+		userRepo:  params.UserRepo,
+		jwtSecret: params.Config.Authentication.JWTSecret,
 	}
 }
 
@@ -88,7 +98,6 @@ func (s *authService) Login(request dto.LoginRequest) (string, *dto.UserResponse
 	}
 
 	// Create JWT token
-	secretKey := viper.GetString("authentication.jwt_secret")
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 
@@ -107,7 +116,7 @@ func (s *authService) Login(request dto.LoginRequest) (string, *dto.UserResponse
 	claims["exp"] = expiredDate.Unix()
 
 	// Sign and get the complete encoded token as a string
-	tokenString, err := token.SignedString([]byte(secretKey))
+	tokenString, err := token.SignedString([]byte(s.jwtSecret))
 	if err != nil {
 		return "", nil, nil, errors.ErrGeneric.Wrap(err)
 	}
