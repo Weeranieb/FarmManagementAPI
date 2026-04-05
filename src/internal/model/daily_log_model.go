@@ -17,7 +17,7 @@ type DailyLog struct {
 	PelletMorning          decimal.Decimal `json:"pelletMorning" gorm:"column:pellet_morning;not null;default:0"`
 	PelletEvening          decimal.Decimal `json:"pelletEvening" gorm:"column:pellet_evening;not null;default:0"`
 	DeathFishCount         int             `json:"deathFishCount" gorm:"column:death_fish_count;not null;default:0"`
-	TouristCatchCount      int             `json:"touristCatchCount" gorm:"column:tourist_catch_count;not null;default:0"`
+	TouristCatchCount      *int            `json:"touristCatchCount" gorm:"column:tourist_catch_count"`
 	BaseModel
 }
 

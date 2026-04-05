@@ -40,10 +40,11 @@ func (s *clientService) Create(ctx context.Context, request dto.CreateClientRequ
 	}
 
 	newClient := &model.Client{
-		Name:          request.Name,
-		OwnerName:     request.OwnerName,
-		ContactNumber: request.ContactNumber,
-		IsActive:      true,
+		Name:                    request.Name,
+		OwnerName:               request.OwnerName,
+		ContactNumber:           request.ContactNumber,
+		IsActive:                true,
+		IsTouristFishingEnabled: false,
 	}
 
 	// Create client (CreatedBy/UpdatedBy set via BaseModel hook from ctx)
@@ -91,6 +92,9 @@ func (s *clientService) Update(ctx context.Context, request dto.UpdateClientRequ
 	if request.IsActive != nil {
 		existingClient.IsActive = *request.IsActive
 	}
+	if request.IsTouristFishingEnabled != nil {
+		existingClient.IsTouristFishingEnabled = *request.IsTouristFishingEnabled
+	}
 
 	// Update client (UpdatedBy set via BaseModel hook from ctx)
 	if err := s.clientRepo.Update(ctx, existingClient); err != nil {
@@ -132,14 +136,15 @@ func (s *clientService) GetClientDropdown() ([]*dto.DropdownItem, error) {
 
 func (s *clientService) toClientResponse(client *model.Client) *dto.ClientResponse {
 	return &dto.ClientResponse{
-		Id:            client.Id,
-		Name:          client.Name,
-		OwnerName:     client.OwnerName,
-		ContactNumber: client.ContactNumber,
-		IsActive:      client.IsActive,
-		CreatedAt:     client.CreatedAt,
-		CreatedBy:     client.CreatedBy,
-		UpdatedAt:     client.UpdatedAt,
-		UpdatedBy:     client.UpdatedBy,
+		Id:                      client.Id,
+		Name:                    client.Name,
+		OwnerName:               client.OwnerName,
+		ContactNumber:           client.ContactNumber,
+		IsActive:                client.IsActive,
+		IsTouristFishingEnabled: client.IsTouristFishingEnabled,
+		CreatedAt:               client.CreatedAt,
+		CreatedBy:               client.CreatedBy,
+		UpdatedAt:               client.UpdatedAt,
+		UpdatedBy:               client.UpdatedBy,
 	}
 }

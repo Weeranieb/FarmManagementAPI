@@ -44,11 +44,12 @@ func (s *ClientHandlerTestSuite) TestAddClient_Success() {
 		ContactNumber: "0812345678",
 	}
 	expectedResponse := &dto.ClientResponse{
-		Id:            1,
-		Name:          createReq.Name,
-		OwnerName:     createReq.OwnerName,
-		ContactNumber: createReq.ContactNumber,
-		IsActive:      true,
+		Id:                      1,
+		Name:                    createReq.Name,
+		OwnerName:               createReq.OwnerName,
+		ContactNumber:           createReq.ContactNumber,
+		IsActive:                true,
+		IsTouristFishingEnabled: false,
 	}
 	username := "admin"
 
@@ -184,8 +185,9 @@ func (s *ClientHandlerTestSuite) TestGetClient_Success() {
 	// GIVEN — clientId in context; service returns client
 	clientId := 1
 	expectedResponse := &dto.ClientResponse{
-		Id:   1,
-		Name: "Acme Corp",
+		Id:                      1,
+		Name:                    "Acme Corp",
+		IsTouristFishingEnabled: false,
 	}
 	s.clientService.On("Get", 1).Return(expectedResponse, nil)
 

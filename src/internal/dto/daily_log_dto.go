@@ -11,7 +11,7 @@ type DailyLogEntryInput struct {
 	PelletMorning     decimal.Decimal `json:"pelletMorning" validate:"decimal_gte0" swaggertype:"number"`
 	PelletEvening     decimal.Decimal `json:"pelletEvening" validate:"decimal_gte0" swaggertype:"number"`
 	DeathFishCount    int             `json:"deathFishCount" validate:"gte=0"`
-	TouristCatchCount int             `json:"touristCatchCount" validate:"gte=0"`
+	TouristCatchCount *int            `json:"touristCatchCount,omitempty" validate:"omitempty,gte=0"`
 }
 
 type DailyLogBulkUpsertRequest struct {
@@ -31,7 +31,7 @@ type DailyLogEntryResponse struct {
 	PelletMorning     decimal.Decimal  `json:"pelletMorning"`
 	PelletEvening     decimal.Decimal  `json:"pelletEvening"`
 	DeathFishCount    int              `json:"deathFishCount"`
-	TouristCatchCount int              `json:"touristCatchCount"`
+	TouristCatchCount *int             `json:"touristCatchCount"`
 	FreshUnitPrice    *decimal.Decimal `json:"freshUnitPrice,omitempty"`
 	PelletUnitPrice   *decimal.Decimal `json:"pelletUnitPrice,omitempty"`
 }

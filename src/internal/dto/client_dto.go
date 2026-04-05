@@ -9,22 +9,23 @@ type CreateClientRequest struct {
 }
 
 type UpdateClientRequest struct {
-	Id            int    `json:"id" validate:"required"`
-	Name          string `json:"name"`
-	OwnerName     string `json:"ownerName"`
-	ContactNumber string `json:"contactNumber"`
-	IsActive      *bool  `json:"isActive"`
+	Id                      int    `json:"id" validate:"required"`
+	Name                    string `json:"name"`
+	OwnerName               string `json:"ownerName"`
+	ContactNumber           string `json:"contactNumber"`
+	IsActive                *bool  `json:"isActive"`
+	IsTouristFishingEnabled *bool  `json:"isTouristFishingEnabled"`
 }
 
 type ClientResponse struct {
-	Id            int       `json:"id"`
-	Name          string    `json:"name"`
-	OwnerName     string    `json:"ownerName"`
-	ContactNumber string    `json:"contactNumber"`
-	IsActive      bool      `json:"isActive"`
-	CreatedAt     time.Time `json:"createdAt"`
-	CreatedBy     string    `json:"createdBy"`
-	UpdatedAt     time.Time `json:"updatedAt"`
-	UpdatedBy     string    `json:"updatedBy"`
+	Id                      int       `json:"id"`
+	Name                    string    `json:"name"`
+	OwnerName               string    `json:"ownerName"`
+	ContactNumber           string    `json:"contactNumber"`
+	IsActive                bool      `json:"isActive"`
+	IsTouristFishingEnabled bool      `json:"isTouristFishingEnabled"`
+	CreatedAt               time.Time `json:"createdAt"`
+	CreatedBy               string    `json:"createdBy"`
+	UpdatedAt               time.Time `json:"updatedAt"`
+	UpdatedBy               string    `json:"updatedBy"`
 }
-

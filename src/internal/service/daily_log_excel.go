@@ -59,6 +59,19 @@ func parseIntCell(s string) (int, error) {
 	return strconv.Atoi(s)
 }
 
+// parseOptionalIntCell returns nil for empty cells; non-empty must parse as int.
+func parseOptionalIntCell(s string) (*int, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil, nil
+	}
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
 func maxWidth(rows [][]string, maxRows int) int {
 	w := 0
 	for i := 0; i < len(rows) && i < maxRows; i++ {
@@ -275,7 +288,8 @@ func parseDailyLogExcelFile(filePath string, month string) ([]dto.DailyLogEntryI
 					}
 				}
 
-				deaths, tourist := 0, 0
+				deaths := 0
+				var tourist *int
 				if deathCol >= 0 {
 					deaths, dErr = parseIntCell(row[deathCol])
 					if dErr != nil {
@@ -283,13 +297,18 @@ func parseDailyLogExcelFile(filePath string, month string) ([]dto.DailyLogEntryI
 					}
 				}
 				if touristCol >= 0 {
-					tourist, dErr = parseIntCell(row[touristCol])
+					cell := ""
+					if touristCol < len(row) {
+						cell = row[touristCol]
+					}
+					tourist, dErr = parseOptionalIntCell(cell)
 					if dErr != nil {
 						return nil, errors.ErrValidationFailed.Wrap(dErr)
 					}
 				}
 
-				if fm.IsZero() && fe.IsZero() && pm.IsZero() && pe.IsZero() && deaths == 0 && tourist == 0 {
+				touristIsZero := tourist == nil || *tourist == 0
+				if fm.IsZero() && fe.IsZero() && pm.IsZero() && pe.IsZero() && deaths == 0 && touristIsZero {
 					continue
 				}
 
