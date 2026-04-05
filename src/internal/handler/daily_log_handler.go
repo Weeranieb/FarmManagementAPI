@@ -181,7 +181,6 @@ func (h *dailyLogHandlerImpl) UploadExcel(c *fiber.Ctx) error {
 	uploadRoot := h.dailyLogUploadPath()
 	pondDir := filepath.Join(uploadRoot, fmt.Sprintf("pond_%d", pondId))
 	if err := os.MkdirAll(pondDir, 0755); err != nil {
-		log.Printf("daily log upload: mkdir %q: %v", pondDir, err)
 		return http.NewError(c, errors.ErrGeneric.Code, errors.ErrGeneric.Wrap(err))
 	}
 
@@ -189,7 +188,6 @@ func (h *dailyLogHandlerImpl) UploadExcel(c *fiber.Ctx) error {
 	destPath := filepath.Join(pondDir, storedName)
 
 	if err := c.SaveFile(fileHeader, destPath); err != nil {
-		log.Printf("daily log upload: save file %q: %v", destPath, err)
 		_ = os.Remove(destPath)
 		return http.NewError(c, errors.ErrGeneric.Code, errors.ErrGeneric.Wrap(err))
 	}

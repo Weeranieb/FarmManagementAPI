@@ -29,7 +29,7 @@ func NewWorkerService(workerRepo repository.WorkerRepository) WorkerService {
 }
 
 func (s *workerService) Create(ctx context.Context, request dto.CreateWorkerRequest, username string, clientId int) (*dto.WorkerResponse, error) {
-	// Check if worker already exists (by FarmGroupId - this seems odd but matches old logic)
+	// Business rule: at most one worker record per farm group (legacy schema).
 	checkWorker, err := s.workerRepo.GetByFarmGroupId(request.FarmGroupId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
