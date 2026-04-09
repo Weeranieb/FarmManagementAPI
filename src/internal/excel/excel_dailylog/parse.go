@@ -3,6 +3,7 @@ package excel_dailylog
 import (
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strconv"
 	"strings"
@@ -418,14 +419,8 @@ func ParseFile(path, sheetName string, ref time.Time) (*ParsedSheet, error) {
 	return ParseSheetAt(f, sheetName, ref)
 }
 
-// ParseFileAllSheets parses every sheet.
-// It returns parsed sheets plus a joined error for any sheets that failed to parse.
-func ParseFileAllSheets(path string, ref time.Time) (map[string]*ParsedSheet, error) {
-	f, err := excelize.OpenFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("open file %q: %w", path, err)
-	}
-	defer func() { _ = f.Close() }()
+// parseAllSheets is the shared implementation for all-sheets parsing.
+func parseAllSheets(f *excelize.File, ref time.Time) (map[string]*ParsedSheet, error) {
 	out := make(map[string]*ParsedSheet)
 	var parseErrs []error
 	for _, name := range f.GetSheetList() {
@@ -437,4 +432,25 @@ func ParseFileAllSheets(path string, ref time.Time) (map[string]*ParsedSheet, er
 		parseErrs = append(parseErrs, fmt.Errorf("sheet %q: %w", name, err))
 	}
 	return out, errors.Join(parseErrs...)
+}
+
+// ParseFileAllSheets parses every sheet from a file on disk.
+// It returns parsed sheets plus a joined error for any sheets that failed to parse.
+func ParseFileAllSheets(path string, ref time.Time) (map[string]*ParsedSheet, error) {
+	f, err := excelize.OpenFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("open file %q: %w", path, err)
+	}
+	defer func() { _ = f.Close() }()
+	return parseAllSheets(f, ref)
+}
+
+// ParseReaderAllSheets parses every sheet from an io.Reader (e.g. an in-memory upload).
+func ParseReaderAllSheets(r io.Reader, ref time.Time) (map[string]*ParsedSheet, error) {
+	f, err := excelize.OpenReader(r)
+	if err != nil {
+		return nil, fmt.Errorf("open reader: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	return parseAllSheets(f, ref)
 }

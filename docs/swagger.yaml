@@ -202,6 +202,26 @@ definitions:
       pelletUnit:
         type: string
     type: object
+  dto.DailyLogTemplateImportResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/dto.DailyLogTemplateImportResult'
+        type: array
+      skipped:
+        items:
+          type: string
+        type: array
+    type: object
+  dto.DailyLogTemplateImportResult:
+    properties:
+      pondId:
+        type: integer
+      pondName:
+        type: string
+      rowsImported:
+        type: integer
+    type: object
   dto.LoginRequest:
     properties:
       password:
@@ -747,6 +767,40 @@ paths:
       - BearerAuth: []
       - CookieAuth: []
       summary: Add a new farm entry
+      tags:
+      - farm
+  /farm/{farmId}/daily-logs/import-template:
+    post:
+      parameters:
+      - description: Farm ID
+        in: path
+        name: farmId
+        required: true
+        type: integer
+      - collectionFormat: csv
+        description: Pond IDs to import
+        in: formData
+        items:
+          type: integer
+        name: selectedPondIds
+        required: true
+        type: array
+      - description: xlsx file
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.ResponseModel'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DailyLogTemplateImportResponse'
+              type: object
+      summary: Upload multi-pond Excel template and import daily logs
       tags:
       - farm
   /farm/{id}:

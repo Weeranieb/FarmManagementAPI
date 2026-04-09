@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -24,6 +25,7 @@ type DailyLogHandler interface {
 	GetMonth(c *fiber.Ctx) error
 	BulkUpsert(c *fiber.Ctx) error
 	UploadExcel(c *fiber.Ctx) error
+	UploadTemplate(c *fiber.Ctx) error
 }
 
 type DailyLogHandlerParams struct {
@@ -219,4 +221,73 @@ func (h *dailyLogHandlerImpl) UploadExcel(c *fiber.Ctx) error {
 		RowsImported: rows,
 		SavedPath:    relPath,
 	})
+}
+
+// POST /farm/:farmId/daily-logs/import-template
+// @Summary      Upload multi-pond Excel template and import daily logs
+// @Tags         farm
+// @Param        farmId path int true "Farm ID"
+// @Param        selectedPondIds formData []int true "Pond IDs to import"
+// @Param        file formData file true "xlsx file"
+// @Success      200  {object}  http.ResponseModel{data=dto.DailyLogTemplateImportResponse}
+// @Router       /farm/{farmId}/daily-logs/import-template [post]
+func (h *dailyLogHandlerImpl) UploadTemplate(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	farmId, err := strconv.Atoi(c.Params("farmId"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid farm ID")
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "invalid multipart form")
+	}
+	rawIds := form.Value["selectedPondIds"]
+	if len(rawIds) == 0 {
+		return http.Error(c, errors.ErrValidationFailed.Code, "selectedPondIds is required")
+	}
+	selectedPondIds := make([]int, 0, len(rawIds))
+	for _, raw := range rawIds {
+		id, err := strconv.Atoi(raw)
+		if err != nil {
+			return http.Error(c, errors.ErrValidationFailed.Code, fmt.Sprintf("invalid pond id: %s", raw))
+		}
+		selectedPondIds = append(selectedPondIds, id)
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "file is required")
+	}
+	if !strings.HasSuffix(strings.ToLower(fileHeader.Filename), ".xlsx") {
+		return http.Error(c, errors.ErrValidationFailed.Code, "only .xlsx files are allowed")
+	}
+
+	f, err := fileHeader.Open()
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, errors.ErrGeneric.Wrap(err))
+	}
+	defer f.Close()
+
+	fileBytes, err := io.ReadAll(f)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, errors.ErrGeneric.Wrap(err))
+	}
+
+	username, err := utils.GetUsername(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	result, err := h.dailyLogService.ImportFromTemplate(c.UserContext(), farmId, selectedPondIds, fileBytes, username)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, result)
 }

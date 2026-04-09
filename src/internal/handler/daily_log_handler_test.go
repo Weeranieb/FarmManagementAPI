@@ -243,3 +243,95 @@ func (s *DailyLogHandlerTestSuite) TestUploadExcel_ImportError_RemovesSavedFile(
 
 	s.dailyLogService.AssertExpectations(s.T())
 }
+
+func (s *DailyLogHandlerTestSuite) TestUploadTemplate_Success() {
+	expected := &dto.DailyLogTemplateImportResponse{
+		Results: []dto.DailyLogTemplateImportResult{
+			{PondId: 1, PondName: "Pond A", RowsImported: 5},
+		},
+		Skipped: []string{"Sheet2"},
+	}
+	s.dailyLogService.On("ImportFromTemplate",
+		mock.Anything,
+		10,
+		[]int{1, 3},
+		mock.AnythingOfType("[]uint8"),
+		"alice",
+	).Return(expected, nil)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(s.T(), writer.WriteField("selectedPondIds", "1"))
+	require.NoError(s.T(), writer.WriteField("selectedPondIds", "3"))
+	part, err := writer.CreateFormFile("file", "template.xlsx")
+	require.NoError(s.T(), err)
+	_, err = io.WriteString(part, "dummy")
+	require.NoError(s.T(), err)
+	require.NoError(s.T(), writer.Close())
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{"username": "alice", "userLevel": 1}))
+	app.Post("/api/v1/farm/:farmId/daily-logs/import-template", s.handler.UploadTemplate)
+
+	req := httptest.NewRequest("POST", "/api/v1/farm/10/daily-logs/import-template", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := app.Test(req)
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
+	assert.Equal(s.T(), true, result["result"])
+	s.dailyLogService.AssertExpectations(s.T())
+}
+
+func (s *DailyLogHandlerTestSuite) TestUploadTemplate_MissingPondIds() {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", "template.xlsx")
+	require.NoError(s.T(), err)
+	_, err = io.WriteString(part, "dummy")
+	require.NoError(s.T(), err)
+	require.NoError(s.T(), writer.Close())
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{"username": "u", "userLevel": 1}))
+	app.Post("/api/v1/farm/:farmId/daily-logs/import-template", s.handler.UploadTemplate)
+
+	req := httptest.NewRequest("POST", "/api/v1/farm/10/daily-logs/import-template", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := app.Test(req)
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
+	assert.NotNil(s.T(), result["error"])
+	s.dailyLogService.AssertNotCalled(s.T(), "ImportFromTemplate")
+}
+
+func (s *DailyLogHandlerTestSuite) TestUploadTemplate_InvalidFileExtension() {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(s.T(), writer.WriteField("selectedPondIds", "1"))
+	part, err := writer.CreateFormFile("file", "data.csv")
+	require.NoError(s.T(), err)
+	_, err = io.WriteString(part, "dummy")
+	require.NoError(s.T(), err)
+	require.NoError(s.T(), writer.Close())
+
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{"username": "u", "userLevel": 1}))
+	app.Post("/api/v1/farm/:farmId/daily-logs/import-template", s.handler.UploadTemplate)
+
+	req := httptest.NewRequest("POST", "/api/v1/farm/10/daily-logs/import-template", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := app.Test(req)
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
+	assert.NotNil(s.T(), result["error"])
+	s.dailyLogService.AssertNotCalled(s.T(), "ImportFromTemplate")
+}

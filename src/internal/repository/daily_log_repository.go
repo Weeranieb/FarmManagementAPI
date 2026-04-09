@@ -9,9 +9,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// DailyLogIDFeedDate is a minimal row projection for template-import reconcile.
+type DailyLogIDFeedDate struct {
+	Id       int       `gorm:"column:id"`
+	FeedDate time.Time `gorm:"column:feed_date"`
+}
+
 //go:generate go run github.com/vektra/mockery/v2@latest --name=DailyLogRepository --output=./mocks --outpkg=mocks --filename=daily_log_repository.go --structname=MockDailyLogRepository --with-expecter=false
 type DailyLogRepository interface {
+	WithTx(tx *gorm.DB) DailyLogRepository
 	Upsert(ctx context.Context, logs []*model.DailyLog) error
+	ListIDAndFeedDateByActivePondRange(ctx context.Context, activePondId int, min, max time.Time) ([]DailyLogIDFeedDate, error)
+	HardDeleteByIDs(ctx context.Context, ids []int) error
 	ListByActivePondAndMonth(activePondId int, start, end time.Time) ([]*model.DailyLog, error)
 }
 
@@ -21,6 +30,27 @@ type dailyLogRepository struct {
 
 func NewDailyLogRepository(db *gorm.DB) DailyLogRepository {
 	return &dailyLogRepository{db: db}
+}
+
+func (r *dailyLogRepository) WithTx(tx *gorm.DB) DailyLogRepository {
+	return &dailyLogRepository{db: tx}
+}
+
+func (r *dailyLogRepository) ListIDAndFeedDateByActivePondRange(ctx context.Context, activePondId int, min, max time.Time) ([]DailyLogIDFeedDate, error) {
+	var rows []DailyLogIDFeedDate
+	err := r.db.WithContext(ctx).Model(&model.DailyLog{}).
+		Select("id", "feed_date").
+		Where("active_pond_id = ? AND feed_date >= ? AND feed_date <= ? AND deleted_at IS NULL", activePondId, min, max).
+		Order("feed_date").
+		Find(&rows).Error
+	return rows, err
+}
+
+func (r *dailyLogRepository) HardDeleteByIDs(ctx context.Context, ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Unscoped().Where("id IN ?", ids).Delete(&model.DailyLog{}).Error
 }
 
 func (r *dailyLogRepository) Upsert(ctx context.Context, logs []*model.DailyLog) error {

@@ -50,3 +50,14 @@ type DailyLogExcelUploadResponse struct {
 	RowsImported int    `json:"rowsImported"`
 	SavedPath    string `json:"savedPath"`
 }
+
+type DailyLogTemplateImportResult struct {
+	PondId       int    `json:"pondId"`
+	PondName     string `json:"pondName"`
+	RowsImported int    `json:"rowsImported"`
+}
+
+type DailyLogTemplateImportResponse struct {
+	Results []DailyLogTemplateImportResult `json:"results"`
+	Skipped []string                       `json:"skipped"`
+}

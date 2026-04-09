@@ -1,17 +1,22 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
+	excel_dailylog "github.com/weeranieb/boonmafarm-backend/src/internal/excel/excel_dailylog"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/transaction"
+	"gorm.io/gorm"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=DailyLogService --output=./mocks --outpkg=service --filename=daily_log_service.go --structname=MockDailyLogService --with-expecter=false
@@ -19,6 +24,7 @@ type DailyLogService interface {
 	GetMonth(ctx context.Context, pondId int, month string) (*dto.DailyLogMonthResponse, error)
 	BulkUpsert(ctx context.Context, pondId int, request dto.DailyLogBulkUpsertRequest, username string) error
 	ImportFromExcelFile(ctx context.Context, pondId int, freshFcID, pelletFcID *int, month, filePath, username string) (int, error)
+	ImportFromTemplate(ctx context.Context, farmId int, selectedPondIds []int, file []byte, username string) (*dto.DailyLogTemplateImportResponse, error)
 }
 
 type dailyLogService struct {
@@ -26,6 +32,8 @@ type dailyLogService struct {
 	activePondRepo       repository.ActivePondRepository
 	feedCollectionRepo   repository.FeedCollectionRepository
 	feedPriceHistoryRepo repository.FeedPriceHistoryRepository
+	pondRepo             repository.PondRepository
+	txManager            transaction.Manager
 }
 
 func NewDailyLogService(
@@ -33,12 +41,16 @@ func NewDailyLogService(
 	activePondRepo repository.ActivePondRepository,
 	feedCollectionRepo repository.FeedCollectionRepository,
 	feedPriceHistoryRepo repository.FeedPriceHistoryRepository,
+	pondRepo repository.PondRepository,
+	txManager transaction.Manager,
 ) DailyLogService {
 	return &dailyLogService{
 		dailyLogRepo:         dailyLogRepo,
 		activePondRepo:       activePondRepo,
 		feedCollectionRepo:   feedCollectionRepo,
 		feedPriceHistoryRepo: feedPriceHistoryRepo,
+		pondRepo:             pondRepo,
+		txManager:            txManager,
 	}
 }
 
@@ -275,6 +287,134 @@ func (s *dailyLogService) ImportFromExcelFile(ctx context.Context, pondId int, f
 		return 0, err
 	}
 	return len(entries), nil
+}
+
+func (s *dailyLogService) ImportFromTemplate(ctx context.Context, farmId int, selectedPondIds []int, file []byte, username string) (*dto.DailyLogTemplateImportResponse, error) {
+	sheets, parseErr := excel_dailylog.ParseReaderAllSheets(bytes.NewReader(file), time.Now())
+	if sheets == nil && parseErr != nil {
+		return nil, errors.ErrGeneric.Wrap(parseErr)
+	}
+
+	ponds, err := s.pondRepo.ListByFarmId(farmId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+
+	pondByName := make(map[string]*model.Pond, len(ponds))
+	for _, p := range ponds {
+		pondByName[strings.TrimSpace(p.Name)] = p
+	}
+
+	selectedSet := make(map[int]bool, len(selectedPondIds))
+	for _, id := range selectedPondIds {
+		selectedSet[id] = true
+	}
+
+	var results []dto.DailyLogTemplateImportResult
+	var skipped []string
+
+	for sheetName, ps := range sheets {
+		pond, ok := pondByName[strings.TrimSpace(ps.PondName)]
+		if !ok || !selectedSet[pond.Id] {
+			skipped = append(skipped, sheetName)
+			continue
+		}
+
+		activePond, err := s.activePondRepo.GetActiveByPondID(ctx, pond.Id)
+		if err != nil {
+			return nil, errors.ErrGeneric.Wrap(err)
+		}
+		if activePond == nil {
+			skipped = append(skipped, sheetName)
+			continue
+		}
+
+		logs := make([]*model.DailyLog, 0, len(ps.Rows))
+		for _, row := range ps.Rows {
+			dl := row.ToDailyLog(activePond.Id, ps.FreshFeedCollectionId, ps.PelletFeedCollectionId, username)
+			logs = append(logs, &dl)
+		}
+
+		if err := s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
+			repo := s.dailyLogRepo.WithTx(tx)
+			if len(logs) > 0 {
+				importKeys, _ := templateImportDateKeys(logs)
+				minD, maxD := templateImportReconcileDateRangeUTC(activePond, logs)
+				existing, err := repo.ListIDAndFeedDateByActivePondRange(ctx, activePond.Id, minD, maxD)
+				if err != nil {
+					return err
+				}
+				deleteIDs := staleDailyLogIDsForTemplateImport(existing, importKeys)
+				if err := repo.HardDeleteByIDs(ctx, deleteIDs); err != nil {
+					return err
+				}
+			}
+			return repo.Upsert(ctx, logs)
+		}); err != nil {
+			return nil, errors.ErrGeneric.Wrap(fmt.Errorf("pond %q: %w", pond.Name, err))
+		}
+
+		results = append(results, dto.DailyLogTemplateImportResult{
+			PondId:       pond.Id,
+			PondName:     pond.Name,
+			RowsImported: len(logs),
+		})
+	}
+
+	return &dto.DailyLogTemplateImportResponse{
+		Results: results,
+		Skipped: skipped,
+	}, nil
+}
+
+func dailyLogUTCDate(t time.Time) time.Time {
+	y, m, d := t.UTC().Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+}
+
+// templateImportDateKeys returns distinct calendar feed dates present in the import (UTC, YYYY-MM-DD keys).
+func templateImportDateKeys(logs []*model.DailyLog) (map[string]struct{}, bool) {
+	if len(logs) == 0 {
+		return nil, false
+	}
+	keys := make(map[string]struct{}, len(logs))
+	for _, l := range logs {
+		nd := dailyLogUTCDate(l.FeedDate)
+		keys[nd.Format("2006-01-02")] = struct{}{}
+	}
+	return keys, true
+}
+
+// templateImportReconcileDateRangeUTC is the window for listing existing rows to reconcile: from active pond
+// start (UTC date) through today (UTC date). If StartDate is zero, uses the earliest feed_date in the import.
+func templateImportReconcileDateRangeUTC(activePond *model.ActivePond, logs []*model.DailyLog) (minD, maxD time.Time) {
+	maxD = dailyLogUTCDate(time.Now())
+	if activePond != nil && !activePond.StartDate.IsZero() {
+		minD = dailyLogUTCDate(activePond.StartDate)
+	} else {
+		minD = dailyLogUTCDate(logs[0].FeedDate)
+		for _, l := range logs[1:] {
+			d := dailyLogUTCDate(l.FeedDate)
+			if d.Before(minD) {
+				minD = d
+			}
+		}
+	}
+	if maxD.Before(minD) {
+		minD = maxD
+	}
+	return minD, maxD
+}
+
+func staleDailyLogIDsForTemplateImport(existing []repository.DailyLogIDFeedDate, importDateKeys map[string]struct{}) []int {
+	var out []int
+	for _, row := range existing {
+		k := dailyLogUTCDate(row.FeedDate).Format("2006-01-02")
+		if _, ok := importDateKeys[k]; !ok {
+			out = append(out, row.Id)
+		}
+	}
+	return out
 }
 
 func parseMonth(month string) (start, end time.Time, err error) {

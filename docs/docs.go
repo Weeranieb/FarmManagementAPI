@@ -533,6 +533,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/farm/{farmId}/daily-logs/import-template": {
+            "post": {
+                "tags": [
+                    "farm"
+                ],
+                "summary": "Upload multi-pond Excel template and import daily logs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Farm ID",
+                        "name": "farmId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Pond IDs to import",
+                        "name": "selectedPondIds",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "xlsx file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DailyLogTemplateImportResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/farm/{id}": {
             "get": {
                 "security": [
@@ -2426,6 +2481,37 @@ const docTemplate = `{
                 },
                 "pelletUnit": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.DailyLogTemplateImportResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.DailyLogTemplateImportResult"
+                    }
+                },
+                "skipped": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "dto.DailyLogTemplateImportResult": {
+            "type": "object",
+            "properties": {
+                "pondId": {
+                    "type": "integer"
+                },
+                "pondName": {
+                    "type": "string"
+                },
+                "rowsImported": {
+                    "type": "integer"
                 }
             }
         },
