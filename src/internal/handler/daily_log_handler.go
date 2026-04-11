@@ -247,6 +247,8 @@ func (h *dailyLogHandlerImpl) UploadTemplate(c *fiber.Ctx) error {
 	if err != nil {
 		return http.Error(c, errors.ErrValidationFailed.Code, "invalid multipart form")
 	}
+	defer form.RemoveAll()
+
 	rawIds := form.Value["selectedPondIds"]
 	if len(rawIds) == 0 {
 		return http.Error(c, errors.ErrValidationFailed.Code, "selectedPondIds is required")

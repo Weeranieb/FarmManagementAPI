@@ -21,7 +21,8 @@ type DailyLogRepository interface {
 	Upsert(ctx context.Context, logs []*model.DailyLog) error
 	ListIDAndFeedDateByActivePondRange(ctx context.Context, activePondId int, min, max time.Time) ([]DailyLogIDFeedDate, error)
 	HardDeleteByIDs(ctx context.Context, ids []int) error
-	ListByActivePondAndMonth(activePondId int, start, end time.Time) ([]*model.DailyLog, error)
+	ListByActivePondAndMonth(ctx context.Context, activePondId int, start, end time.Time) ([]*model.DailyLog, error)
+	HardDeleteByActivePondAndDates(ctx context.Context, activePondId int, dates []time.Time) error
 }
 
 type dailyLogRepository struct {
@@ -59,21 +60,30 @@ func (r *dailyLogRepository) Upsert(ctx context.Context, logs []*model.DailyLog)
 	}
 	return r.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "active_pond_id"}, {Name: "feed_date"}},
+			Columns:     []clause.Column{{Name: "active_pond_id"}, {Name: "feed_date"}},
+			TargetWhere: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: "deleted_at IS NULL"}}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"fresh_feed_collection_id", "pellet_feed_collection_id",
 				"fresh_morning", "fresh_evening", "pellet_morning", "pellet_evening",
 				"death_fish_count", "tourist_catch_count",
 				"updated_by", "updated_at",
 			}),
-			Where: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: "daily_logs.deleted_at IS NULL"}}},
 		}).
 		Create(logs).Error
 }
 
-func (r *dailyLogRepository) ListByActivePondAndMonth(activePondId int, start, end time.Time) ([]*model.DailyLog, error) {
+func (r *dailyLogRepository) HardDeleteByActivePondAndDates(ctx context.Context, activePondId int, dates []time.Time) error {
+	if len(dates) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Unscoped().
+		Where("active_pond_id = ? AND feed_date IN ?", activePondId, dates).
+		Delete(&model.DailyLog{}).Error
+}
+
+func (r *dailyLogRepository) ListByActivePondAndMonth(ctx context.Context, activePondId int, start, end time.Time) ([]*model.DailyLog, error) {
 	var logs []*model.DailyLog
-	err := r.db.
+	err := r.db.WithContext(ctx).
 		Where("active_pond_id = ? AND feed_date >= ? AND feed_date <= ? AND deleted_at IS NULL", activePondId, start, end).
 		Order("feed_date").
 		Find(&logs).Error

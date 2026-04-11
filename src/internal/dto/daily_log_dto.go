@@ -18,7 +18,8 @@ type DailyLogBulkUpsertRequest struct {
 	Month                  string               `json:"month" validate:"required"` // YYYY-MM
 	FreshFeedCollectionId  *int                 `json:"freshFeedCollectionId,omitempty"`
 	PelletFeedCollectionId *int                 `json:"pelletFeedCollectionId,omitempty"`
-	Entries                []DailyLogEntryInput `json:"entries" validate:"required,min=1,dive"`
+	Entries                []DailyLogEntryInput `json:"entries" validate:"dive"`
+	DeleteDays             []int                `json:"deleteDays,omitempty" validate:"dive,min=1,max=31"`
 }
 
 // --- Response DTOs ---

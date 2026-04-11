@@ -1,0 +1,5 @@
+ALTER TABLE active_ponds DROP CONSTRAINT active_ponds_default_pellet_feed_collection_id_fkey;
+ALTER TABLE active_ponds DROP CONSTRAINT active_ponds_default_fresh_feed_collection_id_fkey;
+
+ALTER TABLE active_ponds DROP COLUMN default_pellet_feed_collection_id;
+ALTER TABLE active_ponds DROP COLUMN default_fresh_feed_collection_id;

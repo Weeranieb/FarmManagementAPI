@@ -17,6 +17,9 @@ type ActivePond struct {
 	NetResult   decimal.Decimal `json:"netResult" gorm:"column:net_result"`
 	TotalFish   int             `json:"totalFish" gorm:"column:total_fish"`
 	FishTypes   []string        `json:"fishTypes" gorm:"column:fish_types;serializer:json"`
+	// Default feed collections for daily log UI when a month has no rows yet (at most one fresh + one pellet per active cycle).
+	DefaultFreshFeedCollectionId  *int `json:"defaultFreshFeedCollectionId,omitempty" gorm:"column:default_fresh_feed_collection_id"`
+	DefaultPelletFeedCollectionId *int `json:"defaultPelletFeedCollectionId,omitempty" gorm:"column:default_pellet_feed_collection_id"`
 	BaseModel
 }
 
