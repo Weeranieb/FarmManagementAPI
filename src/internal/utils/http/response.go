@@ -1,6 +1,7 @@
 package http
 
 import (
+	stderrors "errors"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,12 +25,13 @@ type ResponseModel struct {
 }
 
 // NewError sends an error response (returns ErrorResponseModel directly, not wrapped in ResponseModel)
-// Extracts error code from AppError if available, otherwise uses defaultCode
+// Extracts error code from AppError if available (including wrapped errors), otherwise uses defaultCode
 func NewError(c *fiber.Ctx, defaultCode int, err error) error {
 	var code int
 	var message string
 
-	if appErr, ok := err.(*errors.AppError); ok {
+	var appErr *errors.AppError
+	if stderrors.As(err, &appErr) {
 		code = appErr.GetCode()
 		message = appErr.GetMessage()
 	} else {

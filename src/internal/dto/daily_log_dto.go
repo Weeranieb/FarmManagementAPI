@@ -18,7 +18,8 @@ type DailyLogBulkUpsertRequest struct {
 	Month                  string               `json:"month" validate:"required"` // YYYY-MM
 	FreshFeedCollectionId  *int                 `json:"freshFeedCollectionId,omitempty"`
 	PelletFeedCollectionId *int                 `json:"pelletFeedCollectionId,omitempty"`
-	Entries                []DailyLogEntryInput `json:"entries" validate:"required,min=1,dive"`
+	Entries                []DailyLogEntryInput `json:"entries" validate:"dive"`
+	DeleteDays             []int                `json:"deleteDays,omitempty" validate:"dive,min=1,max=31"`
 }
 
 // --- Response DTOs ---
@@ -46,7 +47,13 @@ type DailyLogMonthResponse struct {
 	Entries                  []DailyLogEntryResponse `json:"entries"`
 }
 
-type DailyLogExcelUploadResponse struct {
+type DailyLogTemplateImportResult struct {
+	PondId       int    `json:"pondId"`
+	PondName     string `json:"pondName"`
 	RowsImported int    `json:"rowsImported"`
-	SavedPath    string `json:"savedPath"`
+}
+
+type DailyLogTemplateImportResponse struct {
+	Results []DailyLogTemplateImportResult `json:"results"`
+	Skipped []string                       `json:"skipped"`
 }

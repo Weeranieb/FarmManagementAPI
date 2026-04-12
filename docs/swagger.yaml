@@ -114,10 +114,13 @@ definitions:
     type: object
   dto.DailyLogBulkUpsertRequest:
     properties:
+      deleteDays:
+        items:
+          type: integer
+        type: array
       entries:
         items:
           $ref: '#/definitions/dto.DailyLogEntryInput'
-        minItems: 1
         type: array
       freshFeedCollectionId:
         type: integer
@@ -127,7 +130,6 @@ definitions:
       pelletFeedCollectionId:
         type: integer
     required:
-    - entries
     - month
     type: object
   dto.DailyLogEntryInput:
@@ -176,13 +178,6 @@ definitions:
       touristCatchCount:
         type: integer
     type: object
-  dto.DailyLogExcelUploadResponse:
-    properties:
-      rowsImported:
-        type: integer
-      savedPath:
-        type: string
-    type: object
   dto.DailyLogMonthResponse:
     properties:
       entries:
@@ -201,6 +196,26 @@ definitions:
         type: string
       pelletUnit:
         type: string
+    type: object
+  dto.DailyLogTemplateImportResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/dto.DailyLogTemplateImportResult'
+        type: array
+      skipped:
+        items:
+          type: string
+        type: array
+    type: object
+  dto.DailyLogTemplateImportResult:
+    properties:
+      pondId:
+        type: integer
+      pondName:
+        type: string
+      rowsImported:
+        type: integer
     type: object
   dto.LoginRequest:
     properties:
@@ -747,6 +762,40 @@ paths:
       - BearerAuth: []
       - CookieAuth: []
       summary: Add a new farm entry
+      tags:
+      - farm
+  /farm/{farmId}/daily-logs/import-template:
+    post:
+      parameters:
+      - description: Farm ID
+        in: path
+        name: farmId
+        required: true
+        type: integer
+      - collectionFormat: csv
+        description: Pond IDs to import
+        in: formData
+        items:
+          type: integer
+        name: selectedPondIds
+        required: true
+        type: array
+      - description: xlsx file
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.ResponseModel'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DailyLogTemplateImportResponse'
+              type: object
+      summary: Upload multi-pond Excel template and import daily logs
       tags:
       - farm
   /farm/{id}:
@@ -1380,45 +1429,6 @@ paths:
           schema:
             $ref: '#/definitions/http.ResponseModel'
       summary: Upsert daily logs for a month
-      tags:
-      - pond
-  /pond/{pondId}/daily-logs/upload:
-    post:
-      parameters:
-      - description: Pond ID
-        in: path
-        name: pondId
-        required: true
-        type: integer
-      - description: YYYY-MM
-        in: formData
-        name: month
-        required: true
-        type: string
-      - description: Fresh feed collection id
-        in: formData
-        name: freshFeedCollectionId
-        type: integer
-      - description: Pellet feed collection id
-        in: formData
-        name: pelletFeedCollectionId
-        type: integer
-      - description: xlsx file
-        in: formData
-        name: file
-        required: true
-        type: file
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/http.ResponseModel'
-            - properties:
-                data:
-                  $ref: '#/definitions/dto.DailyLogExcelUploadResponse'
-              type: object
-      summary: Upload Excel and import daily logs
       tags:
       - pond
   /pond/{pondId}/fill:

@@ -29,6 +29,8 @@ type PondFillQueryRow struct {
 	ApNetResult        *string        `gorm:"column:ap_net_result"`
 	ApTotalFish        *int           `gorm:"column:ap_total_fish"`
 	ApFishTypes        *string        `gorm:"column:ap_fish_types"`
+	ApFreshFcId        *int           `gorm:"column:ap_fresh_feed_collection_id"`
+	ApPelletFcId       *int           `gorm:"column:ap_pellet_feed_collection_id"`
 	ApCreatedAt        *time.Time     `gorm:"column:ap_created_at"`
 	ApCreatedBy        *string        `gorm:"column:ap_created_by"`
 	ApUpdatedAt        *time.Time     `gorm:"column:ap_updated_at"`
