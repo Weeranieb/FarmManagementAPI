@@ -2353,13 +2353,17 @@ const docTemplate = `{
         "dto.DailyLogBulkUpsertRequest": {
             "type": "object",
             "required": [
-                "entries",
                 "month"
             ],
             "properties": {
+                "deleteDays": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "entries": {
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/dto.DailyLogEntryInput"
                     }
