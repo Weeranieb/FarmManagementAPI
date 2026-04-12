@@ -15,6 +15,10 @@ A comprehensive Farm Management API built with Go Fiber, GORM, Dependency Inject
 - **Snake Case Database** - Consistent snake_case column naming
 - **Layered Architecture** - Handler → Service → Repository → Model
 
+## Deploying to Vercel
+
+Serverless entrypoint: [`api/index.go`](api/index.go) and [`vercel.json`](vercel.json). For monorepos, set the Vercel **Root Directory** to `backend` and configure env vars — see **[VERCEL.md](VERCEL.md)**.
+
 ## Getting Started
 
 ### Prerequisites
