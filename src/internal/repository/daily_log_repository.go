@@ -62,8 +62,8 @@ func (r *dailyLogRepository) Upsert(ctx context.Context, logs []*model.DailyLog)
 		Clauses(clause.OnConflict{
 			Columns:     []clause.Column{{Name: "active_pond_id"}, {Name: "feed_date"}},
 			TargetWhere: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: "deleted_at IS NULL"}}},
+			// Feed collection IDs live on active_ponds only; created_by comes from BaseModel hooks on insert.
 			DoUpdates: clause.AssignmentColumns([]string{
-				"fresh_feed_collection_id", "pellet_feed_collection_id",
 				"fresh_morning", "fresh_evening", "pellet_morning", "pellet_evening",
 				"death_fish_count", "tourist_catch_count",
 				"updated_by", "updated_at",

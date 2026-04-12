@@ -169,11 +169,8 @@ func TestToDailyLog(t *testing.T) {
 		PelletEvening:  decimal.NewFromInt(2),
 		DeathFishCount: 1,
 	}
-	fid, pid := 10, 20
-	m := e.ToDailyLog(99, &fid, &pid, "alice")
+	m := e.ToDailyLog(99, "alice")
 	require.Equal(t, 99, m.ActivePondId)
-	require.Equal(t, &fid, m.FreshFeedCollectionId)
-	require.Equal(t, &pid, m.PelletFeedCollectionId)
 	require.Equal(t, "alice", m.CreatedBy)
 	require.Equal(t, "alice", m.UpdatedBy)
 }

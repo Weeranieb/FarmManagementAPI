@@ -129,18 +129,33 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_Success_Empty() {
 	assert.Len(s.T(), out.Entries, 0)
 }
 
+func (s *DailyLogServiceTestSuite) TestGetMonth_InvalidStoredFreshFeedCollection() {
+	ctx := dailyLogCtxSuperAdmin()
+	badFresh := 99
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
+		Id:                    10,
+		PondId:                1,
+		FreshFeedCollectionId: &badFresh,
+	}), nil)
+	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, 10, mock.Anything, mock.Anything).Return([]*model.DailyLog{}, nil)
+	s.feedCollectionRepo.On("GetByID", badFresh).Return(nil, nil)
+
+	_, err := s.svc.GetMonth(ctx, 1, "2024-03")
+	assert.ErrorIs(s.T(), err, errors.ErrFeedCollectionNotFound)
+}
+
 func (s *DailyLogServiceTestSuite) TestGetMonth_UsesActivePondDefaultsWhenNoLogs() {
 	ctx := dailyLogCtxSuperAdmin()
 	freshDef, pelletDef := 21, 22
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
-		Id:                            10,
-		PondId:                        1,
-		DefaultFreshFeedCollectionId:  &freshDef,
-		DefaultPelletFeedCollectionId: &pelletDef,
+		Id:                     10,
+		PondId:                 1,
+		FreshFeedCollectionId:  &freshDef,
+		PelletFeedCollectionId: &pelletDef,
 	}), nil)
 	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, 10, mock.Anything, mock.Anything).Return([]*model.DailyLog{}, nil)
-	s.feedCollectionRepo.On("GetByID", freshDef).Return(&model.FeedCollection{Id: freshDef, Name: "FreshDef", Unit: "kg", FeedType: constants.FeedTypeFresh}, nil).Times(2)
-	s.feedCollectionRepo.On("GetByID", pelletDef).Return(&model.FeedCollection{Id: pelletDef, Name: "PelletDef", Unit: "kg", FeedType: constants.FeedTypePellet}, nil).Times(2)
+	s.feedCollectionRepo.On("GetByID", freshDef).Return(&model.FeedCollection{Id: freshDef, Name: "FreshDef", Unit: "kg", FeedType: constants.FeedTypeFresh}, nil).Once()
+	s.feedCollectionRepo.On("GetByID", pelletDef).Return(&model.FeedCollection{Id: pelletDef, Name: "PelletDef", Unit: "kg", FeedType: constants.FeedTypePellet}, nil).Once()
 	s.priceHistoryRepo.On("ListByFeedCollectionId", freshDef).Return([]*model.FeedPriceHistory{}, nil)
 	s.priceHistoryRepo.On("ListByFeedCollectionId", pelletDef).Return([]*model.FeedPriceHistory{}, nil)
 
@@ -157,17 +172,20 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_Success_WithPrices() {
 	ctx := dailyLogCtxSuperAdmin()
 	activePondId := 10
 	freshID, pelletID := 11, 12
-	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{Id: activePondId, PondId: 1}), nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
+		Id:                     activePondId,
+		PondId:                 1,
+		FreshFeedCollectionId:  intPtr(freshID),
+		PelletFeedCollectionId: intPtr(pelletID),
+	}), nil)
 	fd := time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)
 	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, activePondId, mock.Anything, mock.Anything).Return([]*model.DailyLog{
 		{
-			Id:                     1,
-			ActivePondId:           activePondId,
-			FeedDate:               fd,
-			FreshFeedCollectionId:  intPtr(freshID),
-			PelletFeedCollectionId: intPtr(pelletID),
-			FreshMorning:           decimal.RequireFromString("1"),
-			PelletMorning:          decimal.RequireFromString("2"),
+			Id:            1,
+			ActivePondId:  activePondId,
+			FeedDate:      fd,
+			FreshMorning:  decimal.RequireFromString("1"),
+			PelletMorning: decimal.RequireFromString("2"),
 		},
 	}, nil)
 	s.feedCollectionRepo.On("GetByID", freshID).Return(&model.FeedCollection{Id: freshID, Name: "F", Unit: "kg", FeedType: constants.FeedTypeFresh}, nil)
@@ -191,18 +209,21 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_DayUsesThailandCalendarWhenUTCDa
 	ctx := dailyLogCtxSuperAdmin()
 	activePondId := 10
 	freshID, pelletID := 11, 12
-	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{Id: activePondId, PondId: 1}), nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
+		Id:                     activePondId,
+		PondId:                 1,
+		FreshFeedCollectionId:  intPtr(freshID),
+		PelletFeedCollectionId: intPtr(pelletID),
+	}), nil)
 	// Same civil calendar day as 2026-04-02 in Asia/Bangkok (midnight ICT).
 	fd := time.Date(2026, 4, 1, 17, 0, 0, 0, time.UTC)
 	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, activePondId, mock.Anything, mock.Anything).Return([]*model.DailyLog{
 		{
-			Id:                     1,
-			ActivePondId:           activePondId,
-			FeedDate:               fd,
-			FreshFeedCollectionId:  intPtr(freshID),
-			PelletFeedCollectionId: intPtr(pelletID),
-			PelletMorning:          decimal.RequireFromString("2"),
-			PelletEvening:          decimal.RequireFromString("2"),
+			Id:            1,
+			ActivePondId:  activePondId,
+			FeedDate:      fd,
+			PelletMorning: decimal.RequireFromString("2"),
+			PelletEvening: decimal.RequireFromString("2"),
 		},
 	}, nil)
 	s.feedCollectionRepo.On("GetByID", freshID).Return(&model.FeedCollection{Id: freshID, Name: "F", Unit: "kg", FeedType: constants.FeedTypeFresh}, nil)
@@ -283,13 +304,13 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_Success() {
 	s.feedCollectionRepo.On("GetByID", 4).Return(&model.FeedCollection{Id: 4, FeedType: constants.FeedTypeFresh}, nil)
 	s.feedCollectionRepo.On("GetByID", 5).Return(&model.FeedCollection{Id: 5, FeedType: constants.FeedTypePellet}, nil)
 	s.dailyLogRepo.On("Upsert", mock.Anything, mock.MatchedBy(func(logs []*model.DailyLog) bool {
-		return len(logs) == 1 && logs[0].ActivePondId == 10 && *logs[0].FreshFeedCollectionId == 4 &&
+		return len(logs) == 1 && logs[0].ActivePondId == 10 &&
 			logs[0].FreshMorning.Equal(decimal.RequireFromString("1"))
 	})).Return(nil)
 	s.dailyLogRepo.On("HardDeleteByActivePondAndDates", mock.Anything, 10, mock.Anything).Return(nil)
 	s.activePondRepo.On("Update", mock.Anything, mock.MatchedBy(func(ap *model.ActivePond) bool {
-		return ap.Id == 10 && ap.DefaultFreshFeedCollectionId != nil && *ap.DefaultFreshFeedCollectionId == 4 &&
-			ap.DefaultPelletFeedCollectionId != nil && *ap.DefaultPelletFeedCollectionId == 5
+		return ap.Id == 10 && ap.FreshFeedCollectionId != nil && *ap.FreshFeedCollectionId == 4 &&
+			ap.PelletFeedCollectionId != nil && *ap.PelletFeedCollectionId == 5
 	})).Return(nil)
 
 	err := s.svc.BulkUpsert(ctx, 1, dto.DailyLogBulkUpsertRequest{
@@ -307,23 +328,21 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_UsesActivePondDefaultsWhenRequ
 	ctx := dailyLogCtxSuperAdmin()
 	freshDef, pelletDef := 4, 5
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
-		Id:                            10,
-		PondId:                        1,
-		DefaultFreshFeedCollectionId:  &freshDef,
-		DefaultPelletFeedCollectionId: &pelletDef,
+		Id:                     10,
+		PondId:                 1,
+		FreshFeedCollectionId:  &freshDef,
+		PelletFeedCollectionId: &pelletDef,
 	}), nil)
 	s.feedCollectionRepo.On("GetByID", 4).Return(&model.FeedCollection{Id: 4, FeedType: constants.FeedTypeFresh}, nil)
 	s.feedCollectionRepo.On("GetByID", 5).Return(&model.FeedCollection{Id: 5, FeedType: constants.FeedTypePellet}, nil)
 	s.dailyLogRepo.On("Upsert", mock.Anything, mock.MatchedBy(func(logs []*model.DailyLog) bool {
 		return len(logs) == 1 && logs[0].ActivePondId == 10 &&
-			logs[0].FreshFeedCollectionId != nil && *logs[0].FreshFeedCollectionId == 4 &&
-			logs[0].PelletFeedCollectionId != nil && *logs[0].PelletFeedCollectionId == 5 &&
 			logs[0].FreshMorning.Equal(decimal.RequireFromString("1"))
 	})).Return(nil)
 	s.dailyLogRepo.On("HardDeleteByActivePondAndDates", mock.Anything, 10, mock.Anything).Return(nil)
 	s.activePondRepo.On("Update", mock.Anything, mock.MatchedBy(func(ap *model.ActivePond) bool {
-		return ap.Id == 10 && ap.DefaultFreshFeedCollectionId != nil && *ap.DefaultFreshFeedCollectionId == 4 &&
-			ap.DefaultPelletFeedCollectionId != nil && *ap.DefaultPelletFeedCollectionId == 5
+		return ap.Id == 10 && ap.FreshFeedCollectionId != nil && *ap.FreshFeedCollectionId == 4 &&
+			ap.PelletFeedCollectionId != nil && *ap.PelletFeedCollectionId == 5
 	})).Return(nil)
 
 	err := s.svc.BulkUpsert(ctx, 1, dto.DailyLogBulkUpsertRequest{

@@ -29,19 +29,17 @@ type ExtractedDailyLogRow struct {
 	FishCount         *int
 }
 
-// ToDailyLog builds a GORM model row. Resolving pond name to ActivePondId is outside this package.
-func (e ExtractedDailyLogRow) ToDailyLog(activePondId int, freshFcID, pelletFcID *int, createdBy string) model.DailyLog {
+// ToDailyLog builds a GORM model row. Feed collection IDs live on active_ponds, not daily_logs.
+func (e ExtractedDailyLogRow) ToDailyLog(activePondId int, createdBy string) model.DailyLog {
 	return model.DailyLog{
-		ActivePondId:           activePondId,
-		FeedDate:               e.FeedDate,
-		FreshFeedCollectionId:  freshFcID,
-		PelletFeedCollectionId: pelletFcID,
-		FreshMorning:           e.FreshMorning,
-		FreshEvening:           e.FreshEvening,
-		PelletMorning:          e.PelletMorning,
-		PelletEvening:          e.PelletEvening,
-		DeathFishCount:         e.DeathFishCount,
-		TouristCatchCount:      e.TouristCatchCount,
+		ActivePondId:      activePondId,
+		FeedDate:          e.FeedDate,
+		FreshMorning:      e.FreshMorning,
+		FreshEvening:      e.FreshEvening,
+		PelletMorning:     e.PelletMorning,
+		PelletEvening:     e.PelletEvening,
+		DeathFishCount:    e.DeathFishCount,
+		TouristCatchCount: e.TouristCatchCount,
 		BaseModel: model.BaseModel{
 			CreatedBy: createdBy,
 			UpdatedBy: createdBy,

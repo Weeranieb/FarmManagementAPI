@@ -129,21 +129,27 @@ func (s *dailyLogService) resolvePrices(feedCollectionId int, dates []time.Time)
 	return result, nil
 }
 
-func (s *dailyLogService) validateFeedCollectionOptional(id *int, wantType string) error {
+// resolveFeedCollection loads and validates a feed collection when id is set; returns (nil, nil) when id is nil or non-positive.
+func (s *dailyLogService) resolveFeedCollection(id *int, wantType string) (*model.FeedCollection, error) {
 	if id == nil || *id <= 0 {
-		return nil
+		return nil, nil
 	}
 	fc, err := s.feedCollectionRepo.GetByID(*id)
 	if err != nil {
-		return errors.ErrGeneric.Wrap(err)
+		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	if fc == nil {
-		return errors.ErrFeedCollectionNotFound
+		return nil, errors.ErrFeedCollectionNotFound
 	}
 	if fc.FeedType != wantType {
-		return errors.ErrValidationFailed.Wrap(fmt.Errorf("feed collection %d must be type %s", *id, wantType))
+		return nil, errors.ErrValidationFailed.Wrap(fmt.Errorf("feed collection %d must be type %s", *id, wantType))
 	}
-	return nil
+	return fc, nil
+}
+
+func (s *dailyLogService) validateFeedCollectionOptional(id *int, wantType string) error {
+	_, err := s.resolveFeedCollection(id, wantType)
+	return err
 }
 
 func (s *dailyLogService) validateBulkIDs(req *dto.DailyLogBulkUpsertRequest) error {
@@ -169,41 +175,6 @@ func (s *dailyLogService) validateBulkIDs(req *dto.DailyLogBulkUpsertRequest) er
 	return nil
 }
 
-func (s *dailyLogService) inferCollectionIDs(logs []*model.DailyLog) (freshID, pelletID *int) {
-	for _, row := range logs {
-		if row.FreshFeedCollectionId != nil && freshID == nil {
-			v := *row.FreshFeedCollectionId
-			freshID = &v
-		}
-		if row.PelletFeedCollectionId != nil && pelletID == nil {
-			v := *row.PelletFeedCollectionId
-			pelletID = &v
-		}
-	}
-	return freshID, pelletID
-}
-
-// mergeMonthFeedIDsFromActivePond fills nil fresh/pellet IDs from active_ponds defaults when valid.
-func (s *dailyLogService) mergeMonthFeedIDsFromActivePond(ap *model.ActivePond, freshID, pelletID *int) (outFresh, outPellet *int) {
-	outFresh, outPellet = freshID, pelletID
-	if ap == nil {
-		return outFresh, outPellet
-	}
-	if outFresh == nil && ap.DefaultFreshFeedCollectionId != nil {
-		if err := s.validateFeedCollectionOptional(ap.DefaultFreshFeedCollectionId, constants.FeedTypeFresh); err == nil {
-			v := *ap.DefaultFreshFeedCollectionId
-			outFresh = &v
-		}
-	}
-	if outPellet == nil && ap.DefaultPelletFeedCollectionId != nil {
-		if err := s.validateFeedCollectionOptional(ap.DefaultPelletFeedCollectionId, constants.FeedTypePellet); err == nil {
-			v := *ap.DefaultPelletFeedCollectionId
-			outPellet = &v
-		}
-	}
-	return outFresh, outPellet
-}
-
 func (s *dailyLogService) GetMonth(ctx context.Context, pondId int, month string) (*dto.DailyLogMonthResponse, error) {
 	ap, err := s.loadActivePondWithClientAccess(ctx, pondId)
 	if err != nil {
@@ -221,8 +192,24 @@ func (s *dailyLogService) GetMonth(ctx context.Context, pondId int, month string
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
-	freshID, pelletID := s.inferCollectionIDs(logs)
-	freshID, pelletID = s.mergeMonthFeedIDsFromActivePond(ap, freshID, pelletID)
+	freshFc, err := s.resolveFeedCollection(ap.FreshFeedCollectionId, constants.FeedTypeFresh)
+	if err != nil {
+		return nil, err
+	}
+	pelletFc, err := s.resolveFeedCollection(ap.PelletFeedCollectionId, constants.FeedTypePellet)
+	if err != nil {
+		return nil, err
+	}
+
+	var freshID, pelletID *int
+	if freshFc != nil {
+		v := freshFc.Id
+		freshID = &v
+	}
+	if pelletFc != nil {
+		v := pelletFc.Id
+		pelletID = &v
+	}
 
 	out := &dto.DailyLogMonthResponse{
 		FreshFeedCollectionId:  freshID,
@@ -230,44 +217,32 @@ func (s *dailyLogService) GetMonth(ctx context.Context, pondId int, month string
 		Entries:                []dto.DailyLogEntryResponse{},
 	}
 
-	if freshID != nil {
-		fc, err := s.feedCollectionRepo.GetByID(*freshID)
-		if err != nil {
-			return nil, errors.ErrGeneric.Wrap(err)
-		}
-		if fc != nil {
-			out.FreshFeedCollectionName = fc.Name
-			out.FreshUnit = fc.Unit
-		}
+	if freshFc != nil {
+		out.FreshFeedCollectionName = freshFc.Name
+		out.FreshUnit = freshFc.Unit
 	}
-	if pelletID != nil {
-		fc, err := s.feedCollectionRepo.GetByID(*pelletID)
-		if err != nil {
-			return nil, errors.ErrGeneric.Wrap(err)
-		}
-		if fc != nil {
-			out.PelletFeedCollectionName = fc.Name
-			out.PelletUnit = fc.Unit
-		}
+	if pelletFc != nil {
+		out.PelletFeedCollectionName = pelletFc.Name
+		out.PelletUnit = pelletFc.Unit
 	}
 
 	var freshPriceMap, pelletPriceMap map[time.Time]*decimal.Decimal
-	if freshID != nil {
+	if freshFc != nil {
 		dates := make([]time.Time, 0, len(logs))
 		for _, e := range logs {
 			dates = append(dates, e.FeedDate)
 		}
-		freshPriceMap, err = s.resolvePrices(*freshID, dates)
+		freshPriceMap, err = s.resolvePrices(freshFc.Id, dates)
 		if err != nil {
 			return nil, errors.ErrGeneric.Wrap(err)
 		}
 	}
-	if pelletID != nil {
+	if pelletFc != nil {
 		dates := make([]time.Time, 0, len(logs))
 		for _, e := range logs {
 			dates = append(dates, e.FeedDate)
 		}
-		pelletPriceMap, err = s.resolvePrices(*pelletID, dates)
+		pelletPriceMap, err = s.resolvePrices(pelletFc.Id, dates)
 		if err != nil {
 			return nil, errors.ErrGeneric.Wrap(err)
 		}
@@ -303,11 +278,13 @@ func (s *dailyLogService) BulkUpsert(ctx context.Context, pondId int, request dt
 	}
 	activePondId := ap.Id
 
-	if request.FreshFeedCollectionId == nil && ap.DefaultFreshFeedCollectionId != nil {
-		request.FreshFeedCollectionId = ap.DefaultFreshFeedCollectionId
+	if request.FreshFeedCollectionId == nil && ap.FreshFeedCollectionId != nil {
+		v := *ap.FreshFeedCollectionId
+		request.FreshFeedCollectionId = &v
 	}
-	if request.PelletFeedCollectionId == nil && ap.DefaultPelletFeedCollectionId != nil {
-		request.PelletFeedCollectionId = ap.DefaultPelletFeedCollectionId
+	if request.PelletFeedCollectionId == nil && ap.PelletFeedCollectionId != nil {
+		v := *ap.PelletFeedCollectionId
+		request.PelletFeedCollectionId = &v
 	}
 
 	start, _, err := parseMonth(request.Month)
@@ -326,16 +303,14 @@ func (s *dailyLogService) BulkUpsert(ctx context.Context, pondId int, request dt
 			continue
 		}
 		models = append(models, &model.DailyLog{
-			ActivePondId:           activePondId,
-			FeedDate:               feedDate,
-			FreshFeedCollectionId:  request.FreshFeedCollectionId,
-			PelletFeedCollectionId: request.PelletFeedCollectionId,
-			FreshMorning:           e.FreshMorning,
-			FreshEvening:           e.FreshEvening,
-			PelletMorning:          e.PelletMorning,
-			PelletEvening:          e.PelletEvening,
-			DeathFishCount:         e.DeathFishCount,
-			TouristCatchCount:      e.TouristCatchCount,
+			ActivePondId:      activePondId,
+			FeedDate:          feedDate,
+			FreshMorning:      e.FreshMorning,
+			FreshEvening:      e.FreshEvening,
+			PelletMorning:     e.PelletMorning,
+			PelletEvening:     e.PelletEvening,
+			DeathFishCount:    e.DeathFishCount,
+			TouristCatchCount: e.TouristCatchCount,
 		})
 	}
 
@@ -362,12 +337,12 @@ func (s *dailyLogService) BulkUpsert(ctx context.Context, pondId int, request dt
 		updated := false
 		if request.FreshFeedCollectionId != nil {
 			v := *request.FreshFeedCollectionId
-			ap.DefaultFreshFeedCollectionId = &v
+			ap.FreshFeedCollectionId = &v
 			updated = true
 		}
 		if request.PelletFeedCollectionId != nil {
 			v := *request.PelletFeedCollectionId
-			ap.DefaultPelletFeedCollectionId = &v
+			ap.PelletFeedCollectionId = &v
 			updated = true
 		}
 		if !updated {
@@ -440,7 +415,7 @@ func (s *dailyLogService) ImportFromTemplate(ctx context.Context, farmId int, se
 
 		logs := make([]*model.DailyLog, 0, len(ps.Rows))
 		for _, row := range ps.Rows {
-			dl := row.ToDailyLog(activePond.Id, ps.FreshFeedCollectionId, ps.PelletFeedCollectionId, username)
+			dl := row.ToDailyLog(activePond.Id, username)
 			logs = append(logs, &dl)
 		}
 
@@ -465,12 +440,12 @@ func (s *dailyLogService) ImportFromTemplate(ctx context.Context, farmId int, se
 			updated := false
 			if ps.FreshFeedCollectionId != nil {
 				v := *ps.FreshFeedCollectionId
-				activePond.DefaultFreshFeedCollectionId = &v
+				activePond.FreshFeedCollectionId = &v
 				updated = true
 			}
 			if ps.PelletFeedCollectionId != nil {
 				v := *ps.PelletFeedCollectionId
-				activePond.DefaultPelletFeedCollectionId = &v
+				activePond.PelletFeedCollectionId = &v
 				updated = true
 			}
 			if updated {
