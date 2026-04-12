@@ -6,8 +6,6 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,9 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/service/mocks"
 )
 
@@ -31,9 +27,6 @@ type DailyLogHandlerTestSuite struct {
 func (s *DailyLogHandlerTestSuite) SetupTest() {
 	s.dailyLogService = mocks.NewMockDailyLogService(s.T())
 	s.handler = NewDailyLogHandler(DailyLogHandlerParams{
-		Config: &config.Config{
-			App: config.AppConfig{DailyLogUploadPath: s.T().TempDir()},
-		},
 		DailyLogService: s.dailyLogService,
 	})
 }
@@ -156,92 +149,6 @@ func (s *DailyLogHandlerTestSuite) TestBulkUpsert_MissingUsername() {
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
 	s.dailyLogService.AssertNotCalled(s.T(), "BulkUpsert")
-}
-
-func (s *DailyLogHandlerTestSuite) TestUploadExcel_Success() {
-	s.dailyLogService.On(
-		"ImportFromExcelFile",
-		mock.Anything,
-		3,
-		mock.MatchedBy(func(p *int) bool { return p == nil }),
-		mock.MatchedBy(func(p *int) bool { return p != nil && *p == 9 }),
-		"2024-01",
-		mock.AnythingOfType("string"),
-		"u",
-	).Return(2, nil)
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	require.NoError(s.T(), writer.WriteField("month", "2024-01"))
-	require.NoError(s.T(), writer.WriteField("pelletFeedCollectionId", "9"))
-	part, err := writer.CreateFormFile("file", "test.xlsx")
-	require.NoError(s.T(), err)
-	_, err = io.WriteString(part, "dummy")
-	require.NoError(s.T(), err)
-	require.NoError(s.T(), writer.Close())
-
-	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]any{"username": "u", "userLevel": 1}))
-	app.Post("/api/v1/pond/:pondId/daily-logs/upload", s.handler.UploadExcel)
-
-	req := httptest.NewRequest("POST", "/api/v1/pond/3/daily-logs/upload", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	resp, err := app.Test(req)
-	require.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-	var result map[string]any
-	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
-	assert.Equal(s.T(), true, result["result"])
-	s.dailyLogService.AssertExpectations(s.T())
-}
-
-func (s *DailyLogHandlerTestSuite) TestUploadExcel_ImportError_RemovesSavedFile() {
-	s.dailyLogService.On(
-		"ImportFromExcelFile",
-		mock.Anything,
-		3,
-		mock.MatchedBy(func(p *int) bool { return p == nil }),
-		mock.MatchedBy(func(p *int) bool { return p == nil }),
-		"2024-01",
-		mock.AnythingOfType("string"),
-		"u",
-	).Return(0, errors.ErrValidationFailed)
-
-	uploadRoot := s.T().TempDir()
-	s.handler = NewDailyLogHandler(DailyLogHandlerParams{
-		Config: &config.Config{
-			App: config.AppConfig{DailyLogUploadPath: uploadRoot},
-		},
-		DailyLogService: s.dailyLogService,
-	})
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	require.NoError(s.T(), writer.WriteField("month", "2024-01"))
-	part, err := writer.CreateFormFile("file", "test.xlsx")
-	require.NoError(s.T(), err)
-	_, err = io.WriteString(part, "dummy")
-	require.NoError(s.T(), err)
-	require.NoError(s.T(), writer.Close())
-
-	app := fiber.New()
-	app.Use(setLocalsMiddleware(map[string]any{"username": "u", "userLevel": 1}))
-	app.Post("/api/v1/pond/:pondId/daily-logs/upload", s.handler.UploadExcel)
-
-	req := httptest.NewRequest("POST", "/api/v1/pond/3/daily-logs/upload", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	resp, err := app.Test(req)
-	require.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
-
-	pondDir := filepath.Join(uploadRoot, "pond_3")
-	entries, err := os.ReadDir(pondDir)
-	require.NoError(s.T(), err)
-	assert.Empty(s.T(), entries, "uploaded file should be removed when import fails")
-
-	s.dailyLogService.AssertExpectations(s.T())
 }
 
 func (s *DailyLogHandlerTestSuite) TestUploadTemplate_Success() {

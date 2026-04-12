@@ -178,13 +178,6 @@ definitions:
       touristCatchCount:
         type: integer
     type: object
-  dto.DailyLogExcelUploadResponse:
-    properties:
-      rowsImported:
-        type: integer
-      savedPath:
-        type: string
-    type: object
   dto.DailyLogMonthResponse:
     properties:
       entries:
@@ -1436,45 +1429,6 @@ paths:
           schema:
             $ref: '#/definitions/http.ResponseModel'
       summary: Upsert daily logs for a month
-      tags:
-      - pond
-  /pond/{pondId}/daily-logs/upload:
-    post:
-      parameters:
-      - description: Pond ID
-        in: path
-        name: pondId
-        required: true
-        type: integer
-      - description: YYYY-MM
-        in: formData
-        name: month
-        required: true
-        type: string
-      - description: Fresh feed collection id
-        in: formData
-        name: freshFeedCollectionId
-        type: integer
-      - description: Pellet feed collection id
-        in: formData
-        name: pelletFeedCollectionId
-        type: integer
-      - description: xlsx file
-        in: formData
-        name: file
-        required: true
-        type: file
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/http.ResponseModel'
-            - properties:
-                data:
-                  $ref: '#/definitions/dto.DailyLogExcelUploadResponse'
-              type: object
-      summary: Upload Excel and import daily logs
       tags:
       - pond
   /pond/{pondId}/fill:

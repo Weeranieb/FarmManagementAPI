@@ -1533,69 +1533,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/pond/{pondId}/daily-logs/upload": {
-            "post": {
-                "tags": [
-                    "pond"
-                ],
-                "summary": "Upload Excel and import daily logs",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Pond ID",
-                        "name": "pondId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "YYYY-MM",
-                        "name": "month",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Fresh feed collection id",
-                        "name": "freshFeedCollectionId",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Pellet feed collection id",
-                        "name": "pelletFeedCollectionId",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "file",
-                        "description": "xlsx file",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/http.ResponseModel"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/dto.DailyLogExcelUploadResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/pond/{pondId}/fill": {
             "post": {
                 "security": [
@@ -2445,17 +2382,6 @@ const docTemplate = `{
                 },
                 "touristCatchCount": {
                     "type": "integer"
-                }
-            }
-        },
-        "dto.DailyLogExcelUploadResponse": {
-            "type": "object",
-            "properties": {
-                "rowsImported": {
-                    "type": "integer"
-                },
-                "savedPath": {
-                    "type": "string"
                 }
             }
         },

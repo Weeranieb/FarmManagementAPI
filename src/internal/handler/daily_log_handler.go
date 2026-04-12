@@ -3,15 +3,10 @@ package handler
 import (
 	"fmt"
 	"io"
-	"log"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
@@ -24,38 +19,23 @@ import (
 type DailyLogHandler interface {
 	GetMonth(c *fiber.Ctx) error
 	BulkUpsert(c *fiber.Ctx) error
-	UploadExcel(c *fiber.Ctx) error
 	UploadTemplate(c *fiber.Ctx) error
 }
 
 type DailyLogHandlerParams struct {
 	dig.In
 
-	Config          *config.Config
 	DailyLogService service.DailyLogService
 }
 
 type dailyLogHandlerImpl struct {
 	dailyLogService service.DailyLogService
-	cfg             *config.Config
 }
 
 func NewDailyLogHandler(p DailyLogHandlerParams) DailyLogHandler {
 	return &dailyLogHandlerImpl{
 		dailyLogService: p.DailyLogService,
-		cfg:             p.Config,
 	}
-}
-
-func (h *dailyLogHandlerImpl) dailyLogUploadPath() string {
-	p := h.cfg.App.DailyLogUploadPath
-	if p != "" {
-		return p
-	}
-	if h.cfg.App.DailyFeedUploadPath != "" {
-		return h.cfg.App.DailyFeedUploadPath
-	}
-	return "./data/uploads/daily-log"
 }
 
 // GET /pond/:pondId/daily-logs
@@ -66,10 +46,10 @@ func (h *dailyLogHandlerImpl) dailyLogUploadPath() string {
 // @Param        month query string true "YYYY-MM"
 // @Success      200  {object}  http.ResponseModel{data=dto.DailyLogMonthResponse}
 // @Router       /pond/{pondId}/daily-logs [get]
-func (h *dailyLogHandlerImpl) GetMonth(c *fiber.Ctx) error {
+func (h *dailyLogHandlerImpl) GetMonth(c *fiber.Ctx) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			err = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -98,10 +78,10 @@ func (h *dailyLogHandlerImpl) GetMonth(c *fiber.Ctx) error {
 // @Param        body body dto.DailyLogBulkUpsertRequest true "Month + optional collection IDs + entries"
 // @Success      200  {object}  http.ResponseModel
 // @Router       /pond/{pondId}/daily-logs [put]
-func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) error {
+func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			err = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -128,101 +108,6 @@ func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) error {
 	return http.SuccessWithoutData(c)
 }
 
-func parseOptionalPositiveIntPtr(s string) *int {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return nil
-	}
-	v, err := strconv.Atoi(s)
-	if err != nil || v <= 0 {
-		return nil
-	}
-	return &v
-}
-
-// POST /pond/:pondId/daily-logs/upload
-// @Summary      Upload Excel and import daily logs
-// @Tags         pond
-// @Param        pondId path int true "Pond ID"
-// @Param        month formData string true "YYYY-MM"
-// @Param        freshFeedCollectionId formData int false "Fresh feed collection id"
-// @Param        pelletFeedCollectionId formData int false "Pellet feed collection id"
-// @Param        file formData file true "xlsx file"
-// @Success      200  {object}  http.ResponseModel{data=dto.DailyLogExcelUploadResponse}
-// @Router       /pond/{pondId}/daily-logs/upload [post]
-func (h *dailyLogHandlerImpl) UploadExcel(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	pondId, err := strconv.Atoi(c.Params("pondId"))
-	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
-	}
-
-	month := c.FormValue("month")
-	if month == "" {
-		return http.Error(c, errors.ErrValidationFailed.Code, "month is required")
-	}
-
-	freshID := parseOptionalPositiveIntPtr(c.FormValue("freshFeedCollectionId"))
-	pelletID := parseOptionalPositiveIntPtr(c.FormValue("pelletFeedCollectionId"))
-
-	fileHeader, err := c.FormFile("file")
-	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "file is required")
-	}
-
-	filename := filepath.Base(fileHeader.Filename)
-	if !strings.HasSuffix(strings.ToLower(filename), ".xlsx") {
-		return http.Error(c, errors.ErrValidationFailed.Code, "only .xlsx files are allowed")
-	}
-
-	uploadRoot := h.dailyLogUploadPath()
-	pondDir := filepath.Join(uploadRoot, fmt.Sprintf("pond_%d", pondId))
-	if err := os.MkdirAll(pondDir, 0755); err != nil {
-		return http.NewError(c, errors.ErrGeneric.Code, errors.ErrGeneric.Wrap(err))
-	}
-
-	storedName := fmt.Sprintf("%s_%s", uuid.New().String(), filename)
-	destPath := filepath.Join(pondDir, storedName)
-
-	if err := c.SaveFile(fileHeader, destPath); err != nil {
-		_ = os.Remove(destPath)
-		return http.NewError(c, errors.ErrGeneric.Code, errors.ErrGeneric.Wrap(err))
-	}
-
-	relPath := filepath.ToSlash(filepath.Join(fmt.Sprintf("pond_%d", pondId), storedName))
-
-	username, err := utils.GetUsername(c.UserContext())
-	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
-	rows, err := h.dailyLogService.ImportFromExcelFile(
-		c.UserContext(),
-		pondId,
-		freshID,
-		pelletID,
-		month,
-		destPath,
-		username,
-	)
-	if err != nil {
-		if remErr := os.Remove(destPath); remErr != nil {
-			log.Printf("daily log upload: cleanup %q after import error: %v", destPath, remErr)
-		}
-		return http.NewError(c, errors.ErrGeneric.Code, err)
-	}
-
-	return http.Success(c, dto.DailyLogExcelUploadResponse{
-		RowsImported: rows,
-		SavedPath:    relPath,
-	})
-}
-
 // POST /farm/:farmId/daily-logs/import-template
 // @Summary      Upload multi-pond Excel template and import daily logs
 // @Tags         farm
@@ -231,10 +116,10 @@ func (h *dailyLogHandlerImpl) UploadExcel(c *fiber.Ctx) error {
 // @Param        file formData file true "xlsx file"
 // @Success      200  {object}  http.ResponseModel{data=dto.DailyLogTemplateImportResponse}
 // @Router       /farm/{farmId}/daily-logs/import-template [post]
-func (h *dailyLogHandlerImpl) UploadTemplate(c *fiber.Ctx) error {
+func (h *dailyLogHandlerImpl) UploadTemplate(c *fiber.Ctx) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			err = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -249,17 +134,9 @@ func (h *dailyLogHandlerImpl) UploadTemplate(c *fiber.Ctx) error {
 	}
 	defer form.RemoveAll()
 
-	rawIds := form.Value["selectedPondIds"]
-	if len(rawIds) == 0 {
-		return http.Error(c, errors.ErrValidationFailed.Code, "selectedPondIds is required")
-	}
-	selectedPondIds := make([]int, 0, len(rawIds))
-	for _, raw := range rawIds {
-		id, err := strconv.Atoi(raw)
-		if err != nil {
-			return http.Error(c, errors.ErrValidationFailed.Code, fmt.Sprintf("invalid pond id: %s", raw))
-		}
-		selectedPondIds = append(selectedPondIds, id)
+	selectedPondIds, err := utils.ConvertRepeatedFormInts("selectedPondIds", form.Value["selectedPondIds"])
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, err.Error())
 	}
 
 	fileHeader, err := c.FormFile("file")

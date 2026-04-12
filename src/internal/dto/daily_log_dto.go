@@ -47,11 +47,6 @@ type DailyLogMonthResponse struct {
 	Entries                  []DailyLogEntryResponse `json:"entries"`
 }
 
-type DailyLogExcelUploadResponse struct {
-	RowsImported int    `json:"rowsImported"`
-	SavedPath    string `json:"savedPath"`
-}
-
 type DailyLogTemplateImportResult struct {
 	PondId       int    `json:"pondId"`
 	PondName     string `json:"pondName"`

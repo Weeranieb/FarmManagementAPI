@@ -445,6 +445,21 @@ func (s *DailyLogServiceTestSuite) TestImportFromTemplate_HardDeletesStaleRowsBy
 	s.dailyLogRepo.AssertExpectations(s.T())
 }
 
+func (s *DailyLogServiceTestSuite) TestImportFromTemplate_DuplicatePondName() {
+	ctx := dailyLogCtxSuperAdmin()
+	xlsxBytes := readTestXlsx(s.T())
+	s.farmRepo.On("GetByID", 1).Return(&model.Farm{Id: 1, ClientId: 1}, nil)
+	s.pondRepo.On("ListByFarmId", 1).Return([]*model.Pond{
+		{Id: 1, FarmId: 1, Name: "Same"},
+		{Id: 2, FarmId: 1, Name: "Same"},
+	}, nil)
+
+	_, err := s.svc.ImportFromTemplate(ctx, 1, []int{1, 2}, xlsxBytes, "u")
+	require.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), errors.ErrValidationFailed.Message)
+	assert.Contains(s.T(), err.Error(), "duplicate pond name")
+}
+
 func (s *DailyLogServiceTestSuite) TestImportFromTemplate_FarmNotFound() {
 	ctx := dailyLogCtxSuperAdmin()
 	s.farmRepo.On("GetByID", 404).Return(nil, nil)

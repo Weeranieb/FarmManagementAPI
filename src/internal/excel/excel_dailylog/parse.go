@@ -1,7 +1,6 @@
 package excel_dailylog
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -420,22 +419,21 @@ func ParseFile(path, sheetName string, ref time.Time) (*ParsedSheet, error) {
 }
 
 // parseAllSheets is the shared implementation for all-sheets parsing.
+// Sheets that are not valid daily-log templates (blank tabs, helpers, etc.) are skipped; no error is returned for those.
 func parseAllSheets(f *excelize.File, ref time.Time) (map[string]*ParsedSheet, error) {
 	out := make(map[string]*ParsedSheet)
-	var parseErrs []error
 	for _, name := range f.GetSheetList() {
 		ps, err := ParseSheetAt(f, name, ref)
-		if err == nil {
-			out[name] = ps
+		if err != nil {
 			continue
 		}
-		parseErrs = append(parseErrs, fmt.Errorf("sheet %q: %w", name, err))
+		out[name] = ps
 	}
-	return out, errors.Join(parseErrs...)
+	return out, nil
 }
 
 // ParseFileAllSheets parses every sheet from a file on disk.
-// It returns parsed sheets plus a joined error for any sheets that failed to parse.
+// Unreadable or non-template sheets are omitted from the map; the returned error is only for open/read failures.
 func ParseFileAllSheets(path string, ref time.Time) (map[string]*ParsedSheet, error) {
 	f, err := excelize.OpenFile(path)
 	if err != nil {
@@ -446,6 +444,7 @@ func ParseFileAllSheets(path string, ref time.Time) (map[string]*ParsedSheet, er
 }
 
 // ParseReaderAllSheets parses every sheet from an io.Reader (e.g. an in-memory upload).
+// Non-template sheets are skipped; errors are only from opening the workbook.
 func ParseReaderAllSheets(r io.Reader, ref time.Time) (map[string]*ParsedSheet, error) {
 	f, err := excelize.OpenReader(r)
 	if err != nil {
