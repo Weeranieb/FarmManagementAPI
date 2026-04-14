@@ -10,10 +10,6 @@ tmp/
 # Uploaded daily log Excel files (see app.daily_log_upload_path or legacy daily_feed_upload_path)
 data/
 
-**/mocks/
-src/internal/handler/mocks/
-src/internal/service/mocks/
-src/internal/repository/mocks/
 
 # IDE
 .vscode/
