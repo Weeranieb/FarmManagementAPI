@@ -14,6 +14,13 @@ type Config struct {
 	Database       DatabaseConfig       `mapstructure:"database"`
 	App            AppConfig            `mapstructure:"app"`
 	Authentication AuthenticationConfig `mapstructure:"authentication"`
+	AI             AIConfig             `mapstructure:"ai"`
+}
+
+type AIConfig struct {
+	AnthropicAPIKey string `mapstructure:"anthropic_api_key"`
+	Model           string `mapstructure:"model"`
+	MaxTokens       int    `mapstructure:"max_tokens"`
 }
 
 type ServerConfig struct {
@@ -99,6 +106,11 @@ func setDefaults() {
 	// Authentication defaults
 	viper.SetDefault("authentication.jwt_secret", "")
 	viper.SetDefault("authentication.jwt_expiry", "24h")
+
+	// AI defaults
+	viper.SetDefault("ai.anthropic_api_key", "")
+	viper.SetDefault("ai.model", "claude-haiku-4-5-20251001")
+	viper.SetDefault("ai.max_tokens", 2048)
 }
 
 // GetDSN returns the database connection string

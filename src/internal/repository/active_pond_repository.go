@@ -13,6 +13,7 @@ import (
 type ActivePondRepository interface {
 	WithTx(tx *gorm.DB) ActivePondRepository
 	GetActiveByPondID(ctx context.Context, pondId int) (*model.ActivePond, error)
+	GetLatestByPondID(ctx context.Context, pondId int) (*model.ActivePond, error)
 	Create(ctx context.Context, activePond *model.ActivePond) error
 	Update(ctx context.Context, activePond *model.ActivePond) error
 }
@@ -32,6 +33,20 @@ func (r *activePondRepository) WithTx(tx *gorm.DB) ActivePondRepository {
 func (r *activePondRepository) GetActiveByPondID(ctx context.Context, pondId int) (*model.ActivePond, error) {
 	var ap model.ActivePond
 	err := r.db.WithContext(ctx).Where("pond_id = ? AND is_active = ? AND deleted_at IS NULL", pondId, true).First(&ap).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &ap, nil
+}
+
+// GetLatestByPondID returns the most recent active_pond row for a pond, regardless of is_active status.
+// Used for historical data entry on closed ponds.
+func (r *activePondRepository) GetLatestByPondID(ctx context.Context, pondId int) (*model.ActivePond, error) {
+	var ap model.ActivePond
+	err := r.db.WithContext(ctx).Where("pond_id = ? AND deleted_at IS NULL", pondId).Order("id DESC").First(&ap).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
