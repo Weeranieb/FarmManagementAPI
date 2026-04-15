@@ -49,7 +49,7 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -93,7 +93,7 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -130,7 +130,7 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -173,7 +173,7 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 

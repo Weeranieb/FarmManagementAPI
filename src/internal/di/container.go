@@ -10,61 +10,67 @@ import (
 	"go.uber.org/dig"
 )
 
+func mustProvide(c *dig.Container, constructor interface{}) {
+	if err := c.Provide(constructor); err != nil {
+		panic("DI provide: " + err.Error())
+	}
+}
+
 func NewContainer(conf *config.Config) *dig.Container {
 	c := dig.New()
 
-	c.Provide(func() *config.Config { return conf })
+	mustProvide(c, func() *config.Config { return conf })
 
-	c.Provide(conf.ConnectDB)
+	mustProvide(c, conf.ConnectDB)
 
 	// Repository
-	c.Provide(repository.NewUserRepository)
-	c.Provide(repository.NewClientRepository)
-	c.Provide(repository.NewFarmRepository)
-	c.Provide(repository.NewMerchantRepository)
-	c.Provide(repository.NewPondRepository)
-	c.Provide(repository.NewActivePondRepository)
-	c.Provide(repository.NewActivityRepository)
-	c.Provide(repository.NewAdditionalCostRepository)
-	c.Provide(repository.NewSellDetailRepository)
-	c.Provide(repository.NewFishSizeGradeRepository)
-	c.Provide(repository.NewWorkerRepository)
-	c.Provide(repository.NewFarmGroupRepository)
-	c.Provide(repository.NewFeedCollectionRepository)
-	c.Provide(repository.NewFeedPriceHistoryRepository)
-	c.Provide(repository.NewDailyLogRepository)
+	mustProvide(c, repository.NewUserRepository)
+	mustProvide(c, repository.NewClientRepository)
+	mustProvide(c, repository.NewFarmRepository)
+	mustProvide(c, repository.NewMerchantRepository)
+	mustProvide(c, repository.NewPondRepository)
+	mustProvide(c, repository.NewActivePondRepository)
+	mustProvide(c, repository.NewActivityRepository)
+	mustProvide(c, repository.NewAdditionalCostRepository)
+	mustProvide(c, repository.NewSellDetailRepository)
+	mustProvide(c, repository.NewFishSizeGradeRepository)
+	mustProvide(c, repository.NewWorkerRepository)
+	mustProvide(c, repository.NewFarmGroupRepository)
+	mustProvide(c, repository.NewFeedCollectionRepository)
+	mustProvide(c, repository.NewFeedPriceHistoryRepository)
+	mustProvide(c, repository.NewDailyLogRepository)
 
 	// Transaction
-	c.Provide(transaction.NewManager)
+	mustProvide(c, transaction.NewManager)
 
 	// Service
-	c.Provide(service.NewUserService)
-	c.Provide(service.NewAuthService)
-	c.Provide(service.NewClientService)
-	c.Provide(service.NewFarmService)
-	c.Provide(service.NewMerchantService)
-	c.Provide(service.NewPondService)
-	c.Provide(service.NewWorkerService)
-	c.Provide(service.NewFarmGroupService)
-	c.Provide(service.NewFeedCollectionService)
-	c.Provide(service.NewFeedPriceHistoryService)
-	c.Provide(service.NewFishSizeGradeService)
-	c.Provide(service.NewDailyLogService)
+	mustProvide(c, service.NewUserService)
+	mustProvide(c, service.NewAuthService)
+	mustProvide(c, service.NewClientService)
+	mustProvide(c, service.NewFarmService)
+	mustProvide(c, service.NewMerchantService)
+	mustProvide(c, service.NewPondService)
+	mustProvide(c, service.NewWorkerService)
+	mustProvide(c, service.NewFarmGroupService)
+	mustProvide(c, service.NewFeedCollectionService)
+	mustProvide(c, service.NewFeedPriceHistoryService)
+	mustProvide(c, service.NewFishSizeGradeService)
+	mustProvide(c, service.NewDailyLogService)
 
 	// Handler
-	c.Provide(handler.NewUserHandler)
-	c.Provide(handler.NewAuthHandler)
-	c.Provide(handler.NewClientHandler)
-	c.Provide(handler.NewFarmHandler)
-	c.Provide(handler.NewMerchantHandler)
-	c.Provide(handler.NewPondHandler)
-	c.Provide(handler.NewWorkerHandler)
-	c.Provide(handler.NewFarmGroupHandler)
-	c.Provide(handler.NewFeedCollectionHandler)
-	c.Provide(handler.NewFeedPriceHistoryHandler)
-	c.Provide(handler.NewFishSizeGradeHandler)
-	c.Provide(handler.NewDailyLogHandler)
-	c.Provide(handler.NewHandler)
+	mustProvide(c, handler.NewUserHandler)
+	mustProvide(c, handler.NewAuthHandler)
+	mustProvide(c, handler.NewClientHandler)
+	mustProvide(c, handler.NewFarmHandler)
+	mustProvide(c, handler.NewMerchantHandler)
+	mustProvide(c, handler.NewPondHandler)
+	mustProvide(c, handler.NewWorkerHandler)
+	mustProvide(c, handler.NewFarmGroupHandler)
+	mustProvide(c, handler.NewFeedCollectionHandler)
+	mustProvide(c, handler.NewFeedPriceHistoryHandler)
+	mustProvide(c, handler.NewFishSizeGradeHandler)
+	mustProvide(c, handler.NewDailyLogHandler)
+	mustProvide(c, handler.NewHandler)
 
 	return c
 }

@@ -36,7 +36,7 @@ func (h *farmGroupHandlerImpl) AddFarmGroup(c *fiber.Ctx) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -64,7 +64,7 @@ func (h *farmGroupHandlerImpl) AddFarmGroup(c *fiber.Ctx) error {
 func (h *farmGroupHandlerImpl) GetFarmGroup(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -92,7 +92,7 @@ func (h *farmGroupHandlerImpl) UpdateFarmGroup(c *fiber.Ctx) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -125,7 +125,7 @@ func (h *farmGroupHandlerImpl) UpdateFarmGroup(c *fiber.Ctx) error {
 func (h *farmGroupHandlerImpl) ListFarmGroup(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -164,7 +164,7 @@ func (h *farmGroupHandlerImpl) ListFarmGroup(c *fiber.Ctx) error {
 func (h *farmGroupHandlerImpl) GetFarmGroupDropdown(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 

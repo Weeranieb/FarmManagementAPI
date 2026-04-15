@@ -52,7 +52,7 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -96,7 +96,7 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -138,7 +138,7 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -193,7 +193,7 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -248,7 +248,7 @@ func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
 func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 

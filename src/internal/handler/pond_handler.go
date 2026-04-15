@@ -57,7 +57,7 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -92,7 +92,7 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -126,7 +126,7 @@ func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -163,7 +163,7 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -207,7 +207,7 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -250,7 +250,7 @@ func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -295,7 +295,7 @@ func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -340,7 +340,7 @@ func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -384,7 +384,7 @@ func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) FillPondPreview(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -423,7 +423,7 @@ func (h *pondHandlerImpl) FillPondPreview(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) MovePondPreview(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -462,7 +462,7 @@ func (h *pondHandlerImpl) MovePondPreview(c *fiber.Ctx) error {
 func (h *pondHandlerImpl) SellPondPreview(c *fiber.Ctx) error {
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 

@@ -37,7 +37,7 @@ func (s *PondRepositoryTestSuite) SetupSuite() {
 func (s *PondRepositoryTestSuite) TearDownSuite() {
 	sqlDB, _ := s.db.DB()
 	if sqlDB != nil {
-		sqlDB.Close()
+		_ = sqlDB.Close()
 	}
 }
 
@@ -89,7 +89,7 @@ func (s *PondRepositoryTestSuite) TestGetByID_Success() {
 		Name:   "Test Pond",
 		Status: "active",
 	}
-	s.pondRepo.Create(context.Background(), pond)
+	_ = s.pondRepo.Create(context.Background(), pond)
 
 	// WHEN — GetByID is called
 	result, err := s.pondRepo.GetByID(pond.Id)
@@ -107,7 +107,7 @@ func (s *PondRepositoryTestSuite) TestGetByFarmIdAndName_Success() {
 		Name:   "Test Pond",
 		Status: "active",
 	}
-	s.pondRepo.Create(context.Background(), pond)
+	_ = s.pondRepo.Create(context.Background(), pond)
 
 	// WHEN — GetByFarmIdAndName(1, "Test Pond") is called
 	result, err := s.pondRepo.GetByFarmIdAndName(1, "Test Pond")
@@ -123,9 +123,9 @@ func (s *PondRepositoryTestSuite) TestListByFarmId_Success() {
 	pond1 := &model.Pond{FarmId: 1, Name: "Pond 1", Status: "active"}
 	pond2 := &model.Pond{FarmId: 1, Name: "Pond 2", Status: "active"}
 	pond3 := &model.Pond{FarmId: 2, Name: "Pond 3", Status: "active"}
-	s.pondRepo.Create(context.Background(), pond1)
-	s.pondRepo.Create(context.Background(), pond2)
-	s.pondRepo.Create(context.Background(), pond3)
+	_ = s.pondRepo.Create(context.Background(), pond1)
+	_ = s.pondRepo.Create(context.Background(), pond2)
+	_ = s.pondRepo.Create(context.Background(), pond3)
 
 	// WHEN — ListByFarmId(1) is called
 	results, err := s.pondRepo.ListByFarmId(1)
@@ -142,7 +142,7 @@ func (s *PondRepositoryTestSuite) TestUpdate_Success() {
 		Name:   "Test Pond",
 		Status: "active",
 	}
-	s.pondRepo.Create(context.Background(), pond)
+	_ = s.pondRepo.Create(context.Background(), pond)
 	pond.Name = "Updated Pond"
 
 	// WHEN — Update is called
@@ -161,7 +161,7 @@ func (s *PondRepositoryTestSuite) TestDelete_Success() {
 		Name:   "Test Pond",
 		Status: "active",
 	}
-	s.pondRepo.Create(context.Background(), pond)
+	_ = s.pondRepo.Create(context.Background(), pond)
 
 	// WHEN — Delete is called
 	err := s.pondRepo.Delete(context.Background(), pond.Id)

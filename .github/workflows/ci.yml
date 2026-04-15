@@ -50,8 +50,6 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    # Lint is advisory — does not block merges until existing issues are fixed
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 

@@ -132,7 +132,7 @@ func (h *dailyLogHandlerImpl) UploadTemplate(c *fiber.Ctx) (err error) {
 	if err != nil {
 		return http.Error(c, errors.ErrValidationFailed.Code, "invalid multipart form")
 	}
-	defer form.RemoveAll()
+	defer func() { _ = form.RemoveAll() }()
 
 	selectedPondIds, err := utils.ConvertRepeatedFormInts("selectedPondIds", form.Value["selectedPondIds"])
 	if err != nil {
@@ -151,7 +151,7 @@ func (h *dailyLogHandlerImpl) UploadTemplate(c *fiber.Ctx) (err error) {
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, errors.ErrGeneric.Wrap(err))
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	fileBytes, err := io.ReadAll(f)
 	if err != nil {

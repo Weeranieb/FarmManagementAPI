@@ -46,7 +46,7 @@ func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 
@@ -80,7 +80,7 @@ func (h *authHandlerImpl) Login(c *fiber.Ctx) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
 		}
 	}()
 

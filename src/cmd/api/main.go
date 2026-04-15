@@ -85,7 +85,9 @@ func setupAndStartServer(conf *config.Config, container *dig.Container) {
 	}
 
 	router.SetupRoutes(app, conf, handlers)
-	app.Listen(conf.GetServerAddress())
+	if err := app.Listen(conf.GetServerAddress()); err != nil {
+		log.Fatal("Failed to start server: ", err)
+	}
 }
 
 func shutdownServer() {

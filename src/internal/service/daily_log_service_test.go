@@ -252,7 +252,7 @@ func firstSheetName(t *testing.T, xlsxBytes []byte) string {
 	t.Helper()
 	f, err := excelize.OpenReader(bytes.NewReader(xlsxBytes))
 	require.NoError(t, err)
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	sheets := f.GetSheetList()
 	require.NotEmpty(t, sheets)
 	return sheets[0]

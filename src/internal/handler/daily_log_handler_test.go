@@ -91,8 +91,6 @@ func (s *DailyLogHandlerTestSuite) TestGetMonth_InvalidPondId() {
 	s.dailyLogService.AssertNotCalled(s.T(), "GetMonth")
 }
 
-func intPtr(v int) *int { return &v }
-
 func (s *DailyLogHandlerTestSuite) TestBulkUpsert_Success() {
 	tc := 0
 	body := dto.DailyLogBulkUpsertRequest{

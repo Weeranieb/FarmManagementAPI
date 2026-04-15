@@ -42,7 +42,7 @@ func (s *UserRepositoryTestSuite) SetupSuite() {
 func (s *UserRepositoryTestSuite) TearDownSuite() {
 	sqlDB, _ := s.db.DB()
 	if sqlDB != nil {
-		sqlDB.Close()
+		_ = sqlDB.Close()
 	}
 }
 
@@ -323,9 +323,9 @@ func (s *UserRepositoryTestSuite) TestDelete_MultipleUsers() {
 	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: lo.ToPtr(1)}
 	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: lo.ToPtr(1)}
 
-	s.userRepository.Create(context.Background(), user1)
-	s.userRepository.Create(context.Background(), user2)
-	s.userRepository.Create(context.Background(), user3)
+	_ = s.userRepository.Create(context.Background(), user1)
+	_ = s.userRepository.Create(context.Background(), user2)
+	_ = s.userRepository.Create(context.Background(), user3)
 
 	// WHEN — Delete(user2.Id) is called
 	err := s.userRepository.Delete(user2.Id)
@@ -358,7 +358,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 			ContactNumber: "123456789" + strconv.Itoa(i),
 			ClientId:      &clientId,
 		}
-		s.userRepository.Create(context.Background(), user)
+		_ = s.userRepository.Create(context.Background(), user)
 	}
 
 	// Create users for different clientId
@@ -371,7 +371,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 			ContactNumber: "987654321" + strconv.Itoa(i),
 			ClientId:      lo.ToPtr(2),
 		}
-		s.userRepository.Create(context.Background(), user)
+		_ = s.userRepository.Create(context.Background(), user)
 	}
 
 	ctx := context.Background()
@@ -408,11 +408,11 @@ func (s *UserRepositoryTestSuite) TestListByClientId_ExcludesSoftDeleted() {
 	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: &clientId}
 	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: &clientId}
 
-	s.userRepository.Create(context.Background(), user1)
-	s.userRepository.Create(context.Background(), user2)
-	s.userRepository.Create(context.Background(), user3)
+	_ = s.userRepository.Create(context.Background(), user1)
+	_ = s.userRepository.Create(context.Background(), user2)
+	_ = s.userRepository.Create(context.Background(), user3)
 
-	s.userRepository.Delete(user2.Id)
+	_ = s.userRepository.Delete(user2.Id)
 
 	ctx := context.Background()
 	clientIdPtr := &clientId
@@ -433,9 +433,9 @@ func (s *UserRepositoryTestSuite) TestListByClientId_FiltersByClientId() {
 	user2 := &model.User{Username: "user2", Password: "pass2", FirstName: "User2", UserLevel: 1, ContactNumber: "222", ClientId: lo.ToPtr(1)}
 	user3 := &model.User{Username: "user3", Password: "pass3", FirstName: "User3", UserLevel: 1, ContactNumber: "333", ClientId: lo.ToPtr(2)}
 
-	s.userRepository.Create(context.Background(), user1)
-	s.userRepository.Create(context.Background(), user2)
-	s.userRepository.Create(context.Background(), user3)
+	_ = s.userRepository.Create(context.Background(), user1)
+	_ = s.userRepository.Create(context.Background(), user2)
+	_ = s.userRepository.Create(context.Background(), user3)
 
 	ctx := context.Background()
 	clientId := 1
@@ -488,10 +488,10 @@ func (s *UserRepositoryTestSuite) TestGetByID_AfterDelete() {
 		ContactNumber: "1234567890",
 		ClientId:      lo.ToPtr(1),
 	}
-	s.userRepository.Create(context.Background(), user)
+	_ = s.userRepository.Create(context.Background(), user)
 	userID := user.Id
 
-	s.userRepository.Delete(userID)
+	_ = s.userRepository.Delete(userID)
 
 	// WHEN — GetByID is called
 	result, err := s.userRepository.GetByID(userID)
