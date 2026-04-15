@@ -14,6 +14,8 @@ type Config struct {
 	Database       DatabaseConfig       `mapstructure:"database"`
 	App            AppConfig            `mapstructure:"app"`
 	Authentication AuthenticationConfig `mapstructure:"authentication"`
+	Cors           CorsConfig           `mapstructure:"cors"`
+	Security       SecurityConfig       `mapstructure:"security"`
 }
 
 type ServerConfig struct {
@@ -41,6 +43,15 @@ type AppConfig struct {
 type AuthenticationConfig struct {
 	JWTSecret string `mapstructure:"jwt_secret"`
 	JWTExpiry string `mapstructure:"jwt_expiry"`
+}
+
+type CorsConfig struct {
+	AllowedOrigins string `mapstructure:"allowed_origins"`
+}
+
+type SecurityConfig struct {
+	RateLimitMax    int `mapstructure:"rate_limit_max"`
+	RateLimitWindow int `mapstructure:"rate_limit_window"` // seconds
 }
 
 // LoadConfig loads configuration using viper
@@ -99,6 +110,13 @@ func setDefaults() {
 	// Authentication defaults
 	viper.SetDefault("authentication.jwt_secret", "")
 	viper.SetDefault("authentication.jwt_expiry", "24h")
+
+	// CORS defaults (permissive for development; override via CORS_ALLOWED_ORIGINS in production)
+	viper.SetDefault("cors.allowed_origins", "*")
+
+	// Security defaults
+	viper.SetDefault("security.rate_limit_max", 100)    // max requests per window
+	viper.SetDefault("security.rate_limit_window", 60)  // window in seconds
 }
 
 // GetDSN returns the database connection string
