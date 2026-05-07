@@ -96,10 +96,11 @@ func (r *farmRepository) ListByClientIdWithPonds(clientId int) ([]*model.FarmWit
 		}
 		result = append(result, &model.FarmWithPonds{
 			Farm: model.Farm{
-				Id:       row.Id,
-				ClientId: row.ClientId,
-				Name:     row.Name,
-				Status:   row.Status,
+				Id:        row.Id,
+				ClientId:  row.ClientId,
+				Name:      row.Name,
+				Status:    row.Status,
+				BaseModel: row.BaseModel,
 			},
 			Ponds: ponds,
 		})

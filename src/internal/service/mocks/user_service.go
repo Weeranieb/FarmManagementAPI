@@ -74,9 +74,9 @@ func (_m *MockUserService) GetUser(id int) (*dto.UserResponse, error) {
 	return r0, r1
 }
 
-// GetUserList provides a mock function with given fields: ctx, clientId
-func (_m *MockUserService) GetUserList(ctx context.Context, clientId *int) ([]*dto.UserResponse, error) {
-	ret := _m.Called(ctx, clientId)
+// GetUserList provides a mock function with given fields: ctx, filters
+func (_m *MockUserService) GetUserList(ctx context.Context, filters dto.UserListQuery) ([]*dto.UserResponse, error) {
+	ret := _m.Called(ctx, filters)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetUserList")
@@ -84,19 +84,19 @@ func (_m *MockUserService) GetUserList(ctx context.Context, clientId *int) ([]*d
 
 	var r0 []*dto.UserResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *int) ([]*dto.UserResponse, error)); ok {
-		return rf(ctx, clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.UserListQuery) ([]*dto.UserResponse, error)); ok {
+		return rf(ctx, filters)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *int) []*dto.UserResponse); ok {
-		r0 = rf(ctx, clientId)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.UserListQuery) []*dto.UserResponse); ok {
+		r0 = rf(ctx, filters)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*dto.UserResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *int) error); ok {
-		r1 = rf(ctx, clientId)
+	if rf, ok := ret.Get(1).(func(context.Context, dto.UserListQuery) error); ok {
+		r1 = rf(ctx, filters)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -115,6 +115,42 @@ func (_m *MockUserService) Update(ctx context.Context, userId int, request dto.U
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, int, dto.UpdateUserRequest, string) error); ok {
 		r0 = rf(ctx, userId, request, userIdentity)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdminUpdate provides a mock function with given fields: ctx, userId, request, userIdentity
+func (_m *MockUserService) AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error {
+	ret := _m.Called(ctx, userId, request, userIdentity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdminUpdate")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.AdminUpdateUserRequest, string) error); ok {
+		r0 = rf(ctx, userId, request, userIdentity)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Delete provides a mock function with given fields: ctx, userId, userIdentity
+func (_m *MockUserService) Delete(ctx context.Context, userId int, userIdentity string) error {
+	ret := _m.Called(ctx, userId, userIdentity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, string) error); ok {
+		r0 = rf(ctx, userId, userIdentity)
 	} else {
 		r0 = ret.Error(0)
 	}

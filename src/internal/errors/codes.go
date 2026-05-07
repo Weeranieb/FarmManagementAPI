@@ -65,6 +65,26 @@ var (
 		Code:    500032,
 		Message: "User already exists",
 	}
+
+	ErrUserEmailAlreadyExists = &AppError{
+		Code:    500033,
+		Message: "Email already exists",
+	}
+
+	ErrUserCannotModifySuperAdmin = &AppError{
+		Code:    500034,
+		Message: "Cannot modify or delete a super admin via this endpoint",
+	}
+
+	ErrUserCannotDeleteSelf = &AppError{
+		Code:    500035,
+		Message: "Cannot delete yourself",
+	}
+
+	ErrUserCannotAssignSuperAdmin = &AppError{
+		Code:    500036,
+		Message: "Cannot assign super admin role via this endpoint",
+	}
 )
 
 // Farm errors (500040-500049)

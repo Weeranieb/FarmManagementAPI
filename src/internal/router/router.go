@@ -1,6 +1,7 @@
 package router
 
 import (
+	"strings"
 	"time"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
@@ -42,8 +43,15 @@ func SetupRoutes(app *fiber.App, conf *config.Config, handlers *handler.Handler)
 	if corsOrigins == "" {
 		corsOrigins = "*"
 	}
+	allowCredentials := true
+	for _, origin := range strings.Split(corsOrigins, ",") {
+		if strings.TrimSpace(origin) == "*" {
+			allowCredentials = false
+			break
+		}
+	}
 	app.Use(cors.New(cors.Config{
-		AllowCredentials: true,
+		AllowCredentials: allowCredentials,
 		AllowOrigins:     corsOrigins,
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",

@@ -152,18 +152,30 @@ func (s *UserRepositoryTestSuite) TestGetByID_NotFound() {
 	assert.Nil(s.T(), result)
 }
 
-// Test GetByEmail operations - Note: Email field doesn't exist in new model
+// Test GetByEmail operations
 func (s *UserRepositoryTestSuite) TestGetByEmail_Success() {
-	// GIVEN/WHEN/THEN — skipped (email not in model)
-	s.T().Skip("Email field not available in new model - GetByEmail needs to be updated or removed")
+	email := "alice@example.com"
+	user := &model.User{
+		Username:      "alice",
+		Password:      "p",
+		Email:         &email,
+		FirstName:     "Alice",
+		UserLevel:     1,
+		ContactNumber: "1",
+		ClientId:      lo.ToPtr(1),
+	}
+	assert.NoError(s.T(), s.userRepository.Create(context.Background(), user))
+
+	result, err := s.userRepository.GetByEmail(email)
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), result)
+	assert.Equal(s.T(), user.Id, result.Id)
 }
 
 func (s *UserRepositoryTestSuite) TestGetByEmail_NotFound() {
-	s.T().Skip("Email field not available in new model - GetByEmail needs to be updated or removed")
-}
-
-func (s *UserRepositoryTestSuite) TestGetByEmail_CaseSensitive() {
-	s.T().Skip("Email field not available in new model - GetByEmail needs to be updated or removed")
+	result, err := s.userRepository.GetByEmail("nobody@example.com")
+	assert.NoError(s.T(), err)
+	assert.Nil(s.T(), result)
 }
 
 // Test GetByUsername operations
@@ -296,7 +308,7 @@ func (s *UserRepositoryTestSuite) TestDelete_Success() {
 	userID := user.Id
 
 	// WHEN — Delete is called
-	err = s.userRepository.Delete(userID)
+	err = s.userRepository.Delete(context.Background(), userID)
 
 	// THEN — no error; GetByID returns nil; record soft-deleted
 	assert.NoError(s.T(), err)
@@ -311,7 +323,7 @@ func (s *UserRepositoryTestSuite) TestDelete_Success() {
 func (s *UserRepositoryTestSuite) TestDelete_NotFound() {
 	// GIVEN — no user with id 999
 	// WHEN — Delete(999) is called
-	err := s.userRepository.Delete(999)
+	err := s.userRepository.Delete(context.Background(), 999)
 
 	// THEN — no error (GORM behavior)
 	assert.NoError(s.T(), err)
@@ -328,7 +340,7 @@ func (s *UserRepositoryTestSuite) TestDelete_MultipleUsers() {
 	_ = s.userRepository.Create(context.Background(), user3)
 
 	// WHEN — Delete(user2.Id) is called
-	err := s.userRepository.Delete(user2.Id)
+	err := s.userRepository.Delete(context.Background(), user2.Id)
 	assert.NoError(s.T(), err)
 
 	// THEN — only user2 is deleted
@@ -377,7 +389,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Success() {
 	ctx := context.Background()
 	clientIdPtr := &clientId
 	// WHEN — ListByClientId(ctx, 1) is called
-	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
+	users, err := s.userRepository.List(ctx, UserFilters{ClientId: clientIdPtr})
 
 	// THEN — 5 users for client 1
 	assert.NoError(s.T(), err)
@@ -393,7 +405,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_Empty() {
 	clientId := 999
 	clientIdPtr := &clientId
 	// WHEN — ListByClientId is called
-	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
+	users, err := s.userRepository.List(ctx, UserFilters{ClientId: clientIdPtr})
 
 	// THEN — empty list
 	assert.NoError(s.T(), err)
@@ -412,12 +424,12 @@ func (s *UserRepositoryTestSuite) TestListByClientId_ExcludesSoftDeleted() {
 	_ = s.userRepository.Create(context.Background(), user2)
 	_ = s.userRepository.Create(context.Background(), user3)
 
-	_ = s.userRepository.Delete(user2.Id)
+	_ = s.userRepository.Delete(context.Background(), user2.Id)
 
 	ctx := context.Background()
 	clientIdPtr := &clientId
 	// WHEN — ListByClientId is called
-	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
+	users, err := s.userRepository.List(ctx, UserFilters{ClientId: clientIdPtr})
 
 	// THEN — 2 users (soft-deleted excluded)
 	assert.NoError(s.T(), err)
@@ -441,7 +453,7 @@ func (s *UserRepositoryTestSuite) TestListByClientId_FiltersByClientId() {
 	clientId := 1
 	clientIdPtr := &clientId
 	// WHEN — ListByClientId(ctx, 1) is called
-	users, err := s.userRepository.ListByClientId(ctx, clientIdPtr)
+	users, err := s.userRepository.List(ctx, UserFilters{ClientId: clientIdPtr})
 
 	// THEN — 2 users for client 1
 	assert.NoError(s.T(), err)
@@ -491,7 +503,7 @@ func (s *UserRepositoryTestSuite) TestGetByID_AfterDelete() {
 	_ = s.userRepository.Create(context.Background(), user)
 	userID := user.Id
 
-	_ = s.userRepository.Delete(userID)
+	_ = s.userRepository.Delete(context.Background(), userID)
 
 	// WHEN — GetByID is called
 	result, err := s.userRepository.GetByID(userID)
@@ -502,7 +514,22 @@ func (s *UserRepositoryTestSuite) TestGetByID_AfterDelete() {
 }
 
 func (s *UserRepositoryTestSuite) TestGetByEmail_AfterDelete() {
-	s.T().Skip("Email field not available in new model - GetByEmail needs to be updated or removed")
+	email := "bob@example.com"
+	user := &model.User{
+		Username:      "bob",
+		Password:      "p",
+		Email:         &email,
+		FirstName:     "Bob",
+		UserLevel:     1,
+		ContactNumber: "1",
+		ClientId:      lo.ToPtr(1),
+	}
+	assert.NoError(s.T(), s.userRepository.Create(context.Background(), user))
+	assert.NoError(s.T(), s.userRepository.Delete(context.Background(), user.Id))
+
+	result, err := s.userRepository.GetByEmail(email)
+	assert.NoError(s.T(), err)
+	assert.Nil(s.T(), result)
 }
 
 func (s *UserRepositoryTestSuite) TestMultipleOperations() {
@@ -541,7 +568,7 @@ func (s *UserRepositoryTestSuite) TestMultipleOperations() {
 	assert.Equal(s.T(), "updateduser", found.Username)
 
 	// Delete
-	err = s.userRepository.Delete(user.Id)
+	err = s.userRepository.Delete(context.Background(), user.Id)
 	assert.NoError(s.T(), err)
 
 	// Verify deletion - should return nil, nil (not found)

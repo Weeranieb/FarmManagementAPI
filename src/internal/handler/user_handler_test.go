@@ -341,12 +341,10 @@ func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
 // Test UpdateUser handler
 func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
 	// GIVEN — valid update body; service returns nil
-	userLevel := 1
 	updateUser := dto.UpdateUserRequest{
 		Username:      "updateduser",
 		FirstName:     "Updated",
 		LastName:      lo.ToPtr("User"),
-		UserLevel:     &userLevel,
 		ContactNumber: "0987654321",
 	}
 
@@ -477,11 +475,11 @@ func (s *UserHandlerTestSuite) TestGetUserList_Success() {
 		},
 	}
 
-	// Super admin can pass nil clientId
+	// Super admin: no clientId filter is applied.
 	s.userService.On("GetUserList", mock.MatchedBy(func(ctx any) bool {
 		_, ok := ctx.(context.Context)
 		return ok
-	}), (*int)(nil)).Return(expectedUsers, nil)
+	}), dto.UserListQuery{}).Return(expectedUsers, nil)
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
@@ -520,7 +518,7 @@ func (s *UserHandlerTestSuite) TestGetUserList_ServiceError() {
 	s.userService.On("GetUserList", mock.MatchedBy(func(ctx any) bool {
 		_, ok := ctx.(context.Context)
 		return ok
-	}), (*int)(nil)).Return(nil, errors.New("database error"))
+	}), dto.UserListQuery{}).Return(nil, errors.New("database error"))
 
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{

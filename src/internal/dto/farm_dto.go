@@ -17,11 +17,13 @@ type UpdateFarmBody struct {
 }
 
 type FarmResponse struct {
-	Id        int    `json:"id"`
-	ClientId  int    `json:"clientId"`
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	PondCount int    `json:"pondCount"`
+	Id          int    `json:"id"`
+	ClientId    int    `json:"clientId"`
+	Name        string `json:"name"`
+	Status      string `json:"status"`
+	PondCount   int    `json:"pondCount"`
+	ActivePonds int    `json:"activePonds"`
+	CreatedAt   string `json:"createdAt,omitempty"`
 }
 
 type FarmListResponse struct {
