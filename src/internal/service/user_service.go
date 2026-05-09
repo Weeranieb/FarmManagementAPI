@@ -18,7 +18,7 @@ import (
 type UserService interface {
 	Create(ctx context.Context, request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error)
 	GetUser(id int) (*dto.UserResponse, error)
-	Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) error
+	Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) (*dto.UserResponse, error)
 	AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error
 	AdminResetPassword(ctx context.Context, userId int, request dto.AdminResetPasswordRequest, userIdentity string) error
 	ChangePassword(ctx context.Context, userId int, request dto.ChangePasswordRequest, userIdentity string) error
@@ -114,22 +114,24 @@ func (s *userService) GetUser(id int) (*dto.UserResponse, error) {
 
 // Update is the self-update path. It intentionally does NOT allow changing
 // UserLevel or ClientId; those are privileged fields handled by AdminUpdate.
-func (s *userService) Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) error {
+// Returns the updated user so callers can refresh their local snapshot
+// without an extra round-trip.
+func (s *userService) Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) (*dto.UserResponse, error) {
 	existingUser, err := s.userRepo.GetByID(userId)
 	if err != nil {
-		return errors.ErrGeneric.Wrap(err)
+		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	if existingUser == nil {
-		return errors.ErrUserNotFound
+		return nil, errors.ErrUserNotFound
 	}
 
 	if request.Username != "" && request.Username != existingUser.Username {
 		clash, err := s.userRepo.GetByUsername(request.Username)
 		if err != nil {
-			return errors.ErrGeneric.Wrap(err)
+			return nil, errors.ErrGeneric.Wrap(err)
 		}
 		if clash != nil && clash.Id != existingUser.Id {
-			return errors.ErrUserAlreadyExists
+			return nil, errors.ErrUserAlreadyExists
 		}
 		existingUser.Username = request.Username
 	}
@@ -137,10 +139,10 @@ func (s *userService) Update(ctx context.Context, userId int, request dto.Update
 		if *request.Email != "" {
 			clash, err := s.userRepo.GetByEmail(*request.Email)
 			if err != nil {
-				return errors.ErrGeneric.Wrap(err)
+				return nil, errors.ErrGeneric.Wrap(err)
 			}
 			if clash != nil && clash.Id != existingUser.Id {
-				return errors.ErrUserEmailAlreadyExists
+				return nil, errors.ErrUserEmailAlreadyExists
 			}
 		}
 		existingUser.Email = request.Email
@@ -156,9 +158,9 @@ func (s *userService) Update(ctx context.Context, userId int, request dto.Update
 	}
 
 	if err := s.userRepo.Update(ctx, existingUser); err != nil {
-		return errors.ErrGeneric.Wrap(err)
+		return nil, errors.ErrGeneric.Wrap(err)
 	}
-	return nil
+	return s.toUserResponse(existingUser), nil
 }
 
 // AdminUpdate is the super-admin-only path. It can change every field

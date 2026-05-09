@@ -152,12 +152,12 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.userService.Update(c.UserContext(), userId, updateUser, username)
+	updated, err := h.userService.Update(c.UserContext(), userId, updateUser, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
-	return http.SuccessWithoutData(c)
+	return http.Success(c, updated)
 }
 
 // PUT /api/v1/user/:id

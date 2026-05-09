@@ -210,8 +210,11 @@ func (s *UserServiceTestSuite) TestUpdate_SelfUpdate_StripsPrivilegedFields() {
 		assert.Equal(s.T(), constants.UserLevelNormal, u.UserLevel, "self-update must not change user level")
 	})
 
-	err := s.userService.Update(context.Background(), userID, req, "self")
+	updated, err := s.userService.Update(context.Background(), userID, req, "self")
 	assert.NoError(s.T(), err)
+	if assert.NotNil(s.T(), updated) {
+		assert.Equal(s.T(), "Updated", updated.FirstName)
+	}
 }
 
 func (s *UserServiceTestSuite) TestAdminUpdate_RejectsPromotionToSuperAdmin() {
