@@ -20,6 +20,7 @@ type UserService interface {
 	GetUser(id int) (*dto.UserResponse, error)
 	Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) error
 	AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error
+	AdminResetPassword(ctx context.Context, userId int, request dto.AdminResetPasswordRequest, userIdentity string) error
 	Delete(ctx context.Context, userId int, userIdentity string) error
 	GetUserList(ctx context.Context, filters dto.UserListQuery) ([]*dto.UserResponse, error)
 }
@@ -217,6 +218,33 @@ func (s *userService) AdminUpdate(ctx context.Context, userId int, request dto.A
 	if request.ClientId != nil {
 		existingUser.ClientId = request.ClientId
 	}
+
+	if err := s.userRepo.Update(ctx, existingUser); err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	return nil
+}
+
+// AdminResetPassword overwrites a user's password. Callers must already be
+// verified super-admin. Refuses to reset a super admin's password.
+func (s *userService) AdminResetPassword(ctx context.Context, userId int, request dto.AdminResetPasswordRequest, userIdentity string) error {
+	existingUser, err := s.userRepo.GetByID(userId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existingUser == nil {
+		return errors.ErrUserNotFound
+	}
+
+	if existingUser.UserLevel == constants.UserLevelSuperAdmin {
+		return errors.ErrUserCannotModifySuperAdmin
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	existingUser.Password = string(hashedPassword)
 
 	if err := s.userRepo.Update(ctx, existingUser); err != nil {
 		return errors.ErrGeneric.Wrap(err)

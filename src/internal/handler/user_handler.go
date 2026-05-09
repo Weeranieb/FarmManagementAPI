@@ -19,6 +19,7 @@ type UserHandler interface {
 	GetUser(c *fiber.Ctx) error
 	UpdateUser(c *fiber.Ctx) error
 	AdminUpdateUser(c *fiber.Ctx) error
+	AdminResetPassword(c *fiber.Ctx) error
 	DeleteUser(c *fiber.Ctx) error
 	GetUserList(c *fiber.Ctx) error
 }
@@ -203,6 +204,57 @@ func (h *userHandlerImpl) AdminUpdateUser(c *fiber.Ctx) error {
 	}
 
 	if err := h.userService.AdminUpdate(c.UserContext(), userId, body, actor); err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.SuccessWithoutData(c)
+}
+
+// PUT /api/v1/user/:id/password
+// Super-admin reset of another user's password.
+// @Summary      Admin-reset a user's password
+// @Description  Reset another user's password. Super-admin only. Cannot reset a SuperAdmin.
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        id path int true "User ID"
+// @Param        body body dto.AdminResetPasswordRequest true "New password"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /user/{id}/password [put]
+func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
+	var body dto.AdminResetPasswordRequest
+
+	defer func() {
+		if r := recover(); r != nil {
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil || !isSuperAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
+	userId, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid user ID")
+	}
+
+	if err := validateAndParse(c, &body); err != nil {
+		return err
+	}
+
+	actor, err := utils.GetUsername(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	if err := h.userService.AdminResetPassword(c.UserContext(), userId, body, actor); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 

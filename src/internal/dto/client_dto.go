@@ -29,3 +29,16 @@ type ClientResponse struct {
 	UpdatedAt               time.Time `json:"updatedAt"`
 	UpdatedBy               string    `json:"updatedBy"`
 }
+
+// ClientSummaryResponse describes a client with aggregate counts of farms,
+// ponds, and users belonging to it. Used by the master-data clients list.
+type ClientSummaryResponse struct {
+	Id            int    `json:"id"`
+	Name          string `json:"name"`
+	OwnerName     string `json:"ownerName"`
+	ContactNumber string `json:"contactNumber"`
+	IsActive      bool   `json:"isActive"`
+	FarmCount     int64  `json:"farmCount"`
+	PondCount     int64  `json:"pondCount"`
+	UserCount     int64  `json:"userCount"`
+}

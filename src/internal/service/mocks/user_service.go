@@ -14,6 +14,42 @@ type MockUserService struct {
 	mock.Mock
 }
 
+// AdminResetPassword provides a mock function with given fields: ctx, userId, request, userIdentity
+func (_m *MockUserService) AdminResetPassword(ctx context.Context, userId int, request dto.AdminResetPasswordRequest, userIdentity string) error {
+	ret := _m.Called(ctx, userId, request, userIdentity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdminResetPassword")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.AdminResetPasswordRequest, string) error); ok {
+		r0 = rf(ctx, userId, request, userIdentity)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdminUpdate provides a mock function with given fields: ctx, userId, request, userIdentity
+func (_m *MockUserService) AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error {
+	ret := _m.Called(ctx, userId, request, userIdentity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdminUpdate")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.AdminUpdateUserRequest, string) error); ok {
+		r0 = rf(ctx, userId, request, userIdentity)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Create provides a mock function with given fields: ctx, request, userIdentity, clientId
 func (_m *MockUserService) Create(ctx context.Context, request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error) {
 	ret := _m.Called(ctx, request, userIdentity, clientId)
@@ -42,6 +78,24 @@ func (_m *MockUserService) Create(ctx context.Context, request dto.CreateUserReq
 	}
 
 	return r0, r1
+}
+
+// Delete provides a mock function with given fields: ctx, userId, userIdentity
+func (_m *MockUserService) Delete(ctx context.Context, userId int, userIdentity string) error {
+	ret := _m.Called(ctx, userId, userIdentity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, string) error); ok {
+		r0 = rf(ctx, userId, userIdentity)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // GetUser provides a mock function with given fields: id
@@ -115,42 +169,6 @@ func (_m *MockUserService) Update(ctx context.Context, userId int, request dto.U
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, int, dto.UpdateUserRequest, string) error); ok {
 		r0 = rf(ctx, userId, request, userIdentity)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// AdminUpdate provides a mock function with given fields: ctx, userId, request, userIdentity
-func (_m *MockUserService) AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error {
-	ret := _m.Called(ctx, userId, request, userIdentity)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AdminUpdate")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, dto.AdminUpdateUserRequest, string) error); ok {
-		r0 = rf(ctx, userId, request, userIdentity)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Delete provides a mock function with given fields: ctx, userId, userIdentity
-func (_m *MockUserService) Delete(ctx context.Context, userId int, userIdentity string) error {
-	ret := _m.Called(ctx, userId, userIdentity)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Delete")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, string) error); ok {
-		r0 = rf(ctx, userId, userIdentity)
 	} else {
 		r0 = ret.Error(0)
 	}

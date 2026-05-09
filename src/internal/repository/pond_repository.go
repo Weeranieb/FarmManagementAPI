@@ -34,6 +34,7 @@ type PondRepository interface {
 	ListByFarmId(farmId int) ([]*model.Pond, error)
 	ListByFarmIdWithActivePond(ctx context.Context, farmId int) ([]*PondWithFarmAndActivePond, error)
 	Delete(ctx context.Context, id int) error
+	CountAllByClient() ([]*model.PondCountPerClient, error)
 }
 
 type pondRepository struct {
@@ -245,4 +246,20 @@ func (r *pondRepository) ListByFarmId(farmId int) ([]*model.Pond, error) {
 
 func (r *pondRepository) Delete(ctx context.Context, id int) error {
 	return r.db.WithContext(ctx).Delete(&model.Pond{}, id).Error
+}
+
+// CountAllByClient returns pond totals grouped by client_id for all clients,
+// joining ponds → farms to derive client ownership.
+func (r *pondRepository) CountAllByClient() ([]*model.PondCountPerClient, error) {
+	var rows []*model.PondCountPerClient
+	err := r.db.Raw(
+		"SELECT f.client_id AS client_id, COUNT(*) AS total "+
+			"FROM ponds p JOIN farms f ON p.farm_id = f.id "+
+			"WHERE p.deleted_at IS NULL AND f.deleted_at IS NULL "+
+			"GROUP BY f.client_id",
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }

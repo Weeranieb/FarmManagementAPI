@@ -25,6 +25,7 @@ type UserRepository interface {
 	Update(ctx context.Context, user *model.User) error
 	Delete(ctx context.Context, id int) error
 	List(ctx context.Context, filters UserFilters) ([]*model.User, error)
+	CountAllByClient() ([]*model.UserCountPerClient, error)
 }
 
 type userRepository struct {
@@ -101,4 +102,19 @@ func (r *userRepository) List(ctx context.Context, filters UserFilters) ([]*mode
 	}
 	err := query.Order("id ASC").Find(&users).Error
 	return users, err
+}
+
+// CountAllByClient returns user totals grouped by client_id for all clients.
+// Users with NULL client_id (e.g. super admins) are excluded.
+func (r *userRepository) CountAllByClient() ([]*model.UserCountPerClient, error) {
+	var rows []*model.UserCountPerClient
+	err := r.db.Raw(
+		"SELECT client_id, COUNT(*) AS total FROM users " +
+			"WHERE deleted_at IS NULL AND client_id IS NOT NULL " +
+			"GROUP BY client_id",
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }

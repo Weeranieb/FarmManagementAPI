@@ -13,3 +13,9 @@ type User struct {
 	ContactNumber string  `json:"contactNumber" gorm:"column:contact_number"`
 	BaseModel
 }
+
+// UserCountPerClient holds the user total grouped by client_id.
+type UserCountPerClient struct {
+	ClientId int   `gorm:"column:client_id"`
+	Total    int64 `gorm:"column:total"`
+}

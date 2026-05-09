@@ -18,6 +18,7 @@ type ClientHandler interface {
 	AddClient(c *fiber.Ctx) error
 	GetClient(c *fiber.Ctx) error
 	GetClientList(c *fiber.Ctx) error
+	GetClientSummaries(c *fiber.Ctx) error
 	UpdateClient(c *fiber.Ctx) error
 }
 
@@ -147,6 +148,39 @@ func (h *clientHandlerImpl) GetClientList(c *fiber.Ctx) error {
 	}
 
 	return http.Success(c, dropdown)
+}
+
+// GET /client/summaries
+// Get list of clients with aggregate counts (farms, ponds, users). Super admin only.
+// @Summary      Get client summaries
+// @Description  Returns each client with farmCount, pondCount, userCount. Super admin only.
+// @Tags         client
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {object}  http.ResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /client/summaries [get]
+func (h *clientHandlerImpl) GetClientSummaries(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil || !isSuperAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
+	summaries, err := h.clientService.GetSummaries()
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, summaries)
 }
 
 // PUT /client

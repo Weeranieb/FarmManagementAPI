@@ -134,6 +134,36 @@ func (_m *MockClientService) GetList() ([]*dto.ClientResponse, error) {
 	return r0, r1
 }
 
+// GetSummaries provides a mock function with no fields
+func (_m *MockClientService) GetSummaries() ([]*dto.ClientSummaryResponse, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSummaries")
+	}
+
+	var r0 []*dto.ClientSummaryResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]*dto.ClientSummaryResponse, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []*dto.ClientSummaryResponse); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*dto.ClientSummaryResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: ctx, request, username
 func (_m *MockClientService) Update(ctx context.Context, request dto.UpdateClientRequest, username string) error {
 	ret := _m.Called(ctx, request, username)

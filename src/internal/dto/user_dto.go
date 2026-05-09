@@ -4,7 +4,7 @@ import "time"
 
 type CreateUserRequest struct {
 	Username      string  `json:"username" validate:"required"`
-	Password      string  `json:"password" validate:"required"`
+	Password      string  `json:"password" validate:"required,min=8,ascii,alphanum"`
 	Email         *string `json:"email" validate:"omitempty,email"`
 	FirstName     string  `json:"firstName" validate:"required"`
 	LastName      *string `json:"lastName"`
@@ -35,6 +35,12 @@ type AdminUpdateUserRequest struct {
 	UserLevel     *int    `json:"userLevel"`
 	ContactNumber string  `json:"contactNumber"`
 	ClientId      *int    `json:"clientId"`
+}
+
+// AdminResetPasswordRequest is used by super-admins via PUT /user/:id/password
+// to reset another user's password without knowing the current one.
+type AdminResetPasswordRequest struct {
+	Password string `json:"password" validate:"required,min=8,ascii,alphanum"`
 }
 
 type UserListQuery struct {
