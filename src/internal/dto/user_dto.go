@@ -43,6 +43,13 @@ type AdminResetPasswordRequest struct {
 	Password string `json:"password" validate:"required,password"`
 }
 
+// ChangePasswordRequest is used by an authenticated user via PUT /user/password
+// to change their own password. Requires the current password for verification.
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword" validate:"required"`
+	NewPassword     string `json:"newPassword" validate:"required,password"`
+}
+
 type UserListQuery struct {
 	Search    *string `query:"search"`
 	UserLevel *int    `query:"userLevel"`
