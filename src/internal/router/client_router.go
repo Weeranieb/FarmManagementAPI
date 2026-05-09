@@ -15,6 +15,8 @@ func (r *Router) setupClientRoutes(group fiber.Router) {
 	client.Post("", middleware.SuperAdminMiddleware(), r.handlers.ClientHandler.AddClient)
 	// List for dropdown (super admin only) - must be before /:id
 	client.Get("/list", r.handlers.ClientHandler.GetClientList)
+	// Summaries with aggregate counts (super admin only) - must be before /:id
+	client.Get("/summaries", r.handlers.ClientHandler.GetClientSummaries)
 	client.Get("/:id", r.handlers.ClientHandler.GetClient)
 	client.Put("", r.handlers.ClientHandler.UpdateClient)
 }

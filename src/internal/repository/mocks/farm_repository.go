@@ -19,6 +19,36 @@ type MockFarmRepository struct {
 	mock.Mock
 }
 
+// CountAllByClient provides a mock function with no fields
+func (_m *MockFarmRepository) CountAllByClient() ([]*model.FarmCountPerClient, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountAllByClient")
+	}
+
+	var r0 []*model.FarmCountPerClient
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]*model.FarmCountPerClient, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []*model.FarmCountPerClient); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.FarmCountPerClient)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CountByClientId provides a mock function with given fields: clientId
 func (_m *MockFarmRepository) CountByClientId(clientId int) (*model.FarmCountByClientId, error) {
 	ret := _m.Called(clientId)

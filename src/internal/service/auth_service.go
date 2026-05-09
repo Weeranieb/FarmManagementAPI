@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -81,8 +82,8 @@ func (s *authService) Register(request dto.RegisterRequest) (*dto.UserResponse, 
 }
 
 func (s *authService) Login(request dto.LoginRequest) (string, *dto.UserResponse, *time.Time, error) {
-	// Check if user exists
-	checkUser, err := s.userRepo.GetByUsername(request.Username)
+	// Check if user exists (allow login by username or email)
+	checkUser, err := s.getUserByLoginIdentifier(request.Username)
 	if err != nil {
 		return "", nil, nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -122,6 +123,20 @@ func (s *authService) Login(request dto.LoginRequest) (string, *dto.UserResponse
 	}
 
 	return tokenString, s.toUserResponse(checkUser), &expiredDate, nil
+}
+
+func (s *authService) getUserByLoginIdentifier(identifier string) (*model.User, error) {
+	identifier = strings.TrimSpace(identifier)
+
+	user, err := s.userRepo.GetByUsername(identifier)
+	if err != nil {
+		return nil, err
+	}
+	if user != nil {
+		return user, nil
+	}
+
+	return s.userRepo.GetByEmail(identifier)
 }
 
 func (s *authService) toUserResponse(user *model.User) *dto.UserResponse {

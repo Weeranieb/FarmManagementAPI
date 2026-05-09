@@ -20,6 +20,7 @@ type FarmRepository interface {
 	ListByClientId(clientId int) ([]*model.Farm, error)
 	ListByClientIdWithPonds(clientId int) ([]*model.FarmWithPonds, error)
 	CountByClientId(clientId int) (*model.FarmCountByClientId, error)
+	CountAllByClient() ([]*model.FarmCountPerClient, error)
 }
 
 type farmRepository struct {
@@ -96,15 +97,29 @@ func (r *farmRepository) ListByClientIdWithPonds(clientId int) ([]*model.FarmWit
 		}
 		result = append(result, &model.FarmWithPonds{
 			Farm: model.Farm{
-				Id:       row.Id,
-				ClientId: row.ClientId,
-				Name:     row.Name,
-				Status:   row.Status,
+				Id:        row.Id,
+				ClientId:  row.ClientId,
+				Name:      row.Name,
+				Status:    row.Status,
+				BaseModel: row.BaseModel,
 			},
 			Ponds: ponds,
 		})
 	}
 	return result, nil
+}
+
+// CountAllByClient returns farm totals grouped by client_id for all clients.
+// Used to bulk-build client summaries without N+1.
+func (r *farmRepository) CountAllByClient() ([]*model.FarmCountPerClient, error) {
+	var rows []*model.FarmCountPerClient
+	err := r.db.Raw(
+		"SELECT client_id, COUNT(*) AS total FROM farms WHERE deleted_at IS NULL GROUP BY client_id",
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 func (r *farmRepository) CountByClientId(clientId int) (*model.FarmCountByClientId, error) {

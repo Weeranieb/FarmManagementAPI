@@ -9,17 +9,26 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 )
 
+func farmResponseCreatedAt(farm *model.Farm) string {
+	if farm == nil || farm.CreatedAt.IsZero() {
+		return ""
+	}
+	return farm.CreatedAt.UTC().Format(time.RFC3339)
+}
+
 // ToFarmResponse maps model.Farm to dto.FarmResponse (PondCount remains 0).
 func ToFarmResponse(farm *model.Farm) *dto.FarmResponse {
 	if farm == nil {
 		return nil
 	}
 	return &dto.FarmResponse{
-		Id:        farm.Id,
-		ClientId:  farm.ClientId,
-		Name:      farm.Name,
-		Status:    farm.Status,
-		PondCount: 0,
+		Id:          farm.Id,
+		ClientId:    farm.ClientId,
+		Name:        farm.Name,
+		Status:      farm.Status,
+		PondCount:   0,
+		ActivePonds: 0,
+		CreatedAt:   farmResponseCreatedAt(farm),
 	}
 }
 
@@ -32,12 +41,20 @@ func ToFarmResponseFromFarmWithPonds(f *model.FarmWithPonds) *dto.FarmResponse {
 	if ponds == nil {
 		ponds = []*model.Pond{}
 	}
+	var activePonds int
+	for _, p := range ponds {
+		if p != nil && p.Status == constants.FarmStatusActive {
+			activePonds++
+		}
+	}
 	return &dto.FarmResponse{
-		Id:        f.Farm.Id,
-		ClientId:  f.Farm.ClientId,
-		Name:      f.Farm.Name,
-		Status:    utils.DeriveFarmStatusFromPonds(ponds),
-		PondCount: len(ponds),
+		Id:          f.Farm.Id,
+		ClientId:    f.Farm.ClientId,
+		Name:        f.Farm.Name,
+		Status:      utils.DeriveFarmStatusFromPonds(ponds),
+		PondCount:   len(ponds),
+		ActivePonds: activePonds,
+		CreatedAt:   farmResponseCreatedAt(&f.Farm),
 	}
 }
 

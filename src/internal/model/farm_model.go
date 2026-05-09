@@ -14,6 +14,12 @@ type FarmCountByClientId struct {
 	ActiveCount int64 `json:"activeCount" gorm:"column:active_count"`
 }
 
+// FarmCountPerClient holds the farm total grouped by client_id.
+type FarmCountPerClient struct {
+	ClientId int   `gorm:"column:client_id"`
+	Total    int64 `gorm:"column:total"`
+}
+
 // FarmWithPonds is a farm with its ponds, used as the result type for hierarchy.
 type FarmWithPonds struct {
 	Farm  Farm    `json:"farm"`

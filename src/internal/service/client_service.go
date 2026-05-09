@@ -16,15 +16,27 @@ type ClientService interface {
 	Update(ctx context.Context, request dto.UpdateClientRequest, username string) error
 	GetList() ([]*dto.ClientResponse, error)
 	GetClientDropdown() ([]*dto.DropdownItem, error)
+	GetSummaries() ([]*dto.ClientSummaryResponse, error)
 }
 
 type clientService struct {
 	clientRepo repository.ClientRepository
+	farmRepo   repository.FarmRepository
+	pondRepo   repository.PondRepository
+	userRepo   repository.UserRepository
 }
 
-func NewClientService(clientRepo repository.ClientRepository) ClientService {
+func NewClientService(
+	clientRepo repository.ClientRepository,
+	farmRepo repository.FarmRepository,
+	pondRepo repository.PondRepository,
+	userRepo repository.UserRepository,
+) ClientService {
 	return &clientService{
 		clientRepo: clientRepo,
+		farmRepo:   farmRepo,
+		pondRepo:   pondRepo,
+		userRepo:   userRepo,
 	}
 }
 
@@ -116,6 +128,57 @@ func (s *clientService) GetList() ([]*dto.ClientResponse, error) {
 	}
 
 	return responses, nil
+}
+
+// GetSummaries returns every client with aggregate counts of farms, ponds,
+// and users. Counts are fetched in three GROUP BY queries (no N+1).
+func (s *clientService) GetSummaries() ([]*dto.ClientSummaryResponse, error) {
+	clients, err := s.clientRepo.List()
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+
+	farmCounts, err := s.farmRepo.CountAllByClient()
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	pondCounts, err := s.pondRepo.CountAllByClient()
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	userCounts, err := s.userRepo.CountAllByClient()
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+
+	farmByClient := make(map[int]int64, len(farmCounts))
+	for _, row := range farmCounts {
+		farmByClient[row.ClientId] = row.Total
+	}
+	pondByClient := make(map[int]int64, len(pondCounts))
+	for _, row := range pondCounts {
+		pondByClient[row.ClientId] = row.Total
+	}
+	userByClient := make(map[int]int64, len(userCounts))
+	for _, row := range userCounts {
+		userByClient[row.ClientId] = row.Total
+	}
+
+	summaries := make([]*dto.ClientSummaryResponse, 0, len(clients))
+	for _, client := range clients {
+		summaries = append(summaries, &dto.ClientSummaryResponse{
+			Id:            client.Id,
+			Name:          client.Name,
+			OwnerName:     client.OwnerName,
+			ContactNumber: client.ContactNumber,
+			IsActive:      client.IsActive,
+			FarmCount:     farmByClient[client.Id],
+			PondCount:     pondByClient[client.Id],
+			UserCount:     userByClient[client.Id],
+		})
+	}
+
+	return summaries, nil
 }
 
 func (s *clientService) GetClientDropdown() ([]*dto.DropdownItem, error) {

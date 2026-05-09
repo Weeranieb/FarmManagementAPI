@@ -31,6 +31,60 @@ func (_m *MockUserHandler) AddUser(c *fiber.Ctx) error {
 	return r0
 }
 
+// AdminResetPassword provides a mock function with given fields: c
+func (_m *MockUserHandler) AdminResetPassword(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdminResetPassword")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdminUpdateUser provides a mock function with given fields: c
+func (_m *MockUserHandler) AdminUpdateUser(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdminUpdateUser")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DeleteUser provides a mock function with given fields: c
+func (_m *MockUserHandler) DeleteUser(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteUser")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetUser provides a mock function with given fields: c
 func (_m *MockUserHandler) GetUser(c *fiber.Ctx) error {
 	ret := _m.Called(c)

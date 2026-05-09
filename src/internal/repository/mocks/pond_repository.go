@@ -19,6 +19,36 @@ type MockPondRepository struct {
 	mock.Mock
 }
 
+// CountAllByClient provides a mock function with no fields
+func (_m *MockPondRepository) CountAllByClient() ([]*model.PondCountPerClient, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountAllByClient")
+	}
+
+	var r0 []*model.PondCountPerClient
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]*model.PondCountPerClient, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []*model.PondCountPerClient); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.PondCountPerClient)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Create provides a mock function with given fields: ctx, pond
 func (_m *MockPondRepository) Create(ctx context.Context, pond *model.Pond) error {
 	ret := _m.Called(ctx, pond)

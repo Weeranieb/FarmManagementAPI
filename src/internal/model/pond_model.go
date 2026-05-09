@@ -7,3 +7,9 @@ type Pond struct {
 	Status string `json:"status" gorm:"column:status;default:'maintenance'"`
 	BaseModel
 }
+
+// PondCountPerClient holds the pond total grouped by client_id (via farms).
+type PondCountPerClient struct {
+	ClientId int   `gorm:"column:client_id"`
+	Total    int64 `gorm:"column:total"`
+}

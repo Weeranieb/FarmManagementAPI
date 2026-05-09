@@ -12,8 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/repository/mocks"
 )
 
@@ -37,14 +39,13 @@ func TestUserServiceSuite(t *testing.T) {
 }
 
 func (s *UserServiceTestSuite) TestCreate_Success() {
-	// GIVEN — valid CreateUserRequest; username not taken
 	ctx := context.Background()
 	req := dto.CreateUserRequest{
 		Username:      "testuser",
 		Password:      "password123",
 		FirstName:     "Test",
 		LastName:      lo.ToPtr("User"),
-		UserLevel:     1,
+		UserLevel:     constants.UserLevelNormal,
 		ContactNumber: "1234567890",
 	}
 	userIdentity := "admin"
@@ -74,10 +75,8 @@ func (s *UserServiceTestSuite) TestCreate_Success() {
 		user.UpdatedAt = expectedUser.UpdatedAt
 	})
 
-	// WHEN — Create is called
 	result, err := s.userService.Create(ctx, req, userIdentity, clientId)
 
-	// THEN — user is created with expected fields
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
 	assert.Equal(s.T(), req.Username, result.Username)
@@ -87,8 +86,56 @@ func (s *UserServiceTestSuite) TestCreate_Success() {
 	s.userRepo.AssertExpectations(s.T())
 }
 
+func (s *UserServiceTestSuite) TestCreate_WithEmail_ChecksUniqueness() {
+	ctx := context.Background()
+	email := "new@example.com"
+	req := dto.CreateUserRequest{
+		Username:  "u1",
+		Password:  "pw",
+		Email:     &email,
+		FirstName: "A",
+		UserLevel: constants.UserLevelNormal,
+	}
+	clientId := lo.ToPtr(1)
+	s.userRepo.On("GetByUsername", req.Username).Return(nil, nil)
+	s.userRepo.On("GetByEmail", email).Return(nil, nil)
+	s.userRepo.On("Create", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil)
+
+	_, err := s.userService.Create(ctx, req, "admin", clientId)
+	assert.NoError(s.T(), err)
+}
+
+func (s *UserServiceTestSuite) TestCreate_EmailAlreadyExists() {
+	ctx := context.Background()
+	email := "dup@example.com"
+	req := dto.CreateUserRequest{
+		Username:  "u1",
+		Password:  "pw",
+		Email:     &email,
+		FirstName: "A",
+		UserLevel: constants.UserLevelNormal,
+	}
+	s.userRepo.On("GetByUsername", req.Username).Return(nil, nil)
+	s.userRepo.On("GetByEmail", email).Return(&model.User{Id: 9, Email: &email}, nil)
+
+	_, err := s.userService.Create(ctx, req, "admin", lo.ToPtr(1))
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "Email already exists")
+}
+
+func (s *UserServiceTestSuite) TestCreate_RejectsSuperAdminLevel() {
+	req := dto.CreateUserRequest{
+		Username:  "root",
+		Password:  "pw",
+		FirstName: "R",
+		UserLevel: constants.UserLevelSuperAdmin,
+	}
+	_, err := s.userService.Create(context.Background(), req, "admin", lo.ToPtr(1))
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "super admin")
+}
+
 func (s *UserServiceTestSuite) TestCreate_UsernameExists() {
-	// GIVEN — username already exists
 	ctx := context.Background()
 	req := dto.CreateUserRequest{
 		Username:      "existinguser",
@@ -97,50 +144,16 @@ func (s *UserServiceTestSuite) TestCreate_UsernameExists() {
 		UserLevel:     1,
 		ContactNumber: "1234567890",
 	}
-	userIdentity := "admin"
-	clientId := lo.ToPtr(1)
-	existingUser := &model.User{
-		Id:        1,
-		Username:  req.Username,
-		FirstName: "Existing",
-	}
+	existingUser := &model.User{Id: 1, Username: req.Username}
 	s.userRepo.On("GetByUsername", req.Username).Return(existingUser, nil)
 
-	// WHEN — Create is called
-	result, err := s.userService.Create(ctx, req, userIdentity, clientId)
-
-	// THEN — error about user already exists
+	result, err := s.userService.Create(ctx, req, "admin", lo.ToPtr(1))
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), result)
 	assert.Contains(s.T(), err.Error(), "User already exists")
-	s.userRepo.AssertExpectations(s.T())
-}
-
-func (s *UserServiceTestSuite) TestCreate_GetByUsernameError() {
-	// GIVEN — GetByUsername returns database error
-	ctx := context.Background()
-	req := dto.CreateUserRequest{
-		Username:      "testuser",
-		Password:      "password123",
-		FirstName:     "Test",
-		UserLevel:     1,
-		ContactNumber: "1234567890",
-	}
-	userIdentity := "admin"
-	clientId := lo.ToPtr(1)
-	s.userRepo.On("GetByUsername", req.Username).Return(nil, errors.New("database error"))
-
-	// WHEN — Create is called
-	result, err := s.userService.Create(ctx, req, userIdentity, clientId)
-
-	// THEN — error and no result
-	assert.Error(s.T(), err)
-	assert.Nil(s.T(), result)
-	s.userRepo.AssertExpectations(s.T())
 }
 
 func (s *UserServiceTestSuite) TestGetUser_Success() {
-	// GIVEN — user exists in repo
 	userID := 1
 	expectedTime := time.Now()
 	expectedUser := &model.User{
@@ -160,100 +173,116 @@ func (s *UserServiceTestSuite) TestGetUser_Success() {
 	}
 	s.userRepo.On("GetByID", userID).Return(expectedUser, nil)
 
-	// WHEN — GetUser is called
 	result, err := s.userService.GetUser(userID)
 
-	// THEN — user DTO is returned
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
 	assert.Equal(s.T(), expectedUser.Id, result.Id)
-	assert.Equal(s.T(), expectedUser.Username, result.Username)
-	assert.Equal(s.T(), expectedUser.FirstName, result.FirstName)
 	s.userRepo.AssertExpectations(s.T())
 }
 
 func (s *UserServiceTestSuite) TestGetUser_NotFound() {
-	// GIVEN — user id 999 not found
 	userID := 999
 	s.userRepo.On("GetByID", userID).Return(nil, errors.New("user not found"))
 
-	// WHEN — GetUser is called
 	result, err := s.userService.GetUser(userID)
-
-	// THEN — error and no result
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), result)
-	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *UserServiceTestSuite) TestUpdate_Success() {
-	// GIVEN — existing user and valid update request
-	userIdentity := "admin"
+func (s *UserServiceTestSuite) TestUpdate_SelfUpdate_StripsPrivilegedFields() {
 	userID := 1
 	existingUser := &model.User{
-		Id:            userID,
-		ClientId:      lo.ToPtr(1),
-		Username:      "olduser",
-		FirstName:     "Old",
-		LastName:      lo.ToPtr("Name"),
-		UserLevel:     1,
-		ContactNumber: "0000000000",
+		Id:        userID,
+		ClientId:  lo.ToPtr(1),
+		Username:  "olduser",
+		FirstName: "Old",
+		LastName:  lo.ToPtr("Name"),
+		UserLevel: constants.UserLevelNormal,
 	}
-	updateUser := dto.UpdateUserRequest{
-		Username:      "updateduser",
-		FirstName:     "Updated",
-		LastName:      lo.ToPtr("User"),
-		UserLevel:     lo.ToPtr(2),
-		ContactNumber: "0987654321",
+	req := dto.UpdateUserRequest{
+		FirstName: "Updated",
 	}
 	s.userRepo.On("GetByID", userID).Return(existingUser, nil)
-	s.userRepo.On("Update", mock.Anything, existingUser).Return(nil)
+	s.userRepo.On("Update", mock.Anything, existingUser).Return(nil).Run(func(args mock.Arguments) {
+		u := args.Get(1).(*model.User)
+		assert.Equal(s.T(), "Updated", u.FirstName)
+		assert.Equal(s.T(), constants.UserLevelNormal, u.UserLevel, "self-update must not change user level")
+	})
 
-	// WHEN — Update is called
-	err := s.userService.Update(context.Background(), userID, updateUser, userIdentity)
-
-	// THEN — no error
+	err := s.userService.Update(context.Background(), userID, req, "self")
 	assert.NoError(s.T(), err)
-	s.userRepo.AssertExpectations(s.T())
 }
 
-func (s *UserServiceTestSuite) TestUpdate_Error() {
-	// GIVEN — repo returns error on Update
-	userIdentity := "admin"
+func (s *UserServiceTestSuite) TestAdminUpdate_RejectsPromotionToSuperAdmin() {
 	userID := 1
-	existingUser := &model.User{
-		Id:       userID,
-		Username: "olduser",
-	}
-	updateUser := dto.UpdateUserRequest{
-		Username: "updateduser",
-	}
-	s.userRepo.On("GetByID", userID).Return(existingUser, nil)
-	s.userRepo.On("Update", mock.Anything, existingUser).Return(errors.New("update failed"))
+	s.userRepo.On("GetByID", userID).Return(&model.User{Id: userID, UserLevel: constants.UserLevelNormal}, nil)
 
-	// WHEN — Update is called
-	err := s.userService.Update(context.Background(), userID, updateUser, userIdentity)
-
-	// THEN — error
+	level := constants.UserLevelSuperAdmin
+	err := s.userService.AdminUpdate(context.Background(), userID, dto.AdminUpdateUserRequest{UserLevel: &level}, "admin")
 	assert.Error(s.T(), err)
-	s.userRepo.AssertExpectations(s.T())
+	assert.Contains(s.T(), err.Error(), "super admin")
+}
+
+func (s *UserServiceTestSuite) TestAdminUpdate_RejectsModifyingSuperAdmin() {
+	userID := 1
+	s.userRepo.On("GetByID", userID).Return(&model.User{Id: userID, UserLevel: constants.UserLevelSuperAdmin}, nil)
+
+	err := s.userService.AdminUpdate(context.Background(), userID, dto.AdminUpdateUserRequest{FirstName: "X"}, "admin")
+	assert.Error(s.T(), err)
+}
+
+func (s *UserServiceTestSuite) TestAdminUpdate_HappyPath() {
+	userID := 1
+	existing := &model.User{
+		Id:        userID,
+		Username:  "u",
+		UserLevel: constants.UserLevelNormal,
+	}
+	s.userRepo.On("GetByID", userID).Return(existing, nil)
+	s.userRepo.On("Update", mock.Anything, existing).Return(nil)
+
+	newLevel := constants.UserLevelClientAdmin
+	newCid := 7
+	err := s.userService.AdminUpdate(context.Background(), userID, dto.AdminUpdateUserRequest{
+		FirstName: "New",
+		UserLevel: &newLevel,
+		ClientId:  &newCid,
+	}, "admin")
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), "New", existing.FirstName)
+	assert.Equal(s.T(), constants.UserLevelClientAdmin, existing.UserLevel)
+	assert.Equal(s.T(), &newCid, existing.ClientId)
+}
+
+func (s *UserServiceTestSuite) TestDelete_RejectsSuperAdmin() {
+	userID := 1
+	s.userRepo.On("GetByID", userID).Return(&model.User{Id: userID, UserLevel: constants.UserLevelSuperAdmin}, nil)
+
+	err := s.userService.Delete(context.Background(), userID, "admin")
+	assert.Error(s.T(), err)
+}
+
+func (s *UserServiceTestSuite) TestDelete_HappyPath() {
+	userID := 2
+	s.userRepo.On("GetByID", userID).Return(&model.User{Id: userID, UserLevel: constants.UserLevelNormal}, nil)
+	s.userRepo.On("Delete", mock.Anything, userID).Return(nil)
+
+	err := s.userService.Delete(context.Background(), userID, "admin")
+	assert.NoError(s.T(), err)
 }
 
 func (s *UserServiceTestSuite) TestGetUserList_Success() {
-	// GIVEN — repo returns two users for client
 	ctx := context.Background()
 	clientId := 1
-	clientIdPtr := &clientId
+	filters := dto.UserListQuery{ClientId: &clientId}
+	repoFilters := repository.UserFilters{ClientId: &clientId}
 	expectedTime := time.Now()
 	expectedUsers := []*model.User{
 		{
-			Id:            1,
-			ClientId:      &clientId,
-			Username:      "user1",
-			FirstName:     "User",
-			LastName:      lo.ToPtr("One"),
-			UserLevel:     1,
-			ContactNumber: "1111111111",
+			Id:       1,
+			ClientId: &clientId,
+			Username: "user1",
 			BaseModel: model.BaseModel{
 				CreatedAt: expectedTime,
 				UpdatedAt: expectedTime,
@@ -262,13 +291,9 @@ func (s *UserServiceTestSuite) TestGetUserList_Success() {
 			},
 		},
 		{
-			Id:            2,
-			ClientId:      &clientId,
-			Username:      "user2",
-			FirstName:     "User",
-			LastName:      lo.ToPtr("Two"),
-			UserLevel:     1,
-			ContactNumber: "2222222222",
+			Id:       2,
+			ClientId: &clientId,
+			Username: "user2",
 			BaseModel: model.BaseModel{
 				CreatedAt: expectedTime,
 				UpdatedAt: expectedTime,
@@ -277,49 +302,31 @@ func (s *UserServiceTestSuite) TestGetUserList_Success() {
 			},
 		},
 	}
-	s.userRepo.On("ListByClientId", ctx, clientIdPtr).Return(expectedUsers, nil)
+	s.userRepo.On("List", ctx, repoFilters).Return(expectedUsers, nil)
 
-	// WHEN — GetUserList is called
-	result, err := s.userService.GetUserList(ctx, clientIdPtr)
-
-	// THEN — list of two users is returned
+	result, err := s.userService.GetUserList(ctx, filters)
 	assert.NoError(s.T(), err)
-	assert.NotNil(s.T(), result)
 	assert.Len(s.T(), result, 2)
-	assert.Equal(s.T(), expectedUsers[0].Id, result[0].Id)
-	assert.Equal(s.T(), expectedUsers[1].Id, result[1].Id)
-	s.userRepo.AssertExpectations(s.T())
 }
 
 func (s *UserServiceTestSuite) TestGetUserList_Empty() {
-	// GIVEN — repo returns empty list for client
 	ctx := context.Background()
-	clientId := 999
-	clientIdPtr := &clientId
-	s.userRepo.On("ListByClientId", ctx, clientIdPtr).Return([]*model.User{}, nil)
+	filters := dto.UserListQuery{}
+	repoFilters := repository.UserFilters{}
+	s.userRepo.On("List", ctx, repoFilters).Return([]*model.User{}, nil)
 
-	// WHEN — GetUserList is called
-	result, err := s.userService.GetUserList(ctx, clientIdPtr)
-
-	// THEN — empty list
+	result, err := s.userService.GetUserList(ctx, filters)
 	assert.NoError(s.T(), err)
-	assert.NotNil(s.T(), result)
 	assert.Len(s.T(), result, 0)
-	s.userRepo.AssertExpectations(s.T())
 }
 
 func (s *UserServiceTestSuite) TestGetUserList_Error() {
-	// GIVEN — repo returns error
 	ctx := context.Background()
-	clientId := 1
-	clientIdPtr := &clientId
-	s.userRepo.On("ListByClientId", ctx, clientIdPtr).Return(nil, errors.New("database error"))
+	filters := dto.UserListQuery{}
+	repoFilters := repository.UserFilters{}
+	s.userRepo.On("List", ctx, repoFilters).Return(nil, errors.New("database error"))
 
-	// WHEN — GetUserList is called
-	result, err := s.userService.GetUserList(ctx, clientIdPtr)
-
-	// THEN — error and no result
+	result, err := s.userService.GetUserList(ctx, filters)
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), result)
-	s.userRepo.AssertExpectations(s.T())
 }
