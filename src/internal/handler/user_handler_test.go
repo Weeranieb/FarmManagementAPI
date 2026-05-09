@@ -77,7 +77,7 @@ func (s *UserHandlerTestSuite) TestAddUser_Success() {
 	// GIVEN — valid CreateUserRequest; service returns success
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
-		Password:      "password123",
+		Password:      "Password123",
 		FirstName:     "Test",
 		LastName:      lo.ToPtr("User"),
 		UserLevel:     1,
@@ -180,7 +180,7 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingUsername() {
 	// GIVEN — valid body; no username in context
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
-		Password:      "password123",
+		Password:      "Password123",
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
@@ -208,7 +208,7 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
 	// GIVEN — valid body; no clientId in context
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
-		Password:      "password123",
+		Password:      "Password123",
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
@@ -237,7 +237,7 @@ func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
 	// GIVEN — valid body; service returns error (e.g. user already exists)
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
-		Password:      "password123",
+		Password:      "Password123",
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
