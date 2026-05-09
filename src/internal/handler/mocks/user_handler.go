@@ -49,6 +49,24 @@ func (_m *MockUserHandler) AdminResetPassword(c *fiber.Ctx) error {
 	return r0
 }
 
+// ChangePassword provides a mock function with given fields: c
+func (_m *MockUserHandler) ChangePassword(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ChangePassword")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AdminUpdateUser provides a mock function with given fields: c
 func (_m *MockUserHandler) AdminUpdateUser(c *fiber.Ctx) error {
 	ret := _m.Called(c)

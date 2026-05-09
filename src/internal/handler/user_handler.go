@@ -20,6 +20,7 @@ type UserHandler interface {
 	UpdateUser(c *fiber.Ctx) error
 	AdminUpdateUser(c *fiber.Ctx) error
 	AdminResetPassword(c *fiber.Ctx) error
+	ChangePassword(c *fiber.Ctx) error
 	DeleteUser(c *fiber.Ctx) error
 	GetUserList(c *fiber.Ctx) error
 }
@@ -255,6 +256,51 @@ func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
 	}
 
 	if err := h.userService.AdminResetPassword(c.UserContext(), userId, body, actor); err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.SuccessWithoutData(c)
+}
+
+// PUT /api/v1/user/password
+// Change the current user's own password.
+// @Summary      Change own password
+// @Description  Authenticated user changes their own password. Requires current password.
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body body dto.ChangePasswordRequest true "Current and new password"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      401  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /user/password [put]
+func (h *userHandlerImpl) ChangePassword(c *fiber.Ctx) error {
+	var body dto.ChangePasswordRequest
+
+	defer func() {
+		if r := recover(); r != nil {
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	userId, err := utils.GetUserId(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	if err := validateAndParse(c, &body); err != nil {
+		return err
+	}
+
+	actor, err := utils.GetUsername(c.UserContext())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	if err := h.userService.ChangePassword(c.UserContext(), userId, body, actor); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 

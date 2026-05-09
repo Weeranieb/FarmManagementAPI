@@ -21,6 +21,7 @@ type UserService interface {
 	Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) error
 	AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error
 	AdminResetPassword(ctx context.Context, userId int, request dto.AdminResetPasswordRequest, userIdentity string) error
+	ChangePassword(ctx context.Context, userId int, request dto.ChangePasswordRequest, userIdentity string) error
 	Delete(ctx context.Context, userId int, userIdentity string) error
 	GetUserList(ctx context.Context, filters dto.UserListQuery) ([]*dto.UserResponse, error)
 }
@@ -241,6 +242,33 @@ func (s *userService) AdminResetPassword(ctx context.Context, userId int, reques
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	existingUser.Password = string(hashedPassword)
+
+	if err := s.userRepo.Update(ctx, existingUser); err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	return nil
+}
+
+// ChangePassword lets an authenticated user change their own password by
+// verifying the current password before hashing and storing the new one.
+func (s *userService) ChangePassword(ctx context.Context, userId int, request dto.ChangePasswordRequest, userIdentity string) error {
+	existingUser, err := s.userRepo.GetByID(userId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existingUser == nil {
+		return errors.ErrUserNotFound
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(request.CurrentPassword)); err != nil {
+		return errors.ErrAuthInvalidCredentials
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
