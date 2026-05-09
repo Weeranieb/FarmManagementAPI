@@ -32,6 +32,24 @@ func (_m *MockUserService) AdminResetPassword(ctx context.Context, userId int, r
 	return r0
 }
 
+// ChangePassword provides a mock function with given fields: ctx, userId, request, userIdentity
+func (_m *MockUserService) ChangePassword(ctx context.Context, userId int, request dto.ChangePasswordRequest, userIdentity string) error {
+	ret := _m.Called(ctx, userId, request, userIdentity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ChangePassword")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.ChangePasswordRequest, string) error); ok {
+		r0 = rf(ctx, userId, request, userIdentity)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AdminUpdate provides a mock function with given fields: ctx, userId, request, userIdentity
 func (_m *MockUserService) AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error {
 	ret := _m.Called(ctx, userId, request, userIdentity)
@@ -159,21 +177,33 @@ func (_m *MockUserService) GetUserList(ctx context.Context, filters dto.UserList
 }
 
 // Update provides a mock function with given fields: ctx, userId, request, userIdentity
-func (_m *MockUserService) Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) error {
+func (_m *MockUserService) Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) (*dto.UserResponse, error) {
 	ret := _m.Called(ctx, userId, request, userIdentity)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, dto.UpdateUserRequest, string) error); ok {
+	var r0 *dto.UserResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.UpdateUserRequest, string) (*dto.UserResponse, error)); ok {
+		return rf(ctx, userId, request, userIdentity)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.UpdateUserRequest, string) *dto.UserResponse); ok {
 		r0 = rf(ctx, userId, request, userIdentity)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*dto.UserResponse)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, int, dto.UpdateUserRequest, string) error); ok {
+		r1 = rf(ctx, userId, request, userIdentity)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // NewMockUserService creates a new instance of MockUserService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
