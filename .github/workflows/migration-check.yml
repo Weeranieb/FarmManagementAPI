@@ -1,0 +1,178 @@
+name: Migration Check
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'migrations/dev/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate new migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: boonmafarm
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d boonmafarm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MIGRATE_DB_URL: postgres://user:password@localhost:5432/boonmafarm?sslmode=disable
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect added migration files
+        id: detect
+        run: |
+          set -euo pipefail
+          BASE_REF="origin/${{ github.base_ref }}"
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          ADDED=$(git diff --name-only --diff-filter=A "$BASE_REF"...HEAD -- migrations/dev/ || true)
+          {
+            echo "added<<EOF"
+            echo "$ADDED"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          if [ -z "$ADDED" ]; then
+            echo "has_new=false" >> "$GITHUB_OUTPUT"
+            echo "No new migration files detected."
+          else
+            echo "has_new=true" >> "$GITHUB_OUTPUT"
+            echo "Detected added migrations:"
+            echo "$ADDED"
+          fi
+
+      - name: Validate naming and up/down pairing
+        if: steps.detect.outputs.has_new == 'true'
+        id: validate
+        run: |
+          set -euo pipefail
+          ADDED='${{ steps.detect.outputs.added }}'
+          REGEX='^migrations/dev/[0-9]{14}_[a-z0-9_]+\.(up|down)\.sql$'
+          errors=()
+
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            if ! [[ "$f" =~ $REGEX ]]; then
+              errors+=("Bad name: $f (expected migrations/dev/YYYYMMDDHHmmss_snake_case.{up|down}.sql)")
+              continue
+            fi
+            if [[ "$f" == *.up.sql ]]; then
+              pair="${f%.up.sql}.down.sql"
+            else
+              pair="${f%.down.sql}.up.sql"
+            fi
+            if [ ! -f "$pair" ]; then
+              errors+=("Missing pair: $f has no matching $(basename "$pair")")
+            fi
+          done <<< "$ADDED"
+
+          if [ ${#errors[@]} -gt 0 ]; then
+            printf '%s\n' "${errors[@]}" > /tmp/validation_errors.txt
+            echo "::error::Migration validation failed:"
+            printf '%s\n' "${errors[@]}"
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "status=pass" >> "$GITHUB_OUTPUT"
+
+      - name: Install golang-migrate
+        if: steps.detect.outputs.has_new == 'true'
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/migrate.tar.gz \
+            https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz
+          tar -xzf /tmp/migrate.tar.gz -C /tmp
+          sudo mv /tmp/migrate /usr/local/bin/migrate
+          migrate -version
+
+      - name: Wait for Postgres
+        if: steps.detect.outputs.has_new == 'true'
+        run: |
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5432 -U user >/dev/null 2>&1; then
+              echo "postgres ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "postgres failed to become ready" >&2
+          exit 1
+
+      - name: Dry-run migrate up
+        if: steps.detect.outputs.has_new == 'true'
+        id: dryrun_up
+        run: |
+          migrate -path migrations/dev -database "$MIGRATE_DB_URL" up
+
+      - name: Dry-run migrate down
+        if: steps.detect.outputs.has_new == 'true'
+        id: dryrun_down
+        run: |
+          migrate -path migrations/dev -database "$MIGRATE_DB_URL" down -all
+
+      - name: Build PR comment
+        if: always() && steps.detect.outputs.has_new == 'true'
+        id: comment_body
+        run: |
+          set -euo pipefail
+          ADDED='${{ steps.detect.outputs.added }}'
+          VALIDATE_STATUS='${{ steps.validate.outputs.status }}'
+          UP_OUTCOME='${{ steps.dryrun_up.outcome }}'
+          DOWN_OUTCOME='${{ steps.dryrun_down.outcome }}'
+
+          icon() { [ "$1" = "success" ] && echo "✅" || echo "❌"; }
+          vicon() { [ "$1" = "pass" ] && echo "✅" || echo "❌"; }
+
+          {
+            echo "## 🗃️ Migration Check"
+            echo ""
+            echo "**New migration files:**"
+            echo ""
+            while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              echo "- \`$f\`"
+            done <<< "$ADDED"
+            echo ""
+            echo "| Step | Status |"
+            echo "|---|---|"
+            echo "| Naming + up/down pairing | $(vicon "$VALIDATE_STATUS") |"
+            echo "| Dry-run \`migrate up\` | $(icon "$UP_OUTCOME") |"
+            echo "| Dry-run \`migrate down -all\` | $(icon "$DOWN_OUTCOME") |"
+            echo ""
+            if [ "$VALIDATE_STATUS" = "pass" ] && [ "$UP_OUTCOME" = "success" ] && [ "$DOWN_OUTCOME" = "success" ]; then
+              echo "All checks passed. After merge to \`develop\`, run the **Migrate Dev Database** workflow to apply."
+            else
+              echo "❌ One or more checks failed — see the job logs."
+            fi
+          } > /tmp/comment.md
+          {
+            echo "body<<EOF"
+            cat /tmp/comment.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR (sticky)
+        if: always() && steps.detect.outputs.has_new == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: migration-check
+          message: ${{ steps.comment_body.outputs.body }}
