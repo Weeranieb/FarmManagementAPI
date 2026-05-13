@@ -72,6 +72,7 @@ func (r *pondRepository) GetByID(id int) (*model.Pond, error) {
 const pondWithFarmAndActivePondQuery = `
 SELECT
   p.id AS pond_id, p.farm_id AS pond_farm_id, p.name AS pond_name, p.status AS pond_status,
+  p.area_rai AS pond_area_rai,
   p.deleted_at AS pond_deleted_at, p.created_at AS pond_created_at, p.created_by AS pond_created_by,
   p.updated_at AS pond_updated_at, p.updated_by AS pond_updated_by,
   f.client_id,
@@ -92,6 +93,7 @@ WHERE p.id = ? AND p.deleted_at IS NULL`
 const pondListWithActivePondQuery = `
 SELECT
   p.id AS pond_id, p.farm_id AS pond_farm_id, p.name AS pond_name, p.status AS pond_status,
+  p.area_rai AS pond_area_rai,
   p.deleted_at AS pond_deleted_at, p.created_at AS pond_created_at, p.created_by AS pond_created_by,
   p.updated_at AS pond_updated_at, p.updated_by AS pond_updated_by,
   f.client_id,
@@ -115,6 +117,7 @@ func rowToPondWithFarmAndActivePond(row *projection.PondFillQueryRow) *PondWithF
 		FarmId: row.PondFarmId,
 		Name:   row.PondName,
 		Status: row.PondStatus,
+		Area:   decimalFromStringPtr(row.PondArea),
 		BaseModel: model.BaseModel{
 			DeletedAt: row.PondDeletedAt,
 			CreatedAt: row.PondCreatedAt,
@@ -203,6 +206,17 @@ func ptrToInt(p *int) int {
 	return *p
 }
 
+func decimalFromStringPtr(s *string) *decimal.Decimal {
+	if s == nil || *s == "" {
+		return nil
+	}
+	d, err := decimal.NewFromString(*s)
+	if err != nil {
+		return nil
+	}
+	return &d
+}
+
 func copyIntPtr(p *int) *int {
 	if p == nil {
 		return nil
@@ -253,9 +267,9 @@ func (r *pondRepository) Delete(ctx context.Context, id int) error {
 func (r *pondRepository) CountAllByClient() ([]*model.PondCountPerClient, error) {
 	var rows []*model.PondCountPerClient
 	err := r.db.Raw(
-		"SELECT f.client_id AS client_id, COUNT(*) AS total "+
-			"FROM ponds p JOIN farms f ON p.farm_id = f.id "+
-			"WHERE p.deleted_at IS NULL AND f.deleted_at IS NULL "+
+		"SELECT f.client_id AS client_id, COUNT(*) AS total " +
+			"FROM ponds p JOIN farms f ON p.farm_id = f.id " +
+			"WHERE p.deleted_at IS NULL AND f.deleted_at IS NULL " +
 			"GROUP BY f.client_id",
 	).Scan(&rows).Error
 	if err != nil {

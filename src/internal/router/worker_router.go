@@ -15,4 +15,3 @@ func (r *Router) setupWorkerRoutes(group fiber.Router) {
 	worker.Put("", r.handlers.WorkerHandler.UpdateWorker)
 	worker.Get("", r.handlers.WorkerHandler.ListWorker)
 }
-

@@ -31,4 +31,3 @@ func (e *AppError) Wrap(err error) *AppError {
 		Err:     err,
 	}
 }
-

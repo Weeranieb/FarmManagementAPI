@@ -13,6 +13,7 @@ type PondFillQueryRow struct {
 	PondFarmId         int            `gorm:"column:pond_farm_id"`
 	PondName           string         `gorm:"column:pond_name"`
 	PondStatus         string         `gorm:"column:pond_status"`
+	PondArea           *string        `gorm:"column:pond_area_rai"`
 	PondDeletedAt      gorm.DeletedAt `gorm:"column:pond_deleted_at"`
 	PondCreatedAt      time.Time      `gorm:"column:pond_created_at"`
 	PondCreatedBy      string         `gorm:"column:pond_created_by"`

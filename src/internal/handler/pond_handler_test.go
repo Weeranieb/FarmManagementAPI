@@ -45,7 +45,7 @@ func (s *PondHandlerTestSuite) TestAddPonds_Success() {
 	// GIVEN — valid create request; super admin context; service mock returns nil
 	createReq := &dto.CreatePondsRequest{
 		FarmId: 1,
-		Names:  []string{"Pond 1", "Pond 2"},
+		Ponds:  []dto.CreatePondItem{{Name: "Pond 1"}, {Name: "Pond 2"}},
 	}
 	username := "admin"
 	s.pondService.On("CreatePonds", mock.Anything, *createReq).Return(nil)
@@ -72,7 +72,7 @@ func (s *PondHandlerTestSuite) TestAddPonds_NonSuperAdmin_ReturnsPermissionDenie
 	// GIVEN — valid create request; user is not super admin (userLevel 1)
 	createReq := &dto.CreatePondsRequest{
 		FarmId: 1,
-		Names:  []string{"Pond 1"},
+		Ponds:  []dto.CreatePondItem{{Name: "Pond 1"}},
 	}
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{
@@ -102,7 +102,7 @@ func (s *PondHandlerTestSuite) TestAddPonds_IsSuperAdminError() {
 	// GIVEN — valid create request; no user context (empty locals)
 	createReq := &dto.CreatePondsRequest{
 		FarmId: 1,
-		Names:  []string{"Pond 1"},
+		Ponds:  []dto.CreatePondItem{{Name: "Pond 1"}},
 	}
 	app := fiber.New()
 	app.Use(setLocalsMiddleware(map[string]any{}))

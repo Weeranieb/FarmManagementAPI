@@ -1,0 +1,1 @@
+ALTER TABLE ponds DROP COLUMN IF EXISTS area_rai;

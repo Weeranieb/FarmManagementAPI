@@ -86,4 +86,3 @@ func (r *workerRepository) GetPage(clientId, page, pageSize int, orderBy, keywor
 
 	return workers, total, nil
 }
-
