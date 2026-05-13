@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.1](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.0...v0.2.1) (2026-05-13)
+
+
+### Features
+
+* **pond:** refactor pond creation and update logic to include area field ([#18](https://github.com/Weeranieb/FarmManagementAPI/issues/18)) ([c42ef90](https://github.com/Weeranieb/FarmManagementAPI/commit/c42ef90310d539d4ab25ef3831393698bfe4752b))
+
 ## [0.2.0](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.1.0...v0.2.0) (2026-05-09)
 
 
