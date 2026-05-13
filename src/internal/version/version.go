@@ -5,4 +5,4 @@ package version
 
 // Version is the SemVer of this build. The trailing comment is the
 // marker release-please uses to find and rewrite this line.
-const Version = "0.2.0" // x-release-please-version
+const Version = "0.2.1" // x-release-please-version
