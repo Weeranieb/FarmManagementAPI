@@ -1,0 +1,120 @@
+name: Migrate Dev Database
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Migration command to run'
+        required: true
+        type: choice
+        options:
+          - up
+          - down
+          - version
+          - force
+        default: up
+      steps:
+        description: 'Optional: number of steps (blank = all for up, 1 for down)'
+        required: false
+        type: string
+        default: ''
+      force_version:
+        description: 'Required only when action=force: target version number'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-dev
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply migrations to dev
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Guard — only allow develop branch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/develop" ]; then
+            echo "::error::This workflow may only be run from the 'develop' branch (got ${{ github.ref }})"
+            exit 1
+          fi
+
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Install golang-migrate
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/migrate.tar.gz \
+            https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz
+          tar -xzf /tmp/migrate.tar.gz -C /tmp
+          sudo mv /tmp/migrate /usr/local/bin/migrate
+          migrate -version
+
+      - name: Print current version (before)
+        env:
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::DEV_DATABASE_URL secret is not set on the 'dev' environment."
+            exit 1
+          fi
+          echo "Current dev DB version:"
+          migrate -path migrations/dev -database "$DATABASE_URL" version || true
+
+      - name: Execute migration
+        env:
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+          ACTION: ${{ inputs.action }}
+          STEPS: ${{ inputs.steps }}
+          FORCE_VERSION: ${{ inputs.force_version }}
+        run: |
+          set -euo pipefail
+          case "$ACTION" in
+            up)
+              if [ -n "$STEPS" ]; then
+                echo "Running: migrate up $STEPS"
+                migrate -path migrations/dev -database "$DATABASE_URL" up "$STEPS"
+              else
+                echo "Running: migrate up (all pending)"
+                migrate -path migrations/dev -database "$DATABASE_URL" up
+              fi
+              ;;
+            down)
+              N="${STEPS:-1}"
+              echo "Running: migrate down $N"
+              migrate -path migrations/dev -database "$DATABASE_URL" down "$N"
+              ;;
+            version)
+              echo "Action=version (no-op beyond version print)"
+              ;;
+            force)
+              if [ -z "$FORCE_VERSION" ]; then
+                echo "::error::action=force requires force_version input"
+                exit 1
+              fi
+              echo "Running: migrate force $FORCE_VERSION"
+              migrate -path migrations/dev -database "$DATABASE_URL" force "$FORCE_VERSION"
+              ;;
+            *)
+              echo "::error::Unknown action: $ACTION"
+              exit 1
+              ;;
+          esac
+
+      - name: Print new version (after)
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+        run: |
+          echo "New dev DB version:"
+          migrate -path migrations/dev -database "$DATABASE_URL" version || true
