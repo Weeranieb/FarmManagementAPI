@@ -6,42 +6,51 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// CreatePondItem is one pond entry in a bulk create request.
+type CreatePondItem struct {
+	Name string           `json:"name" validate:"required"`
+	Area *decimal.Decimal `json:"area,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+}
+
 // CreatePondsRequest is the body for POST /pond (create multiple ponds for a farm). New ponds are created with status maintenance.
 type CreatePondsRequest struct {
-	FarmId int      `json:"farmId" validate:"required"`
-	Names  []string `json:"names" validate:"required,min=1,dive,required"`
+	FarmId int              `json:"farmId" validate:"required"`
+	Ponds  []CreatePondItem `json:"ponds" validate:"required,min=1,dive"`
 }
 
 // UpdatePondRequest is used by the service layer (id comes from path).
 type UpdatePondRequest struct {
-	Id     int    `json:"-"` // from path
-	FarmId int    `json:"farmId"`
-	Name   string `json:"name"`
-	Status string `json:"status" validate:"omitempty,oneof=active maintenance"`
+	Id     int              `json:"-"` // from path
+	FarmId int              `json:"farmId"`
+	Name   string           `json:"name"`
+	Status string           `json:"status" validate:"omitempty,oneof=active maintenance"`
+	Area   *decimal.Decimal `json:"area,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
 }
 
 // UpdatePondBody is the request body for PUT /pond/:id (id in path).
 type UpdatePondBody struct {
-	FarmId int    `json:"farmId"`
-	Name   string `json:"name"`
-	Status string `json:"status" validate:"omitempty,oneof=active maintenance"`
+	FarmId int              `json:"farmId"`
+	Name   string           `json:"name"`
+	Status string           `json:"status" validate:"omitempty,oneof=active maintenance"`
+	Area   *decimal.Decimal `json:"area,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
 }
 
 type PondResponse struct {
-	Id                 int        `json:"id"`
-	FarmId             int        `json:"farmId"`
-	Name               string     `json:"name"`
-	TotalFish          *int       `json:"totalFish"`
-	Status             string     `json:"status"`
-	FishTypes          []string   `json:"fishTypes"`
-	AgeDays            *int       `json:"ageDays"`
-	StartDate          *time.Time `json:"startDate"`
-	LatestActivityDate *time.Time `json:"latestActivityDate"`
-	LatestActivityType *string    `json:"latestActivityType"`
-	CreatedAt          time.Time  `json:"createdAt"`
-	CreatedBy          string     `json:"createdBy"`
-	UpdatedAt          time.Time  `json:"updatedAt"`
-	UpdatedBy          string     `json:"updatedBy"`
+	Id                 int              `json:"id"`
+	FarmId             int              `json:"farmId"`
+	Name               string           `json:"name"`
+	TotalFish          *int             `json:"totalFish"`
+	Status             string           `json:"status"`
+	Area               *decimal.Decimal `json:"area,omitempty" swaggertype:"number"`
+	FishTypes          []string         `json:"fishTypes"`
+	AgeDays            *int             `json:"ageDays"`
+	StartDate          *time.Time       `json:"startDate"`
+	LatestActivityDate *time.Time       `json:"latestActivityDate"`
+	LatestActivityType *string          `json:"latestActivityType"`
+	CreatedAt          time.Time        `json:"createdAt"`
+	CreatedBy          string           `json:"createdBy"`
+	UpdatedAt          time.Time        `json:"updatedAt"`
+	UpdatedBy          string           `json:"updatedBy"`
 }
 
 // AdditionalCostItem represents a single additional cost with a title and amount.

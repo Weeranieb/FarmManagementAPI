@@ -104,24 +104,20 @@ func (s *pondService) syncFarmStatusFromPonds(ctx context.Context, tx *gorm.DB, 
 }
 
 func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest) error {
-	normalizedNames := make([]string, 0, len(request.Names))
-	for _, name := range request.Names {
-		normalizedNames = append(normalizedNames, utils.NormalizePondNameForStore(name))
-	}
-
-	newPonds := make([]*model.Pond, 0, len(normalizedNames))
-	for _, name := range normalizedNames {
+	newPonds := make([]*model.Pond, 0, len(request.Ponds))
+	for _, item := range request.Ponds {
 		newPonds = append(newPonds, &model.Pond{
 			FarmId: request.FarmId,
-			Name:   name,
+			Name:   utils.NormalizePondNameForStore(item.Name),
 			Status: constants.FarmStatusMaintenance,
+			Area:   item.Area,
 		})
 	}
 
 	return s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
 		pondRepo := s.pondRepo.WithTx(tx)
-		for _, name := range normalizedNames {
-			checkPond, err := pondRepo.GetByFarmIdAndName(request.FarmId, name)
+		for _, pond := range newPonds {
+			checkPond, err := pondRepo.GetByFarmIdAndName(request.FarmId, pond.Name)
 			if err != nil {
 				return errors.ErrGeneric.Wrap(err)
 			}
@@ -167,6 +163,9 @@ func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest) err
 	}
 	if req.Status != "" {
 		existing.Status = req.Status
+	}
+	if req.Area != nil {
+		existing.Area = req.Area
 	}
 
 	// Enforce unique pond name per farm when name was updated
@@ -916,6 +915,7 @@ func (s *pondService) toPondResponseFromPondWithActive(pa *repository.PondWithFa
 		FarmId:    pond.FarmId,
 		Name:      pond.Name,
 		Status:    pond.Status,
+		Area:      pond.Area,
 		CreatedAt: pond.CreatedAt,
 		CreatedBy: pond.CreatedBy,
 		UpdatedAt: pond.UpdatedAt,

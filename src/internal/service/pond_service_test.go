@@ -151,7 +151,7 @@ func (s *PondServiceTestSuite) TestCreatePonds_Success() {
 	// GIVEN — request with farm and names; repo returns no duplicate names
 	req := dto.CreatePondsRequest{
 		FarmId: 1,
-		Names:  []string{"Pond 1", "Pond 2"},
+		Ponds:  []dto.CreatePondItem{{Name: "Pond 1"}, {Name: "Pond 2"}},
 	}
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 1").Return(nil, nil)
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 2").Return(nil, nil)
@@ -181,7 +181,7 @@ func (s *PondServiceTestSuite) TestCreatePonds_PondAlreadyExists() {
 	// GIVEN — request; second name already exists for this farm
 	req := dto.CreatePondsRequest{
 		FarmId: 1,
-		Names:  []string{"Pond 1", "Pond 2"},
+		Ponds:  []dto.CreatePondItem{{Name: "Pond 1"}, {Name: "Pond 2"}},
 	}
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 1").Return(nil, nil)
 	existingPond := &model.Pond{Id: 99, FarmId: 1, Name: "Pond 2", Status: "active"}

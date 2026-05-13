@@ -181,7 +181,7 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	req := dto.UpdatePondRequest{Id: id, FarmId: body.FarmId, Name: body.Name, Status: body.Status}
+	req := dto.UpdatePondRequest{Id: id, FarmId: body.FarmId, Name: body.Name, Status: body.Status, Area: body.Area}
 	err = h.pondService.Update(c.UserContext(), req)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
