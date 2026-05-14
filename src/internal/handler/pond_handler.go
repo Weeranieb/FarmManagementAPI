@@ -26,6 +26,7 @@ type PondHandler interface {
 	FillPondPreview(c *fiber.Ctx) error
 	MovePondPreview(c *fiber.Ctx) error
 	SellPondPreview(c *fiber.Ctx) error
+	DownloadTemplate(c *fiber.Ctx) error
 }
 
 type pondHandlerImpl struct {
@@ -481,4 +482,32 @@ func (h *pondHandlerImpl) SellPondPreview(c *fiber.Ctx) error {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return http.Success(c, response)
+}
+
+// GET /pond/template
+// Download the bulk-import Excel template (1 farm + many ponds with area).
+// @Summary      Download bulk-import pond template
+// @Description  Returns the .xlsx template users fill in to bulk-create ponds for a single farm.
+// @Tags         pond
+// @Produce      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {file}    file
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/template [get]
+func (h *pondHandlerImpl) DownloadTemplate(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	const templatePath = "./src/assets/templates/pond_template.xlsx"
+	const downloadName = "pond_template.xlsx"
+
+	c.Set(fiber.HeaderContentType, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	if err := c.Download(templatePath, downloadName); err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return nil
 }
