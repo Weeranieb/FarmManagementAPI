@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.2](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.1...v0.2.2) (2026-05-14)
+
+
+### Features
+
+* **pond:** serve bulk-import Excel template from backend (FAR-76) ([#23](https://github.com/Weeranieb/FarmManagementAPI/issues/23)) ([c355378](https://github.com/Weeranieb/FarmManagementAPI/commit/c355378cb851cbd61a8799f6d31334c33a241ea7))
+
 ## [0.2.1](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.0...v0.2.1) (2026-05-13)
 
 
