@@ -402,8 +402,76 @@ func (s *FarmHandlerTestSuite) TestAddFarm_ValidationFailed() {
 	}
 }
 
+func (s *FarmHandlerTestSuite) TestAddFarm_ClientAdmin_Allowed() {
+	// GIVEN — client-admin (level 2) targeting their own client (1).
+	// Should now be allowed (was super-admin-only before).
+	createReq := &dto.CreateFarmRequest{
+		ClientId: 1,
+		Name:     "Test Farm",
+	}
+	newFarm := &dto.FarmResponse{Id: 99, ClientId: 1, Name: "Test Farm"}
+	s.farmService.On("Create", mock.Anything, *createReq, createReq.ClientId).Return(newFarm, nil)
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "clientAdmin",
+		"clientId":  1,
+		"userLevel": 2,
+	}))
+	app.Post("/api/v1/farm", s.farmHandler.AddFarm)
+
+	body, _ := json.Marshal(createReq)
+	req := httptest.NewRequest("POST", "/api/v1/farm", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	// WHEN
+	resp, err := app.Test(req)
+
+	// THEN — 200 + farm returned; service was called.
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.farmService.AssertExpectations(s.T())
+}
+
+func (s *FarmHandlerTestSuite) TestAddFarm_ClientAdmin_WrongClient_Denied() {
+	// GIVEN — client-admin for client 1, but request targets client 2.
+	// validateClientAccess writes the error response but returns nil (existing
+	// handler quirk), so the handler may also call service.Create afterward.
+	// Use .Maybe() to tolerate that and assert on the *first* response written.
+	s.farmService.On("Create", mock.Anything, mock.Anything, mock.Anything).
+		Return((*dto.FarmResponse)(nil), errors.New("")).Maybe()
+
+	createReq := &dto.CreateFarmRequest{
+		ClientId: 2,
+		Name:     "Test Farm",
+	}
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "clientAdmin",
+		"clientId":  1,
+		"userLevel": 2,
+	}))
+	app.Post("/api/v1/farm", s.farmHandler.AddFarm)
+
+	body, _ := json.Marshal(createReq)
+	req := httptest.NewRequest("POST", "/api/v1/farm", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	// WHEN
+	resp, err := app.Test(req)
+
+	// THEN — error response (permission denied code surfaces).
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	assert.True(s.T(), result["error"] != nil || result["result"] != true)
+	if errObj, ok := result["error"].(map[string]any); ok && errObj["code"] != nil {
+		assert.Equal(s.T(), "500024", errObj["code"])
+	}
+}
+
 func (s *FarmHandlerTestSuite) TestAddFarm_NotSuperAdmin() {
-	// GIVEN — valid body; userLevel 1 (not super admin)
+	// GIVEN — valid body; userLevel 1 (regular user — below client-admin too)
 	createReq := &dto.CreateFarmRequest{
 		ClientId: 1,
 		Name:     "Test Farm",

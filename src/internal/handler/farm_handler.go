@@ -33,9 +33,9 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 }
 
 // POST /farm
-// Add a new farm entry. Super admin only.
+// Add a new farm entry. Allowed for super admin (any client) or client admin (their own client only).
 // @Summary      Add a new farm entry
-// @Description  Add a new farm entry with the provided details. Super admin only.
+// @Description  Add a new farm entry with the provided details. Requires client-admin role or above.
 // @Tags         farm
 // @Accept       json
 // @Produce      json
@@ -60,13 +60,13 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Super admin only
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
+	// Must be client admin or super admin.
+	isAdmin, err := utils.IsClientAdminOrAbove(c.UserContext())
+	if err != nil || !isAdmin {
 		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
-	// Validate client access
+	// Client admin can only target their own client; super admin any client.
 	if err := validateClientAccess(c, createFarmRequest.ClientId); err != nil {
 		return err
 	}

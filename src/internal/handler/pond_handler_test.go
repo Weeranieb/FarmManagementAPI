@@ -613,3 +613,231 @@ func TestPondFillRequest_Validation(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+// --- AddPonds permissions (relaxed to client-admin-or-above) ---
+
+func (s *PondHandlerTestSuite) TestAddPonds_ClientAdmin_Allowed() {
+	// GIVEN — client admin (level 2); service returns nil.
+	req := dto.CreatePondsRequest{
+		FarmId: 1,
+		Ponds:  []dto.CreatePondItem{{Name: "P1"}},
+	}
+	s.pondService.On("CreatePonds", mock.Anything, req).Return(nil)
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "clientAdmin",
+		"clientId":  1,
+		"userLevel": 2,
+	}))
+	app.Post("/pond", s.pondHandler.AddPonds)
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest("POST", "/pond", bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// WHEN
+	resp, err := app.Test(httpReq)
+
+	// THEN — 200; per-client scoping is enforced in pondService.CreatePonds
+	// (covered by service tests), so the handler delegates without rejecting.
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.pondService.AssertExpectations(s.T())
+}
+
+// --- BulkImportFarmPond handler ---
+
+func (s *PondHandlerTestSuite) TestBulkImportFarmPond_Success() {
+	// GIVEN — super-admin, valid payload, service returns a response.
+	clientId := 1
+	reqBody := dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "Farm A", Ponds: []dto.BulkImportPondItem{{Name: "P1"}}},
+		},
+	}
+	svcResp := &dto.BulkImportFarmPondResponse{
+		FarmsCreated: 1,
+		PondsCreated: 1,
+		Farms: []dto.BulkImportFarmResult{
+			{Name: "Farm A", IsNew: true, PondsCreated: 1},
+		},
+	}
+	s.pondService.On("BulkImportFarmPond", mock.Anything, clientId, reqBody).Return(svcResp, nil)
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "admin",
+		"userLevel": 3,
+	}))
+	app.Post("/pond/bulk-import/:clientId", s.pondHandler.BulkImportFarmPond)
+	body, _ := json.Marshal(reqBody)
+	httpReq := httptest.NewRequest("POST", "/pond/bulk-import/"+strconv.Itoa(clientId), bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// WHEN
+	resp, err := app.Test(httpReq)
+
+	// THEN — 200 with result.data carrying the service response.
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	assert.Equal(s.T(), true, result["result"])
+	data, _ := result["data"].(map[string]any)
+	require.NotNil(s.T(), data)
+	assert.Equal(s.T(), float64(1), data["farmsCreated"])
+	assert.Equal(s.T(), float64(1), data["pondsCreated"])
+	s.pondService.AssertExpectations(s.T())
+}
+
+func (s *PondHandlerTestSuite) TestBulkImportFarmPond_InvalidClientIdParam() {
+	// GIVEN — :clientId is not numeric.
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "admin",
+		"userLevel": 3,
+	}))
+	app.Post("/pond/bulk-import/:clientId", s.pondHandler.BulkImportFarmPond)
+	httpReq := httptest.NewRequest("POST", "/pond/bulk-import/abc", bytes.NewBufferString("{}"))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// WHEN
+	resp, err := app.Test(httpReq)
+
+	// THEN — error response with validation-failed code; service untouched.
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	errObj, _ := result["error"].(map[string]any)
+	require.NotNil(s.T(), errObj)
+	assert.Equal(s.T(), strconv.Itoa(apperrors.ErrValidationFailed.Code), errObj["code"])
+	s.pondService.AssertNotCalled(s.T(), "BulkImportFarmPond", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (s *PondHandlerTestSuite) TestBulkImportFarmPond_NonAdmin_Rejected() {
+	// GIVEN — regular user (level 1) — not even client-admin.
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "regular",
+		"clientId":  1,
+		"userLevel": 1,
+	}))
+	app.Post("/pond/bulk-import/:clientId", s.pondHandler.BulkImportFarmPond)
+	body, _ := json.Marshal(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "F", Ponds: []dto.BulkImportPondItem{{Name: "P"}}},
+		},
+	})
+	httpReq := httptest.NewRequest("POST", "/pond/bulk-import/1", bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// WHEN
+	resp, err := app.Test(httpReq)
+
+	// THEN — permission denied; service untouched.
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	errObj, _ := result["error"].(map[string]any)
+	require.NotNil(s.T(), errObj)
+	assert.Equal(s.T(), strconv.Itoa(apperrors.ErrAuthPermissionDenied.Code), errObj["code"])
+	s.pondService.AssertNotCalled(s.T(), "BulkImportFarmPond", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (s *PondHandlerTestSuite) TestBulkImportFarmPond_ClientAdminWrongClient_Rejected() {
+	// GIVEN — client-admin (level 2) for client 1 trying to target client 2.
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "admin",
+		"clientId":  1,
+		"userLevel": 2,
+	}))
+	app.Post("/pond/bulk-import/:clientId", s.pondHandler.BulkImportFarmPond)
+	body, _ := json.Marshal(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "F", Ponds: []dto.BulkImportPondItem{{Name: "P"}}},
+		},
+	})
+	httpReq := httptest.NewRequest("POST", "/pond/bulk-import/2", bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// WHEN
+	resp, err := app.Test(httpReq)
+
+	// THEN — permission denied; service never called.
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	errObj, _ := result["error"].(map[string]any)
+	require.NotNil(s.T(), errObj)
+	assert.Equal(s.T(), strconv.Itoa(apperrors.ErrAuthPermissionDenied.Code), errObj["code"])
+	s.pondService.AssertNotCalled(s.T(), "BulkImportFarmPond", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (s *PondHandlerTestSuite) TestBulkImportFarmPond_ClientAdminOwnClient_Allowed() {
+	// GIVEN — client-admin for client 1 targeting their own client 1.
+	clientId := 1
+	reqBody := dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "F", Ponds: []dto.BulkImportPondItem{{Name: "P"}}},
+		},
+	}
+	svcResp := &dto.BulkImportFarmPondResponse{FarmsCreated: 1, PondsCreated: 1}
+	s.pondService.On("BulkImportFarmPond", mock.Anything, clientId, reqBody).Return(svcResp, nil)
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "admin",
+		"clientId":  clientId,
+		"userLevel": 2,
+	}))
+	app.Post("/pond/bulk-import/:clientId", s.pondHandler.BulkImportFarmPond)
+	body, _ := json.Marshal(reqBody)
+	httpReq := httptest.NewRequest("POST", "/pond/bulk-import/"+strconv.Itoa(clientId), bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// WHEN
+	resp, err := app.Test(httpReq)
+
+	// THEN — 200; delegation happened.
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	s.pondService.AssertExpectations(s.T())
+}
+
+// (Struct-tag validation for nested ponds is exercised by the existing
+// TestAddFarm_ValidationFailed pattern and by service-level
+// validateBulkImportRequest tests; not duplicated at the handler level.)
+
+func (s *PondHandlerTestSuite) TestBulkImportFarmPond_ServiceError() {
+	// GIVEN — admin + valid request, but service returns an error.
+	clientId := 1
+	reqBody := dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "F", Ponds: []dto.BulkImportPondItem{{Name: "P"}}},
+		},
+	}
+	s.pondService.On("BulkImportFarmPond", mock.Anything, clientId, reqBody).Return(
+		nil, apperrors.ErrValidationFailed.Wrap(errors.New("duplicate pond")))
+	app := fiber.New()
+	app.Use(setLocalsMiddleware(map[string]any{
+		"username":  "admin",
+		"userLevel": 3,
+	}))
+	app.Post("/pond/bulk-import/:clientId", s.pondHandler.BulkImportFarmPond)
+	body, _ := json.Marshal(reqBody)
+	httpReq := httptest.NewRequest("POST", "/pond/bulk-import/"+strconv.Itoa(clientId), bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// WHEN
+	resp, err := app.Test(httpReq)
+
+	// THEN — the AppError's code surfaces via NewError (not the generic
+	// default code) so the frontend can map it.
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	var result map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&result)
+	assert.Equal(s.T(), strconv.Itoa(apperrors.ErrValidationFailed.Code), result["code"])
+	s.pondService.AssertExpectations(s.T())
+}

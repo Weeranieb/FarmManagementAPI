@@ -10,6 +10,105 @@ definitions:
     - cost
     - title
     type: object
+  dto.AdminResetPasswordRequest:
+    properties:
+      password:
+        type: string
+    required:
+    - password
+    type: object
+  dto.AdminUpdateUserRequest:
+    properties:
+      clientId:
+        type: integer
+      contactNumber:
+        type: string
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      userLevel:
+        type: integer
+      username:
+        type: string
+    type: object
+  dto.BulkImportFarmItem:
+    properties:
+      name:
+        maxLength: 100
+        type: string
+      ponds:
+        items:
+          $ref: '#/definitions/dto.BulkImportPondItem'
+        minItems: 1
+        type: array
+    required:
+    - name
+    - ponds
+    type: object
+  dto.BulkImportFarmPondRequest:
+    properties:
+      farms:
+        items:
+          $ref: '#/definitions/dto.BulkImportFarmItem'
+        maxItems: 1000
+        minItems: 1
+        type: array
+    required:
+    - farms
+    type: object
+  dto.BulkImportFarmPondResponse:
+    properties:
+      farms:
+        items:
+          $ref: '#/definitions/dto.BulkImportFarmResult'
+        type: array
+      farmsCreated:
+        type: integer
+      farmsExisting:
+        type: integer
+      pondsCreated:
+        type: integer
+      pondsUnchanged:
+        type: integer
+      pondsUpdated:
+        type: integer
+    type: object
+  dto.BulkImportFarmResult:
+    properties:
+      isNew:
+        type: boolean
+      name:
+        type: string
+      pondsCreated:
+        type: integer
+      pondsUnchanged:
+        type: integer
+      pondsUpdated:
+        type: integer
+    type: object
+  dto.BulkImportPondItem:
+    properties:
+      area:
+        type: number
+      name:
+        maxLength: 100
+        type: string
+    required:
+    - name
+    type: object
+  dto.ChangePasswordRequest:
+    properties:
+      currentPassword:
+        type: string
+      newPassword:
+        type: string
+    required:
+    - currentPassword
+    - newPassword
+    type: object
   dto.CreateClientRequest:
     properties:
       contactNumber:
@@ -78,24 +177,35 @@ definitions:
     required:
     - name
     type: object
+  dto.CreatePondItem:
+    properties:
+      area:
+        type: number
+      name:
+        type: string
+    required:
+    - name
+    type: object
   dto.CreatePondsRequest:
     properties:
       farmId:
         type: integer
-      names:
+      ponds:
         items:
-          type: string
+          $ref: '#/definitions/dto.CreatePondItem'
         minItems: 1
         type: array
     required:
     - farmId
-    - names
+    - ponds
     type: object
   dto.CreateUserRequest:
     properties:
       clientId:
         type: integer
       contactNumber:
+        type: string
+      email:
         type: string
       firstName:
         type: string
@@ -362,6 +472,8 @@ definitions:
     type: object
   dto.UpdatePondBody:
     properties:
+      area:
+        type: number
       farmId:
         type: integer
       name:
@@ -370,6 +482,19 @@ definitions:
         enum:
         - active
         - maintenance
+        type: string
+    type: object
+  dto.UpdateUserRequest:
+    properties:
+      contactNumber:
+        type: string
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      username:
         type: string
     type: object
   http.ErrorResponseModel:
@@ -432,31 +557,6 @@ definitions:
       updated_at:
         type: string
       updated_by:
-        type: string
-    type: object
-  model.User:
-    properties:
-      clientId:
-        type: integer
-      contactNumber:
-        type: string
-      created_at:
-        type: string
-      created_by:
-        type: string
-      firstName:
-        type: string
-      id:
-        type: integer
-      lastName:
-        type: string
-      updated_at:
-        type: string
-      updated_by:
-        type: string
-      userLevel:
-        type: integer
-      username:
         type: string
     type: object
 host: localhost:8080
@@ -697,6 +797,33 @@ paths:
       summary: Get client list for dropdown
       tags:
       - client
+  /client/summaries:
+    get:
+      consumes:
+      - application/json
+      description: Returns each client with farmCount, pondCount, userCount. Super
+        admin only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Get client summaries
+      tags:
+      - client
   /farm:
     get:
       consumes:
@@ -731,7 +858,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Add a new farm entry with the provided details. Super admin only.
+      description: Add a new farm entry with the provided details. Requires client-admin
+        role or above.
       parameters:
       - description: Farm data
         in: body
@@ -1251,7 +1379,7 @@ paths:
       consumes:
       - application/json
       description: 'Create multiple ponds for a farm. Request: farmId, array of names.
-        New ponds have status maintenance.'
+        New ponds have status maintenance. Requires client-admin role or above.'
       parameters:
       - description: farmId, names[]
         in: body
@@ -1268,6 +1396,10 @@ paths:
             $ref: '#/definitions/http.ResponseModel'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
         "500":
@@ -1682,6 +1814,77 @@ paths:
       summary: Preview sell pond
       tags:
       - pond
+  /pond/bulk-import/{clientId}:
+    post:
+      consumes:
+      - application/json
+      description: Upsert farms and ponds from a parsed template. Missing farms are
+        created. Missing ponds are created with status maintenance. Existing ponds
+        get their area updated when an area is provided. No deletes. Requires client-admin
+        role or above.
+      parameters:
+      - description: Client ID
+        in: path
+        name: clientId
+        required: true
+        type: integer
+      - description: farms[] with ponds[]
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BulkImportFarmPondRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.ResponseModel'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BulkImportFarmPondResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Bulk import farms and ponds
+      tags:
+      - pond
+  /pond/template:
+    get:
+      description: Returns the .xlsx template users fill in to bulk-create ponds for
+        a single farm.
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Download bulk-import pond template
+      tags:
+      - pond
   /user:
     get:
       consumes:
@@ -1755,7 +1958,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/model.User'
+          $ref: '#/definitions/dto.UpdateUserRequest'
       produces:
       - application/json
       responses:
@@ -1777,11 +1980,147 @@ paths:
       summary: Update the current user
       tags:
       - user
+  /user/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft-delete a user. Super-admin only. Cannot delete self or another
+        super admin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Delete a user
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      description: Update any user. Super-admin only. Cannot promote to SuperAdmin
+        or modify an existing SuperAdmin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated user data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdminUpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Admin-update a user
+      tags:
+      - user
+  /user/{id}/password:
+    put:
+      consumes:
+      - application/json
+      description: Reset another user's password. Super-admin only. Cannot reset a
+        SuperAdmin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdminResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Admin-reset a user's password
+      tags:
+      - user
   /user/list:
     get:
       consumes:
       - application/json
-      description: Retrieve a list of users associated with the current client ID
+      description: Retrieve users. Super admins see all users and can filter; non-admins
+        are scoped to their own client.
+      parameters:
+      - description: Substring match across username, email, firstName, lastName
+        in: query
+        name: search
+        type: string
+      - description: Filter by user level
+        in: query
+        name: userLevel
+        type: integer
+      - description: Filter by client id (super admin only)
+        in: query
+        name: clientId
+        type: integer
       produces:
       - application/json
       responses:
@@ -1801,6 +2140,44 @@ paths:
       - BearerAuth: []
       - CookieAuth: []
       summary: Get a list of users
+      tags:
+      - user
+  /user/password:
+    put:
+      consumes:
+      - application/json
+      description: Authenticated user changes their own password. Requires current
+        password.
+      parameters:
+      - description: Current and new password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Change own password
       tags:
       - user
 securityDefinitions:

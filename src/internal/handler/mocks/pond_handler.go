@@ -31,6 +31,24 @@ func (_m *MockPondHandler) AddPonds(c *fiber.Ctx) error {
 	return r0
 }
 
+// BulkImportFarmPond provides a mock function with given fields: c
+func (_m *MockPondHandler) BulkImportFarmPond(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BulkImportFarmPond")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeletePond provides a mock function with given fields: c
 func (_m *MockPondHandler) DeletePond(c *fiber.Ctx) error {
 	ret := _m.Called(c)

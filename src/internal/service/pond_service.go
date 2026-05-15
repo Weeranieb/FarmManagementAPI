@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -18,6 +19,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const bulkImportMaxPonds = 5000
+
 //go:generate go run github.com/vektra/mockery/v2@latest --name=PondService --output=./mocks --outpkg=service --filename=pond_service.go --structname=MockPondService --with-expecter=false
 type PondService interface {
 	CreatePonds(ctx context.Context, request dto.CreatePondsRequest) error
@@ -31,6 +34,7 @@ type PondService interface {
 	PreviewFillPond(ctx context.Context, pondId int, request dto.PondFillRequest) (*dto.PondFillPreviewResponse, error)
 	PreviewMovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest) (*dto.PondMovePreviewResponse, error)
 	PreviewSellPond(ctx context.Context, pondId int, request dto.PondSellRequest) (*dto.PondSellPreviewResponse, error)
+	BulkImportFarmPond(ctx context.Context, clientId int, request dto.BulkImportFarmPondRequest) (*dto.BulkImportFarmPondResponse, error)
 }
 
 type PondServiceParams struct {
@@ -104,6 +108,25 @@ func (s *pondService) syncFarmStatusFromPonds(ctx context.Context, tx *gorm.DB, 
 }
 
 func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest) error {
+	// Verify the farm exists and the caller can access its owning client.
+	// The handler only checks admin-level; per-client scoping lives here so a
+	// client admin can't create ponds in another client's farm by passing a
+	// foreign farmId.
+	farm, err := s.farmRepo.GetByID(request.FarmId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if farm == nil {
+		return errors.ErrFarmNotFound
+	}
+	ok, err := utils.CanAccessClient(ctx, farm.ClientId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return errors.ErrAuthPermissionDenied
+	}
+
 	newPonds := make([]*model.Pond, 0, len(request.Ponds))
 	for _, item := range request.Ponds {
 		newPonds = append(newPonds, &model.Pond{
@@ -903,6 +926,170 @@ func collectGradeIDs(details []dto.PondSellDetailItem) []int {
 		}
 	}
 	return ids
+}
+
+// validateBulkImportRequest runs every data-quality check against the parsed
+// payload before any DB work. It collects *all* issues found (joined with
+// "; ") so the user can correct the whole file in one pass instead of
+// hitting the API once per fix.
+//
+// Validations performed here:
+//   - Total pond count (across all farms) does not exceed bulkImportMaxPonds.
+//   - Farm name is non-empty after normalize and ≤ 100 chars.
+//   - Pond name is non-empty after normalize and ≤ 100 chars.
+//   - Area, when provided, is not negative (defense-in-depth against the
+//     `decimal_gte0` struct tag — that tag is what `validateAndParse` runs
+//     in the handler, but we don't trust callers to go through it).
+//   - No duplicate (farmName, pondName) pair, case-insensitive after the
+//     normalize step, within the same request.
+func (s *pondService) validateBulkImportRequest(request dto.BulkImportFarmPondRequest) error {
+	var issues []string
+	totalPonds := 0
+	// Key: "<lower(farmNormalized)>\x00<lower(pondNormalized)>".
+	// Value: 1-based ordinal of where the entry was first seen, so the dup
+	// message can point at the original occurrence.
+	seenFarmPond := make(map[string]int)
+
+	for fi, f := range request.Farms {
+		farmName := utils.NormalizeFarmNameForStore(f.Name)
+		if farmName == "" {
+			issues = append(issues, fmt.Sprintf("farm #%d: empty name after normalize", fi+1))
+			continue
+		}
+		if len(farmName) > 100 {
+			issues = append(issues, fmt.Sprintf("farm %q: name exceeds 100 chars", farmName))
+		}
+		farmKey := strings.ToLower(farmName)
+
+		for pi, p := range f.Ponds {
+			pondName := utils.NormalizePondNameForStore(p.Name)
+			if pondName == "" {
+				issues = append(issues, fmt.Sprintf("farm %q pond #%d: empty pond name after normalize", farmName, pi+1))
+				continue
+			}
+			if len(pondName) > 100 {
+				issues = append(issues, fmt.Sprintf("farm %q pond %q: name exceeds 100 chars", farmName, pondName))
+				continue
+			}
+			if p.Area != nil && p.Area.IsNegative() {
+				issues = append(issues, fmt.Sprintf("farm %q pond %q: area must be >= 0", farmName, pondName))
+			}
+
+			totalPonds++
+			key := farmKey + "\x00" + strings.ToLower(pondName)
+			if firstOrdinal, dup := seenFarmPond[key]; dup {
+				issues = append(issues, fmt.Sprintf("duplicate pond %q in farm %q (also at item #%d)", pondName, farmName, firstOrdinal))
+				continue
+			}
+			seenFarmPond[key] = pi + 1
+		}
+	}
+
+	if totalPonds > bulkImportMaxPonds {
+		issues = append(issues, fmt.Sprintf("too many ponds: got %d, max %d", totalPonds, bulkImportMaxPonds))
+	}
+
+	if len(issues) > 0 {
+		return errors.ErrValidationFailed.Wrap(fmt.Errorf("%s", strings.Join(issues, "; ")))
+	}
+	return nil
+}
+
+// BulkImportFarmPond upserts farms and ponds for a client in one transaction.
+//   - Missing farms are created (status maintenance; will be re-synced from ponds).
+//   - Missing ponds are created (status maintenance).
+//   - Existing ponds get their area updated when an area is provided.
+//   - Nothing is ever deleted.
+func (s *pondService) BulkImportFarmPond(ctx context.Context, clientId int, request dto.BulkImportFarmPondRequest) (*dto.BulkImportFarmPondResponse, error) {
+	if err := s.validateBulkImportRequest(request); err != nil {
+		return nil, err
+	}
+
+	resp := &dto.BulkImportFarmPondResponse{
+		Farms: make([]dto.BulkImportFarmResult, 0, len(request.Farms)),
+	}
+
+	err := s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
+		farmRepo := s.farmRepo.WithTx(tx)
+		pondRepo := s.pondRepo.WithTx(tx)
+		touchedFarmIds := make(map[int]struct{}, len(request.Farms))
+
+		for _, f := range request.Farms {
+			farmName := utils.NormalizeFarmNameForStore(f.Name)
+
+			existingFarm, err := farmRepo.GetByNameAndClientId(farmName, clientId)
+			if err != nil {
+				return errors.ErrGeneric.Wrap(err)
+			}
+
+			farmResult := dto.BulkImportFarmResult{Name: farmName}
+			var targetFarm *model.Farm
+			if existingFarm == nil {
+				targetFarm = &model.Farm{
+					ClientId: clientId,
+					Name:     farmName,
+					Status:   constants.FarmStatusMaintenance,
+				}
+				if err := farmRepo.Create(ctx, targetFarm); err != nil {
+					return errors.ErrGeneric.Wrap(err)
+				}
+				resp.FarmsCreated++
+				farmResult.IsNew = true
+			} else {
+				targetFarm = existingFarm
+				resp.FarmsExisting++
+			}
+			touchedFarmIds[targetFarm.Id] = struct{}{}
+
+			for _, p := range f.Ponds {
+				pondName := utils.NormalizePondNameForStore(p.Name)
+
+				existingPond, err := pondRepo.GetByFarmIdAndName(targetFarm.Id, pondName)
+				if err != nil {
+					return errors.ErrGeneric.Wrap(err)
+				}
+				if existingPond == nil {
+					newPond := &model.Pond{
+						FarmId: targetFarm.Id,
+						Name:   pondName,
+						Status: constants.FarmStatusMaintenance,
+						Area:   p.Area,
+					}
+					if err := pondRepo.Create(ctx, newPond); err != nil {
+						return errors.ErrGeneric.Wrap(err)
+					}
+					resp.PondsCreated++
+					farmResult.PondsCreated++
+				} else {
+					if p.Area != nil {
+						existingPond.Area = p.Area
+						if err := pondRepo.Update(ctx, existingPond); err != nil {
+							return errors.ErrGeneric.Wrap(err)
+						}
+						resp.PondsUpdated++
+						farmResult.PondsUpdated++
+					} else {
+						// Pond matched by name but no area to apply — no DB write.
+						resp.PondsUnchanged++
+						farmResult.PondsUnchanged++
+					}
+				}
+			}
+
+			resp.Farms = append(resp.Farms, farmResult)
+		}
+
+		for farmId := range touchedFarmIds {
+			if err := s.syncFarmStatusFromPonds(ctx, tx, farmId); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (s *pondService) toPondResponseFromPondWithActive(pa *repository.PondWithFarmAndActivePond) *dto.PondResponse {
