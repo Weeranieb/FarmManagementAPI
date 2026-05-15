@@ -1265,3 +1265,210 @@ func (s *PondServiceTestSuite) TestBulkImportValidate_TooManyPonds() {
 	require.Error(s.T(), err)
 	assert.Contains(s.T(), err.Error(), "too many ponds")
 }
+
+// --- BulkImportFarmPond end-to-end (upsert transaction body) ---
+// These cover the actual create/update/leave-alone behavior, complementing
+// the pure-function validation tests above.
+
+func (s *PondServiceTestSuite) TestBulkImportFarmPond_NewFarmAndPonds() {
+	// GIVEN — farm doesn't exist; both ponds are new
+	clientId := 1
+	farmName := "Farm A"
+	req := dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: farmName, Ponds: []dto.BulkImportPondItem{
+				{Name: "P1", Area: newDecimal("2.5")},
+				{Name: "P2"},
+			}},
+		},
+	}
+	// Lookup says farm is new.
+	s.farmRepo.On("GetByNameAndClientId", farmName, clientId).Return(nil, nil)
+	// Create farm sets Id=10.
+	s.farmRepo.On("Create", mock.Anything, mock.MatchedBy(func(f *model.Farm) bool {
+		return f.Name == farmName && f.ClientId == clientId && f.Status == constants.FarmStatusMaintenance
+	})).Return(nil).Run(func(args mock.Arguments) {
+		f := args.Get(1).(*model.Farm)
+		f.Id = 10
+	})
+	// Both pond lookups return nil → create path.
+	s.pondRepo.On("GetByFarmIdAndName", 10, "P1").Return(nil, nil)
+	s.pondRepo.On("GetByFarmIdAndName", 10, "P2").Return(nil, nil)
+	s.pondRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *model.Pond) bool {
+		return p.FarmId == 10 && p.Name == "P1" && p.Status == constants.FarmStatusMaintenance && p.Area != nil
+	})).Return(nil)
+	s.pondRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *model.Pond) bool {
+		return p.FarmId == 10 && p.Name == "P2" && p.Status == constants.FarmStatusMaintenance && p.Area == nil
+	})).Return(nil)
+	// Sync farm status: both new ponds are maintenance → status stays maintenance, no Update.
+	s.expectFarmStatusSyncAfterMutation(10, []*model.Pond{
+		{Id: 1, FarmId: 10, Status: constants.FarmStatusMaintenance},
+		{Id: 2, FarmId: 10, Status: constants.FarmStatusMaintenance},
+	}, constants.FarmStatusMaintenance)
+
+	// WHEN
+	resp, err := s.pondService.BulkImportFarmPond(context.Background(), clientId, req)
+
+	// THEN — response reports 1 new farm + 2 new ponds.
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), resp)
+	assert.Equal(s.T(), 1, resp.FarmsCreated)
+	assert.Equal(s.T(), 0, resp.FarmsExisting)
+	assert.Equal(s.T(), 2, resp.PondsCreated)
+	assert.Equal(s.T(), 0, resp.PondsUpdated)
+	assert.Equal(s.T(), 0, resp.PondsUnchanged)
+	require.Len(s.T(), resp.Farms, 1)
+	assert.Equal(s.T(), farmName, resp.Farms[0].Name)
+	assert.True(s.T(), resp.Farms[0].IsNew)
+	assert.Equal(s.T(), 2, resp.Farms[0].PondsCreated)
+	s.farmRepo.AssertExpectations(s.T())
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestBulkImportFarmPond_ExistingFarmMixedPonds() {
+	// GIVEN — farm exists; one new pond, one existing-with-area-update, one
+	// existing-without-area (unchanged).
+	clientId := 1
+	farmId := 7
+	farmName := "Farm A"
+	req := dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: farmName, Ponds: []dto.BulkImportPondItem{
+				{Name: "PNew"},                                // create
+				{Name: "PUpdate", Area: newDecimal("3.0")},    // update area
+				{Name: "PUnchanged"},                          // matched, no area → no write
+			}},
+		},
+	}
+	existingFarm := &model.Farm{Id: farmId, ClientId: clientId, Name: farmName, Status: constants.FarmStatusMaintenance}
+	s.farmRepo.On("GetByNameAndClientId", farmName, clientId).Return(existingFarm, nil)
+	// PNew → not found, create.
+	s.pondRepo.On("GetByFarmIdAndName", farmId, "PNew").Return(nil, nil)
+	s.pondRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *model.Pond) bool {
+		return p.FarmId == farmId && p.Name == "PNew"
+	})).Return(nil)
+	// PUpdate → found, Update called with new area.
+	existingUpdate := &model.Pond{Id: 100, FarmId: farmId, Name: "PUpdate", Status: constants.FarmStatusActive}
+	s.pondRepo.On("GetByFarmIdAndName", farmId, "PUpdate").Return(existingUpdate, nil)
+	s.pondRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *model.Pond) bool {
+		return p.Id == 100 && p.Area != nil && p.Area.String() == "3"
+	})).Return(nil)
+	// PUnchanged → found, but no area provided → no Update call.
+	existingUnchanged := &model.Pond{Id: 101, FarmId: farmId, Name: "PUnchanged", Status: constants.FarmStatusMaintenance}
+	s.pondRepo.On("GetByFarmIdAndName", farmId, "PUnchanged").Return(existingUnchanged, nil)
+	// Status sync: one pond is active → farm becomes active. Helper registers Update only if status differs.
+	s.expectFarmStatusSyncAfterMutation(farmId, []*model.Pond{
+		{Id: 100, FarmId: farmId, Status: constants.FarmStatusActive},
+		{Id: 101, FarmId: farmId, Status: constants.FarmStatusMaintenance},
+	}, constants.FarmStatusMaintenance)
+
+	// WHEN
+	resp, err := s.pondService.BulkImportFarmPond(context.Background(), clientId, req)
+
+	// THEN — counts split correctly across created/updated/unchanged.
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), resp)
+	assert.Equal(s.T(), 0, resp.FarmsCreated)
+	assert.Equal(s.T(), 1, resp.FarmsExisting)
+	assert.Equal(s.T(), 1, resp.PondsCreated)
+	assert.Equal(s.T(), 1, resp.PondsUpdated)
+	assert.Equal(s.T(), 1, resp.PondsUnchanged)
+	require.Len(s.T(), resp.Farms, 1)
+	assert.False(s.T(), resp.Farms[0].IsNew)
+	assert.Equal(s.T(), 1, resp.Farms[0].PondsCreated)
+	assert.Equal(s.T(), 1, resp.Farms[0].PondsUpdated)
+	assert.Equal(s.T(), 1, resp.Farms[0].PondsUnchanged)
+	s.farmRepo.AssertExpectations(s.T())
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestBulkImportFarmPond_NoDeletesForOmittedPond() {
+	// GIVEN — farm exists with two ponds in DB, file references only one of
+	// them. The omitted pond must NOT be deleted (no-delete contract).
+	clientId := 1
+	farmId := 7
+	farmName := "Farm A"
+	req := dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: farmName, Ponds: []dto.BulkImportPondItem{{Name: "P1"}}},
+		},
+	}
+	s.farmRepo.On("GetByNameAndClientId", farmName, clientId).Return(
+		&model.Farm{Id: farmId, ClientId: clientId, Name: farmName, Status: constants.FarmStatusMaintenance}, nil)
+	s.pondRepo.On("GetByFarmIdAndName", farmId, "P1").Return(
+		&model.Pond{Id: 200, FarmId: farmId, Name: "P1", Status: constants.FarmStatusMaintenance}, nil)
+	// Sync sees both ponds — the one we mentioned AND the omitted one.
+	s.expectFarmStatusSyncAfterMutation(farmId, []*model.Pond{
+		{Id: 200, FarmId: farmId, Status: constants.FarmStatusMaintenance},
+		{Id: 201, FarmId: farmId, Name: "POmitted", Status: constants.FarmStatusMaintenance},
+	}, constants.FarmStatusMaintenance)
+
+	// WHEN
+	_, err := s.pondService.BulkImportFarmPond(context.Background(), clientId, req)
+
+	// THEN — no error and Delete was never called on any pond.
+	require.NoError(s.T(), err)
+	s.pondRepo.AssertNotCalled(s.T(), "Delete", mock.Anything, mock.Anything)
+	s.farmRepo.AssertNotCalled(s.T(), "Delete", mock.Anything, mock.Anything)
+}
+
+func (s *PondServiceTestSuite) TestBulkImportFarmPond_ValidationErrorShortCircuits() {
+	// GIVEN — request fails validation (negative area). No repo work should
+	// happen — even the farm lookup must not be called.
+	req := dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "Farm A", Ponds: []dto.BulkImportPondItem{
+				{Name: "P1", Area: newDecimal("-1")},
+			}},
+		},
+	}
+
+	// WHEN
+	resp, err := s.pondService.BulkImportFarmPond(context.Background(), 1, req)
+
+	// THEN — validation error returned; nothing touched the repos.
+	require.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	assert.Contains(s.T(), err.Error(), "area must be >= 0")
+	s.farmRepo.AssertNotCalled(s.T(), "GetByNameAndClientId", mock.Anything, mock.Anything)
+	s.farmRepo.AssertNotCalled(s.T(), "Create", mock.Anything, mock.Anything)
+	s.pondRepo.AssertNotCalled(s.T(), "Create", mock.Anything, mock.Anything)
+}
+
+func (s *PondServiceTestSuite) TestBulkImportFarmPond_RollbackOnPondCreateFailure() {
+	// GIVEN — farm gets created, first pond create succeeds, second pond
+	// create fails. The transaction must roll back; the response must be nil.
+	// We don't assert specific DB state (sqlite is in-memory), but we do
+	// assert the service surfaces the error.
+	clientId := 1
+	farmName := "Farm A"
+	req := dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: farmName, Ponds: []dto.BulkImportPondItem{
+				{Name: "P1"},
+				{Name: "P2"},
+			}},
+		},
+	}
+	s.farmRepo.On("GetByNameAndClientId", farmName, clientId).Return(nil, nil)
+	s.farmRepo.On("Create", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		args.Get(1).(*model.Farm).Id = 10
+	})
+	s.pondRepo.On("GetByFarmIdAndName", 10, "P1").Return(nil, nil)
+	s.pondRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *model.Pond) bool {
+		return p.Name == "P1"
+	})).Return(nil)
+	s.pondRepo.On("GetByFarmIdAndName", 10, "P2").Return(nil, nil)
+	s.pondRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *model.Pond) bool {
+		return p.Name == "P2"
+	})).Return(fmt.Errorf("simulated db error"))
+
+	// WHEN
+	resp, err := s.pondService.BulkImportFarmPond(context.Background(), clientId, req)
+
+	// THEN — error surfaced; nil response; sync should NOT have run since
+	// the transaction was aborted before the sync loop.
+	require.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	s.pondRepo.AssertNotCalled(s.T(), "ListByFarmId", mock.Anything)
+}
