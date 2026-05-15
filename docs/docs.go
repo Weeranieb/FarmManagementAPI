@@ -1618,6 +1618,56 @@ const docTemplate = `{
                 }
             }
         },
+        "/pond/{pondId}/activities": {
+            "get": {
+                "description": "Return the chronological fill/move/sell activity timeline for a pond, ordered by activity_date desc.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "List pond activity history",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/pond/{pondId}/daily-logs": {
             "get": {
                 "description": "Returns one sheet per month (fresh + pellet columns, deaths, tourist catch).",

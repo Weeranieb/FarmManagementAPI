@@ -18,6 +18,7 @@ type PondHandler interface {
 	AddPonds(c *fiber.Ctx) error
 	GetPond(c *fiber.Ctx) error
 	GetPondList(c *fiber.Ctx) error
+	GetPondActivities(c *fiber.Ctx) error
 	UpdatePond(c *fiber.Ctx) error
 	DeletePond(c *fiber.Ctx) error
 	FillPond(c *fiber.Ctx) error
@@ -115,6 +116,40 @@ func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
 	}
 
 	return http.Success(c, pond)
+}
+
+// GET /pond/:pondId/activities
+// List the activity history (fill/move/sell) for a pond, newest first.
+// @Summary      List pond activity history
+// @Description  Return the chronological fill/move/sell activity timeline for a pond, ordered by activity_date desc.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Param        pondId path int true "Pond ID"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      404  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/activities [get]
+func (h *pondHandlerImpl) GetPondActivities(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	idStr := c.Params("pondId")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+	}
+
+	activities, err := h.pondService.ListActivities(c.UserContext(), id)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, activities)
 }
 
 // GET /pond

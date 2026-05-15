@@ -37,6 +37,66 @@ func (_m *MockActivityRepository) Create(ctx context.Context, activity *model.Ac
 	return r0
 }
 
+// ListByPondID provides a mock function with given fields: ctx, pondId
+func (_m *MockActivityRepository) ListByPondID(ctx context.Context, pondId int) ([]repository.ActivityListRow, error) {
+	ret := _m.Called(ctx, pondId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByPondID")
+	}
+
+	var r0 []repository.ActivityListRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]repository.ActivityListRow, error)); ok {
+		return rf(ctx, pondId)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) []repository.ActivityListRow); ok {
+		r0 = rf(ctx, pondId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.ActivityListRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, pondId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// SumSellDetailsByActivityIDs provides a mock function with given fields: ctx, activityIds
+func (_m *MockActivityRepository) SumSellDetailsByActivityIDs(ctx context.Context, activityIds []int) ([]repository.SellTotalRow, error) {
+	ret := _m.Called(ctx, activityIds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SumSellDetailsByActivityIDs")
+	}
+
+	var r0 []repository.SellTotalRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []int) ([]repository.SellTotalRow, error)); ok {
+		return rf(ctx, activityIds)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []int) []repository.SellTotalRow); ok {
+		r0 = rf(ctx, activityIds)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.SellTotalRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
+		r1 = rf(ctx, activityIds)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // WithTx provides a mock function with given fields: tx
 func (_m *MockActivityRepository) WithTx(tx *gorm.DB) repository.ActivityRepository {
 	ret := _m.Called(tx)
