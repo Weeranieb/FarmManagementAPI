@@ -32,24 +32,6 @@ func (_m *MockUserService) AdminResetPassword(ctx context.Context, userId int, r
 	return r0
 }
 
-// ChangePassword provides a mock function with given fields: ctx, userId, request, userIdentity
-func (_m *MockUserService) ChangePassword(ctx context.Context, userId int, request dto.ChangePasswordRequest, userIdentity string) error {
-	ret := _m.Called(ctx, userId, request, userIdentity)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ChangePassword")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, dto.ChangePasswordRequest, string) error); ok {
-		r0 = rf(ctx, userId, request, userIdentity)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // AdminUpdate provides a mock function with given fields: ctx, userId, request, userIdentity
 func (_m *MockUserService) AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error {
 	ret := _m.Called(ctx, userId, request, userIdentity)
@@ -60,6 +42,24 @@ func (_m *MockUserService) AdminUpdate(ctx context.Context, userId int, request 
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, int, dto.AdminUpdateUserRequest, string) error); ok {
+		r0 = rf(ctx, userId, request, userIdentity)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ChangePassword provides a mock function with given fields: ctx, userId, request, userIdentity
+func (_m *MockUserService) ChangePassword(ctx context.Context, userId int, request dto.ChangePasswordRequest, userIdentity string) error {
+	ret := _m.Called(ctx, userId, request, userIdentity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ChangePassword")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.ChangePasswordRequest, string) error); ok {
 		r0 = rf(ctx, userId, request, userIdentity)
 	} else {
 		r0 = ret.Error(0)

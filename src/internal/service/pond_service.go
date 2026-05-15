@@ -28,6 +28,7 @@ type PondService interface {
 	Update(ctx context.Context, request dto.UpdatePondRequest) error
 	GetList(ctx context.Context, farmId int) ([]*dto.PondResponse, error)
 	Delete(ctx context.Context, id int) error
+	ListActivities(ctx context.Context, pondId int) ([]*dto.ActivityResponse, error)
 	FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error)
 	MovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest, username string) (*dto.PondMoveResponse, error)
 	SellPond(ctx context.Context, pondId int, request dto.PondSellRequest, username string) (*dto.PondSellResponse, error)
@@ -165,6 +166,69 @@ func (s *pondService) Get(ctx context.Context, id int) (*dto.PondResponse, error
 		return nil, errors.ErrPondNotFound
 	}
 	return s.toPondResponseFromPondWithActive(pa), nil
+}
+
+// ListActivities returns the fill/move/sell activity timeline for a pond,
+// ordered by date desc. Sell rows have their total computed from
+// sell_details (sum of weight * price_per_unit) since the parent activity
+// row only stores `amount` (an aggregate fish count).
+func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.ActivityResponse, error) {
+	pond, err := s.pondRepo.GetByID(pondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if pond == nil {
+		return nil, errors.ErrPondNotFound
+	}
+
+	rows, err := s.activityRepo.ListByPondID(ctx, pondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+
+	// Collect sell activity IDs so we can compute totals from sell_details.
+	sellIds := make([]int, 0)
+	for _, r := range rows {
+		if r.Mode == "sell" {
+			sellIds = append(sellIds, r.Id)
+		}
+	}
+
+	sellTotals := map[int]float64{}
+	if len(sellIds) > 0 {
+		totals, err := s.activityRepo.SumSellDetailsByActivityIDs(ctx, sellIds)
+		if err != nil {
+			return nil, errors.ErrGeneric.Wrap(err)
+		}
+		for _, t := range totals {
+			f, _ := t.Total.Float64()
+			sellTotals[t.SellId] = f
+		}
+	}
+
+	out := make([]*dto.ActivityResponse, 0, len(rows))
+	for _, r := range rows {
+		pricePerUnit, _ := r.PricePerUnit.Float64()
+		var total float64
+		switch r.Mode {
+		case "sell":
+			total = sellTotals[r.Id]
+		default:
+			total = float64(r.Amount) * pricePerUnit
+		}
+		out = append(out, &dto.ActivityResponse{
+			Id:           r.Id,
+			Mode:         r.Mode,
+			ActivityDate: r.ActivityDate,
+			FishType:     r.FishType,
+			Amount:       r.Amount,
+			PricePerUnit: pricePerUnit,
+			Total:        total,
+			Merchant:     r.MerchantName,
+			ToPondName:   r.ToPondName,
+		})
+	}
+	return out, nil
 }
 
 func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest) error {

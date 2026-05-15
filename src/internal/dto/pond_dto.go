@@ -223,3 +223,19 @@ type PondSellPreviewResponse struct {
 	TotalWeight     float64               `json:"totalWeight"`
 	ValidationError string                `json:"validationError,omitempty"`
 }
+
+// ActivityResponse is one row of the pond activity history timeline returned
+// by GET /pond/:pondId/activities. Total is computed server-side so the
+// client doesn't need to know the fill/move (amount*pricePerUnit) vs sell
+// (sum of sell_details.weight * price_per_unit) shape.
+type ActivityResponse struct {
+	Id           int       `json:"id"`
+	Mode         string    `json:"mode"` // fill | move | sell
+	ActivityDate time.Time `json:"activityDate"`
+	FishType     string    `json:"fishType"`
+	Amount       int       `json:"amount"`
+	PricePerUnit float64   `json:"pricePerUnit"`
+	Total        float64   `json:"total"`
+	Merchant     *string   `json:"merchant,omitempty"`
+	ToPondName   *string   `json:"toPondName,omitempty"`
+}

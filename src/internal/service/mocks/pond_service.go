@@ -170,6 +170,36 @@ func (_m *MockPondService) GetList(ctx context.Context, farmId int) ([]*dto.Pond
 	return r0, r1
 }
 
+// ListActivities provides a mock function with given fields: ctx, pondId
+func (_m *MockPondService) ListActivities(ctx context.Context, pondId int) ([]*dto.ActivityResponse, error) {
+	ret := _m.Called(ctx, pondId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListActivities")
+	}
+
+	var r0 []*dto.ActivityResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*dto.ActivityResponse, error)); ok {
+		return rf(ctx, pondId)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*dto.ActivityResponse); ok {
+		r0 = rf(ctx, pondId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*dto.ActivityResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, pondId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // MovePond provides a mock function with given fields: ctx, sourcePondId, request, username
 func (_m *MockPondService) MovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest, username string) (*dto.PondMoveResponse, error) {
 	ret := _m.Called(ctx, sourcePondId, request, username)

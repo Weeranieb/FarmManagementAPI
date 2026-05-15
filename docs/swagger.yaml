@@ -1514,6 +1514,40 @@ paths:
       summary: Update a pond
       tags:
       - pond
+  /pond/{pondId}/activities:
+    get:
+      consumes:
+      - application/json
+      description: Return the chronological fill/move/sell activity timeline for a
+        pond, ordered by activity_date desc.
+      parameters:
+      - description: Pond ID
+        in: path
+        name: pondId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      summary: List pond activity history
+      tags:
+      - pond
   /pond/{pondId}/daily-logs:
     get:
       description: Returns one sheet per month (fresh + pellet columns, deaths, tourist
