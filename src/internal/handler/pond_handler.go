@@ -27,6 +27,7 @@ type PondHandler interface {
 	MovePondPreview(c *fiber.Ctx) error
 	SellPondPreview(c *fiber.Ctx) error
 	DownloadTemplate(c *fiber.Ctx) error
+	BulkImportFarmPond(c *fiber.Ctx) error
 }
 
 type pondHandlerImpl struct {
@@ -41,8 +42,9 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 
 // POST /pond
 // Create multiple ponds for a farm (farmId, names array). New ponds are created with status maintenance.
+// Allowed for super admin (any farm) or client admin (farms in their own client only).
 // @Summary      Create multiple ponds
-// @Description  Create multiple ponds for a farm. Request: farmId, array of names. New ponds have status maintenance.
+// @Description  Create multiple ponds for a farm. Request: farmId, array of names. New ponds have status maintenance. Requires client-admin role or above.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
@@ -51,6 +53,7 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 // @Param        body body dto.CreatePondsRequest true "farmId, names[]"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond [post]
 func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
@@ -66,8 +69,10 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 		return err
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
+	// Must be client admin or super admin. Per-client scoping is enforced
+	// in pondService.CreatePonds (which loads the farm to find its clientId).
+	isAdmin, err := utils.IsClientAdminOrAbove(c.UserContext())
+	if err != nil || !isAdmin {
 		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 
@@ -510,4 +515,58 @@ func (h *pondHandlerImpl) DownloadTemplate(c *fiber.Ctx) error {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return nil
+}
+
+// POST /pond/bulk-import/:clientId
+// Bulk-import farms and ponds for a client. Idempotent: missing farms and ponds are created,
+// existing ponds get their area updated when provided. Nothing is ever deleted.
+// Allowed for super admin (any client) or client admin (their own client only).
+// @Summary      Bulk import farms and ponds
+// @Description  Upsert farms and ponds from a parsed template. Missing farms are created. Missing ponds are created with status maintenance. Existing ponds get their area updated when an area is provided. No deletes. Requires client-admin role or above.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        clientId path int true "Client ID"
+// @Param        body body dto.BulkImportFarmPondRequest true "farms[] with ponds[]"
+// @Success      200  {object}  http.ResponseModel{data=dto.BulkImportFarmPondResponse}
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/bulk-import/{clientId} [post]
+func (h *pondHandlerImpl) BulkImportFarmPond(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	clientId, err := strconv.Atoi(c.Params("clientId"))
+	if err != nil {
+		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid client ID")
+	}
+
+	// Must be client admin or super admin.
+	isAdmin, err := utils.IsClientAdminOrAbove(c.UserContext())
+	if err != nil || !isAdmin {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
+	// Super admin can target any client; client admin can only target their own.
+	canAccess, err := utils.CanAccessClient(c.UserContext(), clientId)
+	if err != nil || !canAccess {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+
+	var request dto.BulkImportFarmPondRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+
+	resp, err := h.pondService.BulkImportFarmPond(c.UserContext(), clientId, request)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return http.Success(c, resp)
 }

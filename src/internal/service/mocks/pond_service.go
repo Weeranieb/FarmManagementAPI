@@ -14,6 +14,36 @@ type MockPondService struct {
 	mock.Mock
 }
 
+// BulkImportFarmPond provides a mock function with given fields: ctx, clientId, request
+func (_m *MockPondService) BulkImportFarmPond(ctx context.Context, clientId int, request dto.BulkImportFarmPondRequest) (*dto.BulkImportFarmPondResponse, error) {
+	ret := _m.Called(ctx, clientId, request)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BulkImportFarmPond")
+	}
+
+	var r0 *dto.BulkImportFarmPondResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.BulkImportFarmPondRequest) (*dto.BulkImportFarmPondResponse, error)); ok {
+		return rf(ctx, clientId, request)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, dto.BulkImportFarmPondRequest) *dto.BulkImportFarmPondResponse); ok {
+		r0 = rf(ctx, clientId, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*dto.BulkImportFarmPondResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, dto.BulkImportFarmPondRequest) error); ok {
+		r1 = rf(ctx, clientId, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreatePonds provides a mock function with given fields: ctx, request
 func (_m *MockPondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest) error {
 	ret := _m.Called(ctx, request)

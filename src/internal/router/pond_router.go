@@ -10,6 +10,7 @@ func (r *Router) setupPondRoutes(group fiber.Router) {
 
 	// Pond CRUD operations
 	pond.Get("/template", r.handlers.PondHandler.DownloadTemplate)
+	pond.Post("/bulk-import/:clientId", r.handlers.PondHandler.BulkImportFarmPond)
 	pond.Post("", r.handlers.PondHandler.AddPonds)
 	pond.Post("/:pondId/fill/preview", r.handlers.PondHandler.FillPondPreview)
 	pond.Post("/:pondId/move/preview", r.handlers.PondHandler.MovePondPreview)

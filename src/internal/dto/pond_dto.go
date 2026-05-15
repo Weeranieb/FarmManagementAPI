@@ -12,6 +12,50 @@ type CreatePondItem struct {
 	Area *decimal.Decimal `json:"area,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
 }
 
+// BulkImportPondItem is one pond entry inside a farm in a bulk import.
+type BulkImportPondItem struct {
+	Name string           `json:"name" validate:"required,max=100"`
+	Area *decimal.Decimal `json:"area,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+}
+
+// BulkImportFarmItem is one farm grouping in a bulk import.
+type BulkImportFarmItem struct {
+	Name  string               `json:"name" validate:"required,max=100"`
+	Ponds []BulkImportPondItem `json:"ponds" validate:"required,min=1,dive"`
+}
+
+// BulkImportFarmPondRequest is the body for POST /pond/bulk-import/:clientId.
+// Idempotent: missing farms/ponds are created, existing ponds get their area
+// updated (when area is provided). Nothing is ever deleted.
+type BulkImportFarmPondRequest struct {
+	Farms []BulkImportFarmItem `json:"farms" validate:"required,min=1,max=1000,dive"`
+}
+
+// BulkImportFarmResult is the per-farm summary returned to the client.
+// PondsUpdated counts existing ponds where an area was provided and applied.
+// PondsUnchanged counts existing ponds that matched by name but had no area
+// to apply (so no DB write happened for them).
+type BulkImportFarmResult struct {
+	Name           string `json:"name"`
+	IsNew          bool   `json:"isNew"`
+	PondsCreated   int    `json:"pondsCreated"`
+	PondsUpdated   int    `json:"pondsUpdated"`
+	PondsUnchanged int    `json:"pondsUnchanged"`
+}
+
+// BulkImportFarmPondResponse is the summary returned after a bulk import.
+// PondsUpdated counts only ponds where an area was actually written; ponds
+// that matched by name but came in with no area are reported separately in
+// PondsUnchanged so the UI doesn't claim a change that didn't happen.
+type BulkImportFarmPondResponse struct {
+	FarmsCreated   int                    `json:"farmsCreated"`
+	FarmsExisting  int                    `json:"farmsExisting"`
+	PondsCreated   int                    `json:"pondsCreated"`
+	PondsUpdated   int                    `json:"pondsUpdated"`
+	PondsUnchanged int                    `json:"pondsUnchanged"`
+	Farms          []BulkImportFarmResult `json:"farms"`
+}
+
 // CreatePondsRequest is the body for POST /pond (create multiple ponds for a farm). New ponds are created with status maintenance.
 type CreatePondsRequest struct {
 	FarmId int              `json:"farmId" validate:"required"`

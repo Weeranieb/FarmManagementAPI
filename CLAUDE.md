@@ -23,3 +23,15 @@ PR titles follow Conventional Commits (linted by CI).
 Never run `git commit`, `git push`, or open a PR automatically just because a task is implemented and verified. Finish coding, summarize what changed, and stop.
 
 Phrases like "do it", "do what you plan", "proceed", or "go ahead" mean **implement** — not commit. Only commit when the user explicitly says commit / push / ship / open PR.
+
+## Regenerate Swagger after adding/changing an API
+
+When you add a new HTTP endpoint, change a route, or modify request/response DTOs or `@Swagger` annotations, regenerate the OpenAPI spec as a post-edit step:
+
+```
+make gen-swag
+```
+
+This runs `swag init -g src/cmd/api/main.go -o docs --propertyStrategy snakecase` and updates `docs/`. Commit the regenerated `docs/` files alongside the code change so `/swagger/*` and downstream clients stay in sync.
+
+Skip this only for changes that don't affect the public API surface (internal refactors, repository/service-only changes, comment fixes).

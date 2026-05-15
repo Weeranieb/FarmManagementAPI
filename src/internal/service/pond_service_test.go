@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -148,7 +149,9 @@ func TestPondServiceSuite(t *testing.T) {
 }
 
 func (s *PondServiceTestSuite) TestCreatePonds_Success() {
-	// GIVEN — request with farm and names; repo returns no duplicate names
+	// GIVEN — request with farm and names; repo returns no duplicate names.
+	// The pre-check GetByID(1) is satisfied by expectFarmStatusSyncAfterMutation
+	// below (which registers the same expectation for the in-transaction sync).
 	req := dto.CreatePondsRequest{
 		FarmId: 1,
 		Ponds:  []dto.CreatePondItem{{Name: "Pond 1"}, {Name: "Pond 2"}},
@@ -168,8 +171,8 @@ func (s *PondServiceTestSuite) TestCreatePonds_Success() {
 		{Id: 2, FarmId: 1, Status: constants.FarmStatusMaintenance},
 	}, constants.FarmStatusMaintenance)
 
-	// WHEN — CreatePonds is called
-	err := s.pondService.CreatePonds(context.Background(), req)
+	// WHEN — CreatePonds is called (super-admin context)
+	err := s.pondService.CreatePonds(fillPondCtx(), req)
 
 	// THEN — no error; CreateBatch was used
 	assert.NoError(s.T(), err)
@@ -183,17 +186,57 @@ func (s *PondServiceTestSuite) TestCreatePonds_PondAlreadyExists() {
 		FarmId: 1,
 		Ponds:  []dto.CreatePondItem{{Name: "Pond 1"}, {Name: "Pond 2"}},
 	}
+	// Pre-check: farm exists in client 1; super-admin context can access.
+	s.farmRepo.On("GetByID", 1).Return(&model.Farm{Id: 1, ClientId: 1, Name: "F", Status: constants.FarmStatusMaintenance}, nil)
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 1").Return(nil, nil)
 	existingPond := &model.Pond{Id: 99, FarmId: 1, Name: "Pond 2", Status: "active"}
 	s.pondRepo.On("GetByFarmIdAndName", 1, "Pond 2").Return(existingPond, nil)
 
-	// WHEN — CreatePonds is called
-	err := s.pondService.CreatePonds(context.Background(), req)
+	// WHEN — CreatePonds is called (super-admin context)
+	err := s.pondService.CreatePonds(fillPondCtx(), req)
 
 	// THEN — ErrPondAlreadyExists; CreateBatch not called
 	assert.Error(s.T(), err)
 	assert.ErrorIs(s.T(), err, errors.ErrPondAlreadyExists)
 	s.pondRepo.AssertExpectations(s.T())
+	s.pondRepo.AssertNotCalled(s.T(), "CreateBatch")
+}
+
+func (s *PondServiceTestSuite) TestCreatePonds_FarmNotFound() {
+	// GIVEN — farm does not exist
+	s.farmRepo.On("GetByID", 99).Return(nil, nil)
+
+	// WHEN
+	err := s.pondService.CreatePonds(fillPondCtx(), dto.CreatePondsRequest{
+		FarmId: 99,
+		Ponds:  []dto.CreatePondItem{{Name: "P1"}},
+	})
+
+	// THEN — ErrFarmNotFound; no pond lookup
+	assert.ErrorIs(s.T(), err, errors.ErrFarmNotFound)
+	s.pondRepo.AssertNotCalled(s.T(), "GetByFarmIdAndName")
+	s.pondRepo.AssertNotCalled(s.T(), "CreateBatch")
+}
+
+func (s *PondServiceTestSuite) TestCreatePonds_ClientAdminWrongClientDenied() {
+	// GIVEN — client admin for client 1 trying to add ponds to farm in client 2
+	s.farmRepo.On("GetByID", 5).Return(&model.Farm{Id: 5, ClientId: 2, Name: "F"}, nil)
+
+	// Context: client admin (level 2) tied to client 1.
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, constants.UsernameKey, "admin")
+	ctx = context.WithValue(ctx, constants.ClientIDKey, 1)
+	ctx = context.WithValue(ctx, constants.UserLevelKey, 2)
+
+	// WHEN
+	err := s.pondService.CreatePonds(ctx, dto.CreatePondsRequest{
+		FarmId: 5,
+		Ponds:  []dto.CreatePondItem{{Name: "P1"}},
+	})
+
+	// THEN — permission denied; no pond operations attempted
+	assert.ErrorIs(s.T(), err, errors.ErrAuthPermissionDenied)
+	s.pondRepo.AssertNotCalled(s.T(), "GetByFarmIdAndName")
 	s.pondRepo.AssertNotCalled(s.T(), "CreateBatch")
 }
 
@@ -1098,4 +1141,127 @@ func (s *PondServiceTestSuite) TestSellPond_Success_MarkToClose() {
 	assert.Equal(s.T(), constants.FarmStatusMaintenance, updatedPond.Status)
 	s.pondRepo.AssertExpectations(s.T())
 	s.farmRepo.AssertExpectations(s.T())
+}
+
+// --- BulkImportFarmPond validation ---
+// validateBulkImportRequest is a pure function; no repo mocks needed.
+
+func newDecimal(v string) *decimal.Decimal {
+	d := decimal.RequireFromString(v)
+	return &d
+}
+
+func (s *PondServiceTestSuite) TestBulkImportValidate_HappyPath() {
+	svc := s.pondService.(*pondService)
+	err := svc.validateBulkImportRequest(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "Farm A", Ponds: []dto.BulkImportPondItem{
+				{Name: "P1", Area: newDecimal("2.5")},
+				{Name: "P2"}, // no area is fine
+			}},
+		},
+	})
+	assert.NoError(s.T(), err)
+}
+
+func (s *PondServiceTestSuite) TestBulkImportValidate_DuplicateInsideRequest() {
+	svc := s.pondService.(*pondService)
+	err := svc.validateBulkImportRequest(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "Farm A", Ponds: []dto.BulkImportPondItem{
+				{Name: "P1"},
+				{Name: "P2"},
+				{Name: "p1"}, // case-insensitive dup of #1
+			}},
+		},
+	})
+	require.Error(s.T(), err)
+	// Message reports the duplicate-row entry (lowercased "p1") and points
+	// at "item #1" so the user can find the original.
+	assert.Contains(s.T(), err.Error(), "duplicate pond")
+	assert.Contains(s.T(), err.Error(), "p1")
+	assert.Contains(s.T(), err.Error(), "item #1")
+}
+
+func (s *PondServiceTestSuite) TestBulkImportValidate_NegativeAreaRejected() {
+	svc := s.pondService.(*pondService)
+	err := svc.validateBulkImportRequest(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "Farm A", Ponds: []dto.BulkImportPondItem{
+				{Name: "P1", Area: newDecimal("-1")},
+			}},
+		},
+	})
+	require.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "area must be >= 0")
+}
+
+func (s *PondServiceTestSuite) TestBulkImportValidate_EmptyFarmNameAfterNormalize() {
+	svc := s.pondService.(*pondService)
+	err := svc.validateBulkImportRequest(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			// "ฟาร์ม " is the Thai display prefix; normalize strips it to "".
+			{Name: "ฟาร์ม ", Ponds: []dto.BulkImportPondItem{{Name: "P1"}}},
+		},
+	})
+	require.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "empty name")
+}
+
+func (s *PondServiceTestSuite) TestBulkImportValidate_EmptyPondNameAfterNormalize() {
+	svc := s.pondService.(*pondService)
+	err := svc.validateBulkImportRequest(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			// "บ่อ " normalizes to "".
+			{Name: "Farm A", Ponds: []dto.BulkImportPondItem{{Name: "บ่อ "}}},
+		},
+	})
+	require.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "empty pond name")
+}
+
+func (s *PondServiceTestSuite) TestBulkImportValidate_NameTooLong() {
+	svc := s.pondService.(*pondService)
+	long := make([]byte, 101)
+	for i := range long {
+		long[i] = 'a'
+	}
+	err := svc.validateBulkImportRequest(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: string(long), Ponds: []dto.BulkImportPondItem{{Name: "P1"}}},
+		},
+	})
+	require.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "exceeds 100 chars")
+}
+
+func (s *PondServiceTestSuite) TestBulkImportValidate_CollectsAllIssues() {
+	// Multiple distinct issues across the payload should be reported together
+	// so the user can fix the whole file in one pass.
+	svc := s.pondService.(*pondService)
+	err := svc.validateBulkImportRequest(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{
+			{Name: "Farm A", Ponds: []dto.BulkImportPondItem{
+				{Name: "P1", Area: newDecimal("-2")}, // negative area
+				{Name: "P1"},                         // duplicate of #1
+			}},
+		},
+	})
+	require.Error(s.T(), err)
+	msg := err.Error()
+	assert.Contains(s.T(), msg, "area must be >= 0")
+	assert.Contains(s.T(), msg, "duplicate pond")
+}
+
+func (s *PondServiceTestSuite) TestBulkImportValidate_TooManyPonds() {
+	svc := s.pondService.(*pondService)
+	ponds := make([]dto.BulkImportPondItem, bulkImportMaxPonds+1)
+	for i := range ponds {
+		ponds[i] = dto.BulkImportPondItem{Name: fmt.Sprintf("P%d", i)}
+	}
+	err := svc.validateBulkImportRequest(dto.BulkImportFarmPondRequest{
+		Farms: []dto.BulkImportFarmItem{{Name: "Farm A", Ponds: ponds}},
+	})
+	require.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "too many ponds")
 }
