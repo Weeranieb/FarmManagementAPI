@@ -1425,6 +1425,150 @@ const docTemplate = `{
                 }
             }
         },
+        "/pond/fill/calc": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Compute live cost/weight totals for the fill (add stock) form. Pure math, no validation against pond state. Used for live form updates as the user types.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Calculate fill totals",
+                "parameters": [
+                    {
+                        "description": "amount, fishWeight, pricePerUnit, additionalCosts",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondFillCalcRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/move/calc": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Compute live cost/weight totals for the move (transfer) form. Pure math, no validation against pond state.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Calculate move totals",
+                "parameters": [
+                    {
+                        "description": "amount, fishWeight, pricePerUnit, additionalCosts",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondMoveCalcRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/sell/calc": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Compute live revenue/weight totals for the sell form. Pure math, no fish-size-grade validation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Calculate sell totals",
+                "parameters": [
+                    {
+                        "description": "details[], additionalCosts",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondSellCalcRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/pond/template": {
             "get": {
                 "security": [
@@ -2603,6 +2747,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AdditionalCostCalcItem": {
+            "type": "object",
+            "properties": {
+                "cost": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.AdditionalCostItem": {
             "type": "object",
             "required": [
@@ -2980,10 +3135,7 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 0
                 },
-                "freshEvening": {
-                    "type": "number"
-                },
-                "freshMorning": {
+                "fresh": {
                     "type": "number"
                 },
                 "pelletEvening": {
@@ -3007,10 +3159,7 @@ const docTemplate = `{
                 "deathFishCount": {
                     "type": "integer"
                 },
-                "freshEvening": {
-                    "type": "number"
-                },
-                "freshMorning": {
+                "fresh": {
                     "type": "number"
                 },
                 "freshUnitPrice": {
@@ -3111,6 +3260,27 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PondFillCalcRequest": {
+            "type": "object",
+            "properties": {
+                "additionalCosts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdditionalCostCalcItem"
+                    }
+                },
+                "amount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "fishWeight": {
+                    "type": "number"
+                },
+                "pricePerUnit": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.PondFillRequest": {
             "type": "object",
             "required": [
@@ -3144,6 +3314,27 @@ const docTemplate = `{
                 },
                 "remark": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.PondMoveCalcRequest": {
+            "type": "object",
+            "properties": {
+                "additionalCosts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdditionalCostCalcItem"
+                    }
+                },
+                "amount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "fishWeight": {
+                    "type": "number"
+                },
+                "pricePerUnit": {
+                    "type": "number"
                 }
             }
         },
@@ -3187,6 +3378,40 @@ const docTemplate = `{
                 },
                 "toPondId": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.PondSellCalcDetailItem": {
+            "type": "object",
+            "properties": {
+                "fishCount": {
+                    "type": "integer"
+                },
+                "fishSizeGradeId": {
+                    "type": "integer"
+                },
+                "pricePerUnit": {
+                    "type": "number"
+                },
+                "weight": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.PondSellCalcRequest": {
+            "type": "object",
+            "properties": {
+                "additionalCosts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdditionalCostCalcItem"
+                    }
+                },
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PondSellCalcDetailItem"
+                    }
                 }
             }
         },
@@ -3349,11 +3574,45 @@ const docTemplate = `{
             "properties": {
                 "code": {
                     "type": "string",
-                    "example": "100001"
+                    "example": "500010"
+                },
+                "details": {
+                    "type": "string",
+                    "example": "freshFeedCollectionId is required"
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/http.FieldError"
+                    }
                 },
                 "message": {
                     "type": "string",
-                    "example": "User already exists"
+                    "example": "Validation failed"
+                },
+                "request_id": {
+                    "type": "string",
+                    "example": "01HXYZ123ABC"
+                }
+            }
+        },
+        "http.FieldError": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string",
+                    "example": "freshFeedCollectionId"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "is required"
+                },
+                "tag": {
+                    "type": "string",
+                    "example": "required"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         },

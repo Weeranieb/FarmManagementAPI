@@ -57,7 +57,7 @@ func (s *ClientHandlerTestSuite) TestAddClient_Success() {
 
 	s.clientService.On("Create", mock.Anything, *createReq, username).Return(expectedResponse, nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username": username,
 	}))
@@ -78,8 +78,7 @@ func (s *ClientHandlerTestSuite) TestAddClient_Success() {
 
 func (s *ClientHandlerTestSuite) TestAddClient_InvalidBody() {
 	// GIVEN — malformed JSON body
-	s.clientService.On("Create", mock.Anything, mock.Anything, mock.Anything).Return((*dto.ClientResponse)(nil), errors.New("")).Maybe()
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "admin"}))
 	app.Post("/api/v1/client", s.clientHandler.AddClient)
 
@@ -89,9 +88,10 @@ func (s *ClientHandlerTestSuite) TestAddClient_InvalidBody() {
 	// WHEN — POST with invalid JSON is sent
 	resp, err := app.Test(req)
 
-	// THEN — error or message in response
+	// THEN — 400 (ErrInvalidRequestBody). validateAndParse short-circuits via the
+	// sentinel returned from http.NewError/http.Error.
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusBadRequest, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.True(s.T(), result["error"] != nil || result["message"] != nil)
@@ -99,13 +99,12 @@ func (s *ClientHandlerTestSuite) TestAddClient_InvalidBody() {
 
 func (s *ClientHandlerTestSuite) TestAddClient_ValidationFailed() {
 	// GIVEN — body with empty required name
-	s.clientService.On("Create", mock.Anything, mock.Anything, mock.Anything).Return((*dto.ClientResponse)(nil), errors.New("")).Maybe()
 	createReq := map[string]any{
 		"name":          "",
 		"ownerName":     "John",
 		"contactNumber": "0812345678",
 	}
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "admin"}))
 	app.Post("/api/v1/client", s.clientHandler.AddClient)
 
@@ -116,9 +115,10 @@ func (s *ClientHandlerTestSuite) TestAddClient_ValidationFailed() {
 	// WHEN — POST with invalid body is sent
 	resp, err := app.Test(req)
 
-	// THEN — error or message in response
+	// THEN — 422 (ErrValidationFailed). validateAndParse short-circuits via the
+	// sentinel.
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusUnprocessableEntity, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.True(s.T(), result["error"] != nil || result["message"] != nil)
@@ -131,7 +131,7 @@ func (s *ClientHandlerTestSuite) TestAddClient_MissingUsername() {
 		OwnerName:     "John",
 		ContactNumber: "0812345678",
 	}
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{}))
 	app.Post("/api/v1/client", s.clientHandler.AddClient)
 
@@ -142,9 +142,9 @@ func (s *ClientHandlerTestSuite) TestAddClient_MissingUsername() {
 	// WHEN — POST /api/v1/client is sent
 	resp, err := app.Test(req)
 
-	// THEN — error in response
+	// THEN — 401 (ErrAuthTokenInvalid when username missing from context)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusUnauthorized, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"])
@@ -161,7 +161,7 @@ func (s *ClientHandlerTestSuite) TestAddClient_ServiceError() {
 	svcErr := errors.New("client already exists")
 	s.clientService.On("Create", mock.Anything, *createReq, username).Return((*dto.ClientResponse)(nil), svcErr)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": username}))
 	app.Post("/api/v1/client", s.clientHandler.AddClient)
 
@@ -172,9 +172,9 @@ func (s *ClientHandlerTestSuite) TestAddClient_ServiceError() {
 	// WHEN — POST /api/v1/client is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 with message in body
+	// THEN — 500 (service returned an unknown error, mapped via ErrGeneric)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotEmpty(s.T(), result["message"])
@@ -193,7 +193,7 @@ func (s *ClientHandlerTestSuite) TestGetClient_Success() {
 	}
 	s.clientService.On("Get", 1).Return(expectedResponse, nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"clientId":  clientId,
 		"userLevel": 1,
@@ -213,7 +213,7 @@ func (s *ClientHandlerTestSuite) TestGetClient_Success() {
 
 func (s *ClientHandlerTestSuite) TestGetClient_InvalidId() {
 	// GIVEN — invalid id "not-a-number" in path
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"clientId":  1,
 		"userLevel": 1,
@@ -225,9 +225,9 @@ func (s *ClientHandlerTestSuite) TestGetClient_InvalidId() {
 	// WHEN — GET /api/v1/client/not-a-number is sent
 	resp, err := app.Test(req)
 
-	// THEN — error in response
+	// THEN — 422 (ErrValidationFailed: id param failed strconv.Atoi)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusUnprocessableEntity, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"])
@@ -235,7 +235,7 @@ func (s *ClientHandlerTestSuite) TestGetClient_InvalidId() {
 
 func (s *ClientHandlerTestSuite) TestGetClient_AccessDenied() {
 	// GIVEN — user client 1; request for client 2
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(userContextFromRequest)
 	app.Get("/api/v1/client/:id", s.clientHandler.GetClient)
 
@@ -246,9 +246,9 @@ func (s *ClientHandlerTestSuite) TestGetClient_AccessDenied() {
 	// WHEN — GET /api/v1/client/2 is sent
 	resp, err := app.Test(req)
 
-	// THEN — error in response
+	// THEN — 403 (ErrAuthPermissionDenied: cross-client access denied)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusForbidden, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"])
@@ -260,7 +260,7 @@ func (s *ClientHandlerTestSuite) TestGetClient_ServiceError() {
 	svcErr := errors.New("not found")
 	s.clientService.On("Get", 1).Return((*dto.ClientResponse)(nil), svcErr)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"clientId":  clientId,
 		"userLevel": 1,
@@ -272,9 +272,9 @@ func (s *ClientHandlerTestSuite) TestGetClient_ServiceError() {
 	// WHEN — GET /api/v1/client/1 is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 with message in body
+	// THEN — 500 (service returned an unknown error, mapped via ErrGeneric)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotEmpty(s.T(), result["message"])
@@ -291,7 +291,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_Success() {
 	}
 	s.clientService.On("GetClientDropdown").Return(expectedDropdown, nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"userLevel": 3, // super admin
 	}))
@@ -314,7 +314,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_Success() {
 
 func (s *ClientHandlerTestSuite) TestGetClientList_NotSuperAdmin() {
 	// GIVEN — userLevel 1 (not super admin)
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"userLevel": 1, // normal user
 	}))
@@ -325,9 +325,9 @@ func (s *ClientHandlerTestSuite) TestGetClientList_NotSuperAdmin() {
 	// WHEN — GET /api/v1/client/list is sent
 	resp, err := app.Test(req)
 
-	// THEN — error 500024
+	// THEN — 403 (ErrAuthPermissionDenied — non-super-admin)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusForbidden, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"])
@@ -338,7 +338,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_NotSuperAdmin() {
 
 func (s *ClientHandlerTestSuite) TestGetClientList_IsSuperAdminError() {
 	// GIVEN — no userLevel in context
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{})) // no userLevel
 	app.Get("/api/v1/client/list", s.clientHandler.GetClientList)
 
@@ -347,9 +347,9 @@ func (s *ClientHandlerTestSuite) TestGetClientList_IsSuperAdminError() {
 	// WHEN — GET /api/v1/client/list is sent
 	resp, err := app.Test(req)
 
-	// THEN — error in response
+	// THEN — 403 (handler treats IsSuperAdmin error as permission denied)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusForbidden, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"])
@@ -360,7 +360,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_ServiceError() {
 	svcErr := errors.New("db error")
 	s.clientService.On("GetClientDropdown").Return(([]*dto.DropdownItem)(nil), svcErr)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"userLevel": 3}))
 	app.Get("/api/v1/client/list", s.clientHandler.GetClientList)
 
@@ -369,9 +369,9 @@ func (s *ClientHandlerTestSuite) TestGetClientList_ServiceError() {
 	// WHEN — GET /api/v1/client/list is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 with message in body
+	// THEN — 500 (service returned an unknown error, mapped via ErrGeneric)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotEmpty(s.T(), result["message"])
@@ -383,7 +383,7 @@ func (s *ClientHandlerTestSuite) TestGetClientList_EmptyDropdown() {
 	expectedDropdown := []*dto.DropdownItem{}
 	s.clientService.On("GetClientDropdown").Return(expectedDropdown, nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"userLevel": 3}))
 	app.Get("/api/v1/client/list", s.clientHandler.GetClientList)
 
@@ -416,7 +416,7 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_Success() {
 	username := "admin"
 	s.clientService.On("Update", mock.Anything, updateReq, username).Return(nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  username,
 		"clientId":  1,
@@ -439,7 +439,7 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_Success() {
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_InvalidBody() {
 	// GIVEN — non-JSON body
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  "admin",
 		"clientId":  1,
@@ -453,12 +453,15 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_InvalidBody() {
 	// WHEN — PUT with invalid body is sent
 	resp, err := app.Test(req)
 
-	// THEN — error in response
+	// THEN — 400 (ErrInvalidRequestBody). validateAndParse short-circuits before
+	// the access check via the sentinel.
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusBadRequest, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
-	assert.NotNil(s.T(), result["error"])
+	// http.NewError writes ErrorResponseModel directly (code/message at root),
+	// not wrapped in ResponseModel.
+	assert.Equal(s.T(), "500011", result["code"])
 }
 
 func (s *ClientHandlerTestSuite) TestUpdateClient_AccessDenied() {
@@ -469,7 +472,7 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_AccessDenied() {
 		Name:     "Updated",
 		IsActive: &isActive,
 	}
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(userContextFromRequest)
 	app.Put("/api/v1/client", s.clientHandler.UpdateClient)
 
@@ -481,9 +484,9 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_AccessDenied() {
 	// WHEN — PUT with client 2 body is sent
 	resp, err := app.Test(req)
 
-	// THEN — error in response
+	// THEN — 403 (ErrAuthPermissionDenied: cross-client update denied)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusForbidden, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"])
@@ -497,7 +500,7 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_MissingUsername() {
 		Name:     "Updated",
 		IsActive: &isActive,
 	}
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"clientId":  1,
 		"userLevel": 1,
@@ -511,9 +514,9 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_MissingUsername() {
 	// WHEN — PUT /api/v1/client is sent
 	resp, err := app.Test(req)
 
-	// THEN — error in response
+	// THEN — 401 (ErrAuthTokenInvalid: username missing in context)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusUnauthorized, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotNil(s.T(), result["error"])
@@ -531,7 +534,7 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_ServiceError() {
 	svcErr := errors.New("client not found")
 	s.clientService.On("Update", mock.Anything, updateReq, username).Return(svcErr)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  username,
 		"clientId":  1,
@@ -546,9 +549,9 @@ func (s *ClientHandlerTestSuite) TestUpdateClient_ServiceError() {
 	// WHEN — PUT /api/v1/client is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 with message in body
+	// THEN — 500 (service returned an unknown error, mapped via ErrGeneric)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 	var result map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NotEmpty(s.T(), result["message"])

@@ -163,6 +163,93 @@ type PondSellResponse struct {
 	ActivePondId int64 `json:"activePondId"`
 }
 
+// --- Calculation DTOs (live form totals; pure math, no DB) ---
+
+// AdditionalCostCalcItem is a relaxed AdditionalCostItem for calc requests.
+// Title is optional so partial in-progress rows can be sent without rejecting
+// the whole request. Cost still must be >= 0.
+type AdditionalCostCalcItem struct {
+	Title string          `json:"title,omitempty"`
+	Cost  decimal.Decimal `json:"cost,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+}
+
+// PondFillCalcRequest is the body for POST /pond/fill/calc.
+// Used by the stock-action form to compute live totals as the user types.
+// Validation is intentionally relaxed (zero values allowed) so partial form
+// state still returns numeric zeros instead of an error.
+type PondFillCalcRequest struct {
+	Amount          int                      `json:"amount" validate:"min=0"`
+	FishWeight      decimal.Decimal          `json:"fishWeight,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+	PricePerUnit    decimal.Decimal          `json:"pricePerUnit,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+	AdditionalCosts []AdditionalCostCalcItem `json:"additionalCosts,omitempty" validate:"dive"`
+}
+
+// PondFillCalcResponse mirrors the cost-relevant fields of the fill preview.
+type PondFillCalcResponse struct {
+	Quantity             int                  `json:"quantity"`
+	AvgWeightKg          float64              `json:"avgWeightKg"`
+	TotalWeight          float64              `json:"totalWeight"`
+	CostPerUnit          float64              `json:"costPerUnit"`
+	BaseStockCost        float64              `json:"baseStockCost"`
+	AdditionalCosts      []AdditionalCostLine `json:"additionalCosts"`
+	AdditionalCostsTotal float64              `json:"additionalCostsTotal"`
+	TotalCost            float64              `json:"totalCost"`
+}
+
+// PondMoveCalcRequest is the body for POST /pond/move/calc.
+type PondMoveCalcRequest struct {
+	Amount          int                      `json:"amount" validate:"min=0"`
+	FishWeight      decimal.Decimal          `json:"fishWeight,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+	PricePerUnit    decimal.Decimal          `json:"pricePerUnit,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+	AdditionalCosts []AdditionalCostCalcItem `json:"additionalCosts,omitempty" validate:"dive"`
+}
+
+// PondMoveCalcResponse mirrors the cost-relevant fields of the move preview.
+type PondMoveCalcResponse struct {
+	Quantity             int                  `json:"quantity"`
+	AvgWeightKg          float64              `json:"avgWeightKg"`
+	TotalWeight          float64              `json:"totalWeight"`
+	CostPerUnit          float64              `json:"costPerUnit"`
+	BaseTransferCost     float64              `json:"baseTransferCost"`
+	AdditionalCosts      []AdditionalCostLine `json:"additionalCosts"`
+	AdditionalCostsTotal float64              `json:"additionalCostsTotal"`
+	TotalCost            float64              `json:"totalCost"`
+}
+
+// PondSellCalcDetailItem is one row in a sell-calc request. Looser than the
+// real PondSellDetailItem so partial in-progress rows can be sent.
+type PondSellCalcDetailItem struct {
+	FishSizeGradeId int             `json:"fishSizeGradeId,omitempty"`
+	Weight          decimal.Decimal `json:"weight,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+	PricePerUnit    decimal.Decimal `json:"pricePerUnit,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+	FishCount       *int            `json:"fishCount,omitempty"`
+}
+
+// PondSellCalcRequest is the body for POST /pond/sell/calc.
+type PondSellCalcRequest struct {
+	Details         []PondSellCalcDetailItem `json:"details,omitempty" validate:"dive"`
+	AdditionalCosts []AdditionalCostCalcItem `json:"additionalCosts,omitempty" validate:"dive"`
+}
+
+// PondSellCalcLine is a per-row breakdown returned by sell/calc.
+type PondSellCalcLine struct {
+	FishSizeGradeId int     `json:"fishSizeGradeId"`
+	Weight          float64 `json:"weight"`
+	PricePerKg      float64 `json:"pricePerKg"`
+	Subtotal        float64 `json:"subtotal"`
+	FishCount       *int    `json:"fishCount,omitempty"`
+}
+
+// PondSellCalcResponse mirrors the cost-relevant fields of the sell preview.
+type PondSellCalcResponse struct {
+	Items                []PondSellCalcLine   `json:"items"`
+	TotalWeight          float64              `json:"totalWeight"`
+	TotalRevenue         float64              `json:"totalRevenue"`
+	AdditionalCosts      []AdditionalCostLine `json:"additionalCosts"`
+	AdditionalCostsTotal float64              `json:"additionalCostsTotal"`
+	NetTotal             float64              `json:"netTotal"`
+}
+
 // --- Preview (Review & Confirm) DTOs ---
 
 // AdditionalCostLine is a single row in the additional-costs summary.

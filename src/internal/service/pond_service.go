@@ -35,6 +35,9 @@ type PondService interface {
 	PreviewFillPond(ctx context.Context, pondId int, request dto.PondFillRequest) (*dto.PondFillPreviewResponse, error)
 	PreviewMovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest) (*dto.PondMovePreviewResponse, error)
 	PreviewSellPond(ctx context.Context, pondId int, request dto.PondSellRequest) (*dto.PondSellPreviewResponse, error)
+	CalcFillPond(ctx context.Context, request dto.PondFillCalcRequest) *dto.PondFillCalcResponse
+	CalcMovePond(ctx context.Context, request dto.PondMoveCalcRequest) *dto.PondMoveCalcResponse
+	CalcSellPond(ctx context.Context, request dto.PondSellCalcRequest) *dto.PondSellCalcResponse
 	BulkImportFarmPond(ctx context.Context, clientId int, request dto.BulkImportFarmPondRequest) (*dto.BulkImportFarmPondResponse, error)
 }
 
@@ -344,8 +347,8 @@ func (s *pondService) FillPond(ctx context.Context, pondId int, request dto.Pond
 	}
 
 	activePond := data.ActivePond
-	// Calculate
-	fillCost := utils.CalculateFillCost(request.Amount, request.PricePerUnit, request.AdditionalCosts)
+	// Calculate: amount × fishWeight × pricePerUnit + additionalCosts (price is per kg)
+	fillCost := utils.CalculateFillCost(request.Amount, request.PricePerUnit, request.FishWeight, request.AdditionalCosts)
 
 	var resp *dto.PondFillResponse
 	err = s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
@@ -828,7 +831,7 @@ func (s *pondService) PreviewFillPond(ctx context.Context, pondId int, request d
 	}
 
 	// Reuse same calculation as FillPond
-	fillCost := utils.CalculateFillCost(request.Amount, request.PricePerUnit, request.AdditionalCosts)
+	fillCost := utils.CalculateFillCost(request.Amount, request.PricePerUnit, request.FishWeight, request.AdditionalCosts)
 	additionalTotal := utils.CalculateAdditionalCostsTotal(request.AdditionalCosts)
 	baseCost := fillCost.Sub(additionalTotal)
 	totalCost, _ := fillCost.Float64()
@@ -948,6 +951,98 @@ func (s *pondService) PreviewSellPond(ctx context.Context, pondId int, request d
 		TotalRevenue: totalRevenue,
 		TotalWeight:  totalWeight,
 	}, nil
+}
+
+// toAdditionalCostItems converts the relaxed calc-request shape into the
+// stricter shape consumed by utils.* and buildAdditionalCostLines.
+func toAdditionalCostItems(calcs []dto.AdditionalCostCalcItem) []dto.AdditionalCostItem {
+	if len(calcs) == 0 {
+		return nil
+	}
+	out := make([]dto.AdditionalCostItem, 0, len(calcs))
+	for _, c := range calcs {
+		out = append(out, dto.AdditionalCostItem(c))
+	}
+	return out
+}
+
+// CalcFillPond returns live cost/weight totals for the fill form. Pure math,
+// no DB access — used by the stock-action modal to display running totals.
+func (s *pondService) CalcFillPond(_ context.Context, request dto.PondFillCalcRequest) *dto.PondFillCalcResponse {
+	addCosts := toAdditionalCostItems(request.AdditionalCosts)
+	fillCost := utils.CalculateFillCost(request.Amount, request.PricePerUnit, request.FishWeight, addCosts)
+	additionalTotal := utils.CalculateAdditionalCostsTotal(addCosts)
+	baseCost := fillCost.Sub(additionalTotal)
+	totalCostF, _ := fillCost.Float64()
+	additionalTotalF, _ := additionalTotal.Float64()
+	baseCostF, _ := baseCost.Float64()
+	pricePerUnit, _ := request.PricePerUnit.Float64()
+	fishWeight, _ := request.FishWeight.Float64()
+	return &dto.PondFillCalcResponse{
+		Quantity:             request.Amount,
+		AvgWeightKg:          fishWeight,
+		TotalWeight:          float64(request.Amount) * fishWeight,
+		CostPerUnit:          pricePerUnit,
+		BaseStockCost:        baseCostF,
+		AdditionalCosts:      buildAdditionalCostLines(addCosts),
+		AdditionalCostsTotal: additionalTotalF,
+		TotalCost:            totalCostF,
+	}
+}
+
+// CalcMovePond returns live cost/weight totals for the move form. Pure math.
+// Move cost formula: amount × fishWeight × pricePerUnit + additionalCosts.
+func (s *pondService) CalcMovePond(_ context.Context, request dto.PondMoveCalcRequest) *dto.PondMoveCalcResponse {
+	addCosts := toAdditionalCostItems(request.AdditionalCosts)
+	fishCost, additionalCost := utils.CalculateMoveCost(request.Amount, request.PricePerUnit, request.FishWeight, addCosts)
+	totalCost := fishCost.Add(additionalCost)
+	fishCostF, _ := fishCost.Float64()
+	additionalCostF, _ := additionalCost.Float64()
+	totalCostF, _ := totalCost.Float64()
+	pricePerUnit, _ := request.PricePerUnit.Float64()
+	fishWeight, _ := request.FishWeight.Float64()
+	return &dto.PondMoveCalcResponse{
+		Quantity:             request.Amount,
+		AvgWeightKg:          fishWeight,
+		TotalWeight:          float64(request.Amount) * fishWeight,
+		CostPerUnit:          pricePerUnit,
+		BaseTransferCost:     fishCostF,
+		AdditionalCosts:      buildAdditionalCostLines(addCosts),
+		AdditionalCostsTotal: additionalCostF,
+		TotalCost:            totalCostF,
+	}
+}
+
+// CalcSellPond returns live revenue/weight totals for the sell form. Pure math.
+// Skips fish-size-grade lookup so partial in-progress rows can be sent.
+func (s *pondService) CalcSellPond(_ context.Context, request dto.PondSellCalcRequest) *dto.PondSellCalcResponse {
+	items := make([]dto.PondSellCalcLine, 0, len(request.Details))
+	var totalRevenue, totalWeight float64
+	for _, d := range request.Details {
+		w, _ := d.Weight.Float64()
+		ppu, _ := d.PricePerUnit.Float64()
+		subtotal := w * ppu
+		items = append(items, dto.PondSellCalcLine{
+			FishSizeGradeId: d.FishSizeGradeId,
+			Weight:          w,
+			PricePerKg:      ppu,
+			Subtotal:        subtotal,
+			FishCount:       d.FishCount,
+		})
+		totalRevenue += subtotal
+		totalWeight += w
+	}
+	addCosts := toAdditionalCostItems(request.AdditionalCosts)
+	additionalTotal := utils.CalculateAdditionalCostsTotal(addCosts)
+	additionalTotalF, _ := additionalTotal.Float64()
+	return &dto.PondSellCalcResponse{
+		Items:                items,
+		TotalWeight:          totalWeight,
+		TotalRevenue:         totalRevenue,
+		AdditionalCosts:      buildAdditionalCostLines(addCosts),
+		AdditionalCostsTotal: additionalTotalF,
+		NetTotal:             totalRevenue - additionalTotalF,
+	}
 }
 
 // validateSellGradeIDs checks that all FishSizeGradeId values in the details exist.

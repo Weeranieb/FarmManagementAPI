@@ -1,5 +1,12 @@
 basePath: /api/v1
 definitions:
+  dto.AdditionalCostCalcItem:
+    properties:
+      cost:
+        type: number
+      title:
+        type: string
+    type: object
   dto.AdditionalCostItem:
     properties:
       cost:
@@ -251,9 +258,7 @@ definitions:
       deathFishCount:
         minimum: 0
         type: integer
-      freshEvening:
-        type: number
-      freshMorning:
+      fresh:
         type: number
       pelletEvening:
         type: number
@@ -271,9 +276,7 @@ definitions:
         type: integer
       deathFishCount:
         type: integer
-      freshEvening:
-        type: number
-      freshMorning:
+      fresh:
         type: number
       freshUnitPrice:
         type: number
@@ -339,6 +342,20 @@ definitions:
     - password
     - username
     type: object
+  dto.PondFillCalcRequest:
+    properties:
+      additionalCosts:
+        items:
+          $ref: '#/definitions/dto.AdditionalCostCalcItem'
+        type: array
+      amount:
+        minimum: 0
+        type: integer
+      fishWeight:
+        type: number
+      pricePerUnit:
+        type: number
+    type: object
   dto.PondFillRequest:
     properties:
       activityDate:
@@ -363,6 +380,20 @@ definitions:
     - amount
     - fishType
     - pricePerUnit
+    type: object
+  dto.PondMoveCalcRequest:
+    properties:
+      additionalCosts:
+        items:
+          $ref: '#/definitions/dto.AdditionalCostCalcItem'
+        type: array
+      amount:
+        minimum: 0
+        type: integer
+      fishWeight:
+        type: number
+      pricePerUnit:
+        type: number
     type: object
   dto.PondMoveRequest:
     properties:
@@ -393,6 +424,28 @@ definitions:
     - fishType
     - pricePerUnit
     - toPondId
+    type: object
+  dto.PondSellCalcDetailItem:
+    properties:
+      fishCount:
+        type: integer
+      fishSizeGradeId:
+        type: integer
+      pricePerUnit:
+        type: number
+      weight:
+        type: number
+    type: object
+  dto.PondSellCalcRequest:
+    properties:
+      additionalCosts:
+        items:
+          $ref: '#/definitions/dto.AdditionalCostCalcItem'
+        type: array
+      details:
+        items:
+          $ref: '#/definitions/dto.PondSellCalcDetailItem'
+        type: array
     type: object
   dto.PondSellDetailItem:
     properties:
@@ -500,10 +553,34 @@ definitions:
   http.ErrorResponseModel:
     properties:
       code:
-        example: "100001"
+        example: "500010"
+        type: string
+      details:
+        example: freshFeedCollectionId is required
+        type: string
+      fields:
+        items:
+          $ref: '#/definitions/http.FieldError'
+        type: array
+      message:
+        example: Validation failed
+        type: string
+      request_id:
+        example: 01HXYZ123ABC
+        type: string
+    type: object
+  http.FieldError:
+    properties:
+      field:
+        example: freshFeedCollectionId
         type: string
       message:
-        example: User already exists
+        example: is required
+        type: string
+      tag:
+        example: required
+        type: string
+      value:
         type: string
     type: object
   http.ResponseModel:
@@ -1896,6 +1973,97 @@ paths:
       - BearerAuth: []
       - CookieAuth: []
       summary: Bulk import farms and ponds
+      tags:
+      - pond
+  /pond/fill/calc:
+    post:
+      consumes:
+      - application/json
+      description: Compute live cost/weight totals for the fill (add stock) form.
+        Pure math, no validation against pond state. Used for live form updates as
+        the user types.
+      parameters:
+      - description: amount, fishWeight, pricePerUnit, additionalCosts
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PondFillCalcRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Calculate fill totals
+      tags:
+      - pond
+  /pond/move/calc:
+    post:
+      consumes:
+      - application/json
+      description: Compute live cost/weight totals for the move (transfer) form. Pure
+        math, no validation against pond state.
+      parameters:
+      - description: amount, fishWeight, pricePerUnit, additionalCosts
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PondMoveCalcRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Calculate move totals
+      tags:
+      - pond
+  /pond/sell/calc:
+    post:
+      consumes:
+      - application/json
+      description: Compute live revenue/weight totals for the sell form. Pure math,
+        no fish-size-grade validation.
+      parameters:
+      - description: details[], additionalCosts
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PondSellCalcRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Calculate sell totals
       tags:
       - pond
   /pond/template:

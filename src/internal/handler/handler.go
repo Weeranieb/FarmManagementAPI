@@ -57,14 +57,19 @@ func NewHandler(params HandlerParams) *Handler {
 	}
 }
 
-// validateAndParse parses the request body and validates the struct
+// validateAndParse parses the request body and validates the struct.
+//
+// Errors are wrapped (not flattened) so http.NewError can surface field-level
+// details: bad JSON → 400 with the parser error as `details`; struct validation
+// failure → 422 with a `fields` array listing each offending field's tag and
+// human-readable cause.
 func validateAndParse(c *fiber.Ctx, target any) error {
 	if err := c.BodyParser(target); err != nil {
-		return http.Error(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Message)
+		return http.NewError(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Wrap(err))
 	}
 
 	if err := utils.ValidateStruct(target); err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, errors.ErrValidationFailed.Message)
+		return http.NewError(c, errors.ErrValidationFailed.Code, errors.ErrValidationFailed.Wrap(err))
 	}
 
 	return nil

@@ -5,9 +5,11 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 )
 
-// CalculateFillCost returns cost for a single fill: amount × pricePerUnit + sum(additionalCosts).
-func CalculateFillCost(amount int, pricePerUnit decimal.Decimal, additionalCosts []dto.AdditionalCostItem) decimal.Decimal {
-	fishCost := decimal.NewFromInt(int64(amount)).Mul(pricePerUnit)
+// CalculateFillCost returns cost for a single fill: amount × fishWeight × pricePerUnit + sum(additionalCosts).
+// pricePerUnit is price per kilogram, so the total stock cost scales by both
+// the number of fish and their average weight.
+func CalculateFillCost(amount int, pricePerUnit, fishWeight decimal.Decimal, additionalCosts []dto.AdditionalCostItem) decimal.Decimal {
+	fishCost := decimal.NewFromInt(int64(amount)).Mul(fishWeight).Mul(pricePerUnit)
 	fishCost = fishCost.Add(CalculateAdditionalCostsTotal(additionalCosts))
 	return fishCost
 }

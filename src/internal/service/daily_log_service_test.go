@@ -5,7 +5,7 @@ package service
 import (
 	"bytes"
 	"context"
-	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -186,7 +186,7 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_Success_WithPrices() {
 			Id:            1,
 			ActivePondId:  activePondId,
 			FeedDate:      fd,
-			FreshMorning:  decimal.RequireFromString("1"),
+			Fresh:         decimal.RequireFromString("1"),
 			PelletMorning: decimal.RequireFromString("2"),
 		},
 	}, nil)
@@ -241,11 +241,39 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_DayUsesThailandCalendarWhenUTCDa
 
 func intPtr(v int) *int { return &v }
 
+// readTestXlsx builds an in-memory daily-log template with the post-collapse
+// single-fresh-column layout. Sheet name "1 ซ้าย" matches the legacy fixture so
+// caller assertions on `firstSheetName` continue to work.
 func readTestXlsx(t *testing.T) []byte {
 	t.Helper()
-	data, err := os.ReadFile("../excel/excel_dailylog/test_no_fishing.xlsx")
+	f := excelize.NewFile()
+	defer func() { _ = f.Close() }()
+	sheet := "1 ซ้าย"
+	require.NoError(t, f.SetSheetName(f.GetSheetName(0), sheet))
+
+	// Mar block at column 2 (B): B=fresh, C=pelletMorning, D=pelletEvening, E=death.
+	require.NoError(t, f.SetCellValue(sheet, "B1", "Mar-69"))
+	require.NoError(t, f.SetCellValue(sheet, "B2", "เหยื่อ"))
+	require.NoError(t, f.SetCellValue(sheet, "C2", "อาหาร"))
+	require.NoError(t, f.SetCellValue(sheet, "D2", "อาหาร"))
+	require.NoError(t, f.SetCellValue(sheet, "E2", "ตาย"))
+	require.NoError(t, f.SetCellValue(sheet, "C3", "เช้า"))
+	require.NoError(t, f.SetCellValue(sheet, "D3", "เย็น"))
+
+	for i := 0; i < 7; i++ {
+		cell := "A" + strconv.Itoa(5+i)
+		require.NoError(t, f.SetCellValue(sheet, cell, strconv.Itoa(i+1)))
+	}
+	require.NoError(t, f.SetCellValue(sheet, "B9", "2"))
+	require.NoError(t, f.SetCellValue(sheet, "C10", "1"))
+	require.NoError(t, f.SetCellValue(sheet, "D11", "1"))
+
+	require.NoError(t, f.SetCellValue(sheet, "B42", "1"))
+	require.NoError(t, f.SetCellValue(sheet, "B43", "2"))
+
+	buf, err := f.WriteToBuffer()
 	require.NoError(t, err)
-	return data
+	return buf.Bytes()
 }
 
 func firstSheetName(t *testing.T, xlsxBytes []byte) string {
@@ -264,7 +292,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_PondNotActive() {
 	err := s.svc.BulkUpsert(ctx, 3, dto.DailyLogBulkUpsertRequest{
 		Month: "2024-01",
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.Zero, FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.ErrorIs(s.T(), err, errors.ErrPondNotActive)
@@ -276,7 +304,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_InvalidMonth() {
 	err := s.svc.BulkUpsert(ctx, 1, dto.DailyLogBulkUpsertRequest{
 		Month: "xx",
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.Zero, FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.Error(s.T(), err)
@@ -292,7 +320,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_FeedCollectionWrongType() {
 		Month:                 "2024-01",
 		FreshFeedCollectionId: &pid,
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.RequireFromString("1"), FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.RequireFromString("1"), PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.Error(s.T(), err)
@@ -307,7 +335,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_Success() {
 	s.feedCollectionRepo.On("GetByID", 5).Return(&model.FeedCollection{Id: 5, FeedType: constants.FeedTypePellet}, nil)
 	s.dailyLogRepo.On("Upsert", mock.Anything, mock.MatchedBy(func(logs []*model.DailyLog) bool {
 		return len(logs) == 1 && logs[0].ActivePondId == 10 &&
-			logs[0].FreshMorning.Equal(decimal.RequireFromString("1"))
+			logs[0].Fresh.Equal(decimal.RequireFromString("1"))
 	})).Return(nil)
 	s.dailyLogRepo.On("HardDeleteByActivePondAndDates", mock.Anything, 10, mock.Anything).Return(nil)
 	s.activePondRepo.On("Update", mock.Anything, mock.MatchedBy(func(ap *model.ActivePond) bool {
@@ -320,7 +348,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_Success() {
 		FreshFeedCollectionId:  &fid,
 		PelletFeedCollectionId: &pid,
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.RequireFromString("1"), FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.RequireFromString("1"), PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.NoError(s.T(), err)
@@ -339,7 +367,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_UsesActivePondDefaultsWhenRequ
 	s.feedCollectionRepo.On("GetByID", 5).Return(&model.FeedCollection{Id: 5, FeedType: constants.FeedTypePellet}, nil)
 	s.dailyLogRepo.On("Upsert", mock.Anything, mock.MatchedBy(func(logs []*model.DailyLog) bool {
 		return len(logs) == 1 && logs[0].ActivePondId == 10 &&
-			logs[0].FreshMorning.Equal(decimal.RequireFromString("1"))
+			logs[0].Fresh.Equal(decimal.RequireFromString("1"))
 	})).Return(nil)
 	s.dailyLogRepo.On("HardDeleteByActivePondAndDates", mock.Anything, 10, mock.Anything).Return(nil)
 	s.activePondRepo.On("Update", mock.Anything, mock.MatchedBy(func(ap *model.ActivePond) bool {
@@ -350,7 +378,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_UsesActivePondDefaultsWhenRequ
 	err := s.svc.BulkUpsert(ctx, 1, dto.DailyLogBulkUpsertRequest{
 		Month: "2024-01",
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.RequireFromString("1"), FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.RequireFromString("1"), PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.NoError(s.T(), err)
@@ -500,7 +528,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_SkipsInvalidDayForMonth() {
 	err := s.svc.BulkUpsert(ctx, 1, dto.DailyLogBulkUpsertRequest{
 		Month: "2024-02",
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 31, FreshMorning: decimal.Zero, FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 31, Fresh: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.NoError(s.T(), err)

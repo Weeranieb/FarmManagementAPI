@@ -3,6 +3,7 @@ package utils
 import (
 	"reflect"
 	"regexp"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/shopspring/decimal"
@@ -15,6 +16,16 @@ var passwordRE = regexp.MustCompile(`^[A-Za-z0-9]{8,}$`)
 
 func init() {
 	validate = validator.New()
+
+	// Report the JSON name (camelCase) instead of the Go struct field name so
+	// validation errors say `freshFeedCollectionId`, not `FreshFeedCollectionId`.
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		return name
+	})
 	// decimal_gt0: decimal.Decimal must be > 0 (use with required or omitempty as needed)
 	_ = validate.RegisterValidation("decimal_gt0", func(fl validator.FieldLevel) bool {
 		f := fl.Field()

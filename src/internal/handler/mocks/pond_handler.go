@@ -103,6 +103,24 @@ func (_m *MockPondHandler) FillPond(c *fiber.Ctx) error {
 	return r0
 }
 
+// FillPondCalc provides a mock function with given fields: c
+func (_m *MockPondHandler) FillPondCalc(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FillPondCalc")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // FillPondPreview provides a mock function with given fields: c
 func (_m *MockPondHandler) FillPondPreview(c *fiber.Ctx) error {
 	ret := _m.Called(c)
@@ -193,6 +211,24 @@ func (_m *MockPondHandler) MovePond(c *fiber.Ctx) error {
 	return r0
 }
 
+// MovePondCalc provides a mock function with given fields: c
+func (_m *MockPondHandler) MovePondCalc(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MovePondCalc")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // MovePondPreview provides a mock function with given fields: c
 func (_m *MockPondHandler) MovePondPreview(c *fiber.Ctx) error {
 	ret := _m.Called(c)
@@ -217,6 +253,24 @@ func (_m *MockPondHandler) SellPond(c *fiber.Ctx) error {
 
 	if len(ret) == 0 {
 		panic("no return value specified for SellPond")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*fiber.Ctx) error); ok {
+		r0 = rf(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SellPondCalc provides a mock function with given fields: c
+func (_m *MockPondHandler) SellPondCalc(c *fiber.Ctx) error {
+	ret := _m.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SellPondCalc")
 	}
 
 	var r0 error

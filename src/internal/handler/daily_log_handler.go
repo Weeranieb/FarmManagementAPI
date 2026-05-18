@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 
@@ -102,10 +103,23 @@ func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 
 	err = h.dailyLogService.BulkUpsert(c.UserContext(), pondId, request, username)
 	if err != nil {
+		log.Printf(
+			"[daily-log][bulk-upsert] pondId=%d user=%s month=%s freshFcId=%v pelletFcId=%v entries=%d deleteDays=%d err=%v",
+			pondId, username, request.Month,
+			fcPtrLog(request.FreshFeedCollectionId), fcPtrLog(request.PelletFeedCollectionId),
+			len(request.Entries), len(request.DeleteDays), err,
+		)
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
 	return http.SuccessWithoutData(c)
+}
+
+func fcPtrLog(p *int) any {
+	if p == nil {
+		return "nil"
+	}
+	return *p
 }
 
 // POST /farm/:farmId/daily-logs/import-template
