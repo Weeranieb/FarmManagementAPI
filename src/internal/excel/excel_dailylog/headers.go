@@ -6,14 +6,11 @@ func normalizeHeader(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
 }
 
-func headerLooksLikeFreshMorning(nh string) bool {
-	return (strings.Contains(nh, "เหยื่อ") || strings.Contains(nh, "fresh")) &&
-		(strings.Contains(nh, "เช้า") || strings.Contains(nh, "morning"))
-}
-
-func headerLooksLikeFreshEvening(nh string) bool {
-	return (strings.Contains(nh, "เหยื่อ") || strings.Contains(nh, "fresh")) &&
-		(strings.Contains(nh, "เย็น") || strings.Contains(nh, "evening"))
+func headerLooksLikeFresh(nh string) bool {
+	fresh := strings.Contains(nh, "เหยื่อ") || strings.Contains(nh, "fresh")
+	session := strings.Contains(nh, "เช้า") || strings.Contains(nh, "เย็น") ||
+		strings.Contains(nh, "morning") || strings.Contains(nh, "evening")
+	return fresh && !session
 }
 
 func headerLooksLikePelletMorning(nh string) bool {

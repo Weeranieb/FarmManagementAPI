@@ -27,6 +27,9 @@ type PondHandler interface {
 	FillPondPreview(c *fiber.Ctx) error
 	MovePondPreview(c *fiber.Ctx) error
 	SellPondPreview(c *fiber.Ctx) error
+	FillPondCalc(c *fiber.Ctx) error
+	MovePondCalc(c *fiber.Ctx) error
+	SellPondCalc(c *fiber.Ctx) error
 	DownloadTemplate(c *fiber.Ctx) error
 	BulkImportFarmPond(c *fiber.Ctx) error
 }
@@ -522,6 +525,87 @@ func (h *pondHandlerImpl) SellPondPreview(c *fiber.Ctx) error {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return http.Success(c, response)
+}
+
+// POST /pond/fill/calc
+// Live totals for the fill form (no persistence, no DB). Pure math.
+// @Summary      Calculate fill totals
+// @Description  Compute live cost/weight totals for the fill (add stock) form. Pure math, no validation against pond state. Used for live form updates as the user types.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body body dto.PondFillCalcRequest true "amount, fishWeight, pricePerUnit, additionalCosts"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Router       /pond/fill/calc [post]
+func (h *pondHandlerImpl) FillPondCalc(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	var request dto.PondFillCalcRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+	return http.Success(c, h.pondService.CalcFillPond(c.UserContext(), request))
+}
+
+// POST /pond/move/calc
+// Live totals for the move form (no persistence, no DB). Pure math.
+// @Summary      Calculate move totals
+// @Description  Compute live cost/weight totals for the move (transfer) form. Pure math, no validation against pond state.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body body dto.PondMoveCalcRequest true "amount, fishWeight, pricePerUnit, additionalCosts"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Router       /pond/move/calc [post]
+func (h *pondHandlerImpl) MovePondCalc(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	var request dto.PondMoveCalcRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+	return http.Success(c, h.pondService.CalcMovePond(c.UserContext(), request))
+}
+
+// POST /pond/sell/calc
+// Live totals for the sell form (no persistence, no DB). Pure math.
+// @Summary      Calculate sell totals
+// @Description  Compute live revenue/weight totals for the sell form. Pure math, no fish-size-grade validation.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body body dto.PondSellCalcRequest true "details[], additionalCosts"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Router       /pond/sell/calc [post]
+func (h *pondHandlerImpl) SellPondCalc(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
+		}
+	}()
+
+	var request dto.PondSellCalcRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+	return http.Success(c, h.pondService.CalcSellPond(c.UserContext(), request))
 }
 
 // GET /pond/template

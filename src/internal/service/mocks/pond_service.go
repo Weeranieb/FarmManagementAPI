@@ -44,6 +44,66 @@ func (_m *MockPondService) BulkImportFarmPond(ctx context.Context, clientId int,
 	return r0, r1
 }
 
+// CalcFillPond provides a mock function with given fields: ctx, request
+func (_m *MockPondService) CalcFillPond(ctx context.Context, request dto.PondFillCalcRequest) *dto.PondFillCalcResponse {
+	ret := _m.Called(ctx, request)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CalcFillPond")
+	}
+
+	var r0 *dto.PondFillCalcResponse
+	if rf, ok := ret.Get(0).(func(context.Context, dto.PondFillCalcRequest) *dto.PondFillCalcResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*dto.PondFillCalcResponse)
+		}
+	}
+
+	return r0
+}
+
+// CalcMovePond provides a mock function with given fields: ctx, request
+func (_m *MockPondService) CalcMovePond(ctx context.Context, request dto.PondMoveCalcRequest) *dto.PondMoveCalcResponse {
+	ret := _m.Called(ctx, request)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CalcMovePond")
+	}
+
+	var r0 *dto.PondMoveCalcResponse
+	if rf, ok := ret.Get(0).(func(context.Context, dto.PondMoveCalcRequest) *dto.PondMoveCalcResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*dto.PondMoveCalcResponse)
+		}
+	}
+
+	return r0
+}
+
+// CalcSellPond provides a mock function with given fields: ctx, request
+func (_m *MockPondService) CalcSellPond(ctx context.Context, request dto.PondSellCalcRequest) *dto.PondSellCalcResponse {
+	ret := _m.Called(ctx, request)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CalcSellPond")
+	}
+
+	var r0 *dto.PondSellCalcResponse
+	if rf, ok := ret.Get(0).(func(context.Context, dto.PondSellCalcRequest) *dto.PondSellCalcResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*dto.PondSellCalcResponse)
+		}
+	}
+
+	return r0
+}
+
 // CreatePonds provides a mock function with given fields: ctx, request
 func (_m *MockPondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest) error {
 	ret := _m.Called(ctx, request)

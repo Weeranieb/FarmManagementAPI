@@ -64,7 +64,7 @@ func (r *dailyLogRepository) Upsert(ctx context.Context, logs []*model.DailyLog)
 			TargetWhere: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: "deleted_at IS NULL"}}},
 			// Feed collection IDs live on active_ponds only; created_by comes from BaseModel hooks on insert.
 			DoUpdates: clause.AssignmentColumns([]string{
-				"fresh_morning", "fresh_evening", "pellet_morning", "pellet_evening",
+				"fresh", "pellet_morning", "pellet_evening",
 				"death_fish_count", "tourist_catch_count",
 				"updated_by", "updated_at",
 			}),

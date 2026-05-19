@@ -6,8 +6,7 @@ import "github.com/shopspring/decimal"
 
 type DailyLogEntryInput struct {
 	Day               int             `json:"day" validate:"required,min=1,max=31"`
-	FreshMorning      decimal.Decimal `json:"freshMorning" validate:"decimal_gte0" swaggertype:"number"`
-	FreshEvening      decimal.Decimal `json:"freshEvening" validate:"decimal_gte0" swaggertype:"number"`
+	Fresh             decimal.Decimal `json:"fresh" validate:"decimal_gte0" swaggertype:"number"`
 	PelletMorning     decimal.Decimal `json:"pelletMorning" validate:"decimal_gte0" swaggertype:"number"`
 	PelletEvening     decimal.Decimal `json:"pelletEvening" validate:"decimal_gte0" swaggertype:"number"`
 	DeathFishCount    int             `json:"deathFishCount" validate:"gte=0"`
@@ -27,8 +26,7 @@ type DailyLogBulkUpsertRequest struct {
 type DailyLogEntryResponse struct {
 	Id                int              `json:"id"`
 	Day               int              `json:"day"`
-	FreshMorning      decimal.Decimal  `json:"freshMorning"`
-	FreshEvening      decimal.Decimal  `json:"freshEvening"`
+	Fresh             decimal.Decimal  `json:"fresh"`
 	PelletMorning     decimal.Decimal  `json:"pelletMorning"`
 	PelletEvening     decimal.Decimal  `json:"pelletEvening"`
 	DeathFishCount    int              `json:"deathFishCount"`

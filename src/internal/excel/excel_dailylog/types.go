@@ -19,8 +19,7 @@ type ParsedSheet struct {
 // AvgBodyWeight and FishCount are optional Excel-only columns (not on model.DailyLog).
 type ExtractedDailyLogRow struct {
 	FeedDate          time.Time
-	FreshMorning      decimal.Decimal
-	FreshEvening      decimal.Decimal
+	Fresh             decimal.Decimal
 	PelletMorning     decimal.Decimal
 	PelletEvening     decimal.Decimal
 	DeathFishCount    int
@@ -34,8 +33,7 @@ func (e ExtractedDailyLogRow) ToDailyLog(activePondId int, createdBy string) mod
 	return model.DailyLog{
 		ActivePondId:      activePondId,
 		FeedDate:          e.FeedDate,
-		FreshMorning:      e.FreshMorning,
-		FreshEvening:      e.FreshEvening,
+		Fresh:             e.Fresh,
 		PelletMorning:     e.PelletMorning,
 		PelletEvening:     e.PelletEvening,
 		DeathFishCount:    e.DeathFishCount,

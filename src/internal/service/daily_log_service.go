@@ -160,7 +160,7 @@ func (s *dailyLogService) validateBulkIDs(req *dto.DailyLogBulkUpsertRequest) er
 	}
 
 	for _, e := range req.Entries {
-		if !e.FreshMorning.IsZero() || !e.FreshEvening.IsZero() {
+		if !e.Fresh.IsZero() {
 			if req.FreshFeedCollectionId == nil || *req.FreshFeedCollectionId <= 0 {
 				return errors.ErrValidationFailed.Wrap(fmt.Errorf("freshFeedCollectionId is required when logging fresh feed amounts"))
 			}
@@ -251,8 +251,7 @@ func (s *dailyLogService) GetMonth(ctx context.Context, pondId int, month string
 		er := dto.DailyLogEntryResponse{
 			Id:                e.Id,
 			Day:               utils.CalendarDay(e.FeedDate),
-			FreshMorning:      e.FreshMorning,
-			FreshEvening:      e.FreshEvening,
+			Fresh:             e.Fresh,
 			PelletMorning:     e.PelletMorning,
 			PelletEvening:     e.PelletEvening,
 			DeathFishCount:    e.DeathFishCount,
@@ -304,8 +303,7 @@ func (s *dailyLogService) BulkUpsert(ctx context.Context, pondId int, request dt
 		models = append(models, &model.DailyLog{
 			ActivePondId:      activePondId,
 			FeedDate:          feedDate,
-			FreshMorning:      e.FreshMorning,
-			FreshEvening:      e.FreshEvening,
+			Fresh:             e.Fresh,
 			PelletMorning:     e.PelletMorning,
 			PelletEvening:     e.PelletEvening,
 			DeathFishCount:    e.DeathFishCount,

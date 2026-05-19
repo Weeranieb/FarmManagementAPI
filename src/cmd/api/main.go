@@ -1,20 +1,22 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/di"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/handler"
+	appmiddleware "github.com/weeranieb/boonmafarm-backend/src/internal/middleware"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/router"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/logging"
 
 	_ "github.com/weeranieb/boonmafarm-backend/docs"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"go.uber.org/dig"
 )
@@ -42,6 +44,7 @@ var (
 // @description JWT token stored in HTTP-only cookie (automatically sent by browser)
 func main() {
 	conf := LoadConfigFunc()
+	logging.Init(conf.App.Environment, conf.App.LogLevel)
 
 	// Dependency Injection
 	container := di.NewContainer(conf)
@@ -54,14 +57,15 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		for range c {
-			log.Println("Gracefully shutting down...")
+			slog.Info("server shutting down")
 			shutdownServer()
 		}
 	}()
 
-	log.Println("Starting server on " + conf.GetServerAddress())
+	slog.Info("server starting", "address", conf.GetServerAddress())
 	if err := app.Listen(conf.GetServerAddress()); err != nil {
-		log.Fatal("Failed to start server", err)
+		slog.Error("failed to start server", "err", err)
+		os.Exit(1)
 	}
 }
 
@@ -69,10 +73,20 @@ func setupAndStartServer(conf *config.Config, container *dig.Container) {
 	app = fiber.New(fiber.Config{
 		ReadBufferSize: 60 * 1024,
 		BodyLimit:      10 * 1024 * 1024, // 10MB
+		ErrorHandler:   appmiddleware.ErrorHandler,
 	})
 
-	app.Use(logger.New())
-	app.Use(recover.New())
+	app.Use(appmiddleware.RequestID())
+	app.Use(logging.AccessLog())
+	app.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e any) {
+			logging.FromCtx(c).Error("panic recovered",
+				"panic", e,
+				"stack", string(debug.Stack()),
+			)
+		},
+	}))
 
 	// Construct the Handler using DI container
 	var handlers *handler.Handler
@@ -81,20 +95,23 @@ func setupAndStartServer(conf *config.Config, container *dig.Container) {
 		handlers = h
 	})
 	if err != nil {
-		log.Fatal("DI error", err)
+		slog.Error("DI error", "err", err)
+		os.Exit(1)
 	}
 
 	router.SetupRoutes(app, conf, handlers)
 	if err := app.Listen(conf.GetServerAddress()); err != nil {
-		log.Fatal("Failed to start server: ", err)
+		slog.Error("failed to start server", "err", err)
+		os.Exit(1)
 	}
 }
 
 func shutdownServer() {
-	log.Println("Fiber was successfully shut down.")
+	slog.Info("fiber shutting down")
 
 	if err := app.Shutdown(); err != nil {
-		log.Fatal("Error shutting down Fiber", err)
+		slog.Error("error shutting down fiber", "err", err)
+		os.Exit(1)
 	}
 	os.Exit(0)
 }
