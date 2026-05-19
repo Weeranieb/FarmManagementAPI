@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.4](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.3...v0.2.4) (2026-05-19)
+
+
+### Features
+
+* **daily-log:** collapse feed columns and improve API error responses ([#28](https://github.com/Weeranieb/FarmManagementAPI/issues/28)) ([89693b2](https://github.com/Weeranieb/FarmManagementAPI/commit/89693b29ad36fd98c662fe5e8ca424182b795405))
+
 ## [0.2.3](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.2...v0.2.3) (2026-05-15)
 
 
