@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
@@ -106,7 +107,7 @@ func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 		log.Printf(
 			"[daily-log][bulk-upsert] pondId=%d user=%s month=%s freshFcId=%v pelletFcId=%v entries=%d deleteDays=%d err=%v",
 			pondId, username, request.Month,
-			fcPtrLog(request.FreshFeedCollectionId), fcPtrLog(request.PelletFeedCollectionId),
+			lo.FromPtr(request.FreshFeedCollectionId), lo.FromPtr(request.PelletFeedCollectionId),
 			len(request.Entries), len(request.DeleteDays), err,
 		)
 		return http.NewError(c, errors.ErrGeneric.Code, err)
@@ -118,20 +119,6 @@ func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 	}
 
 	return http.Success(c, result)
-}
-
-func fcPtrLog(p *int) any {
-	if p == nil {
-		return "nil"
-	}
-	return *p
-}
-
-func fcPtrLog(p *int) any {
-	if p == nil {
-		return "nil"
-	}
-	return *p
 }
 
 // POST /farm/:farmId/daily-logs/import-template
