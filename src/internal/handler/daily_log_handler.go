@@ -127,6 +127,13 @@ func fcPtrLog(p *int) any {
 	return *p
 }
 
+func fcPtrLog(p *int) any {
+	if p == nil {
+		return "nil"
+	}
+	return *p
+}
+
 // POST /farm/:farmId/daily-logs/import-template
 // @Summary      Upload multi-pond Excel template and import daily logs
 // @Tags         farm
