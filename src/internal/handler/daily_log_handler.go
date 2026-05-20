@@ -77,7 +77,7 @@ func (h *dailyLogHandlerImpl) GetMonth(c *fiber.Ctx) (err error) {
 // @Tags         pond
 // @Param        pondId path int true "Pond ID"
 // @Param        body body dto.DailyLogBulkUpsertRequest true "Month + optional collection IDs + entries"
-// @Success      200  {object}  http.ResponseModel
+// @Success      200  {object}  http.ResponseModel{data=dto.DailyLogMonthResponse}
 // @Router       /pond/{pondId}/daily-logs [put]
 func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 	defer func() {
@@ -112,7 +112,12 @@ func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
-	return http.SuccessWithoutData(c)
+	result, err := h.dailyLogService.GetMonth(c.UserContext(), pondId, request.Month)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, result)
 }
 
 func fcPtrLog(p *int) any {

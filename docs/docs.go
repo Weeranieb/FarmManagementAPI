@@ -1883,7 +1883,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DailyLogMonthResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }

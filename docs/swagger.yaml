@@ -1670,7 +1670,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/http.ResponseModel'
+            allOf:
+            - $ref: '#/definitions/http.ResponseModel'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DailyLogMonthResponse'
+              type: object
       summary: Upsert daily logs for a month
       tags:
       - pond
