@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
@@ -77,7 +78,7 @@ func (h *dailyLogHandlerImpl) GetMonth(c *fiber.Ctx) (err error) {
 // @Tags         pond
 // @Param        pondId path int true "Pond ID"
 // @Param        body body dto.DailyLogBulkUpsertRequest true "Month + optional collection IDs + entries"
-// @Success      200  {object}  http.ResponseModel
+// @Success      200  {object}  http.ResponseModel{data=dto.DailyLogMonthResponse}
 // @Router       /pond/{pondId}/daily-logs [put]
 func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 	defer func() {
@@ -106,20 +107,18 @@ func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 		log.Printf(
 			"[daily-log][bulk-upsert] pondId=%d user=%s month=%s freshFcId=%v pelletFcId=%v entries=%d deleteDays=%d err=%v",
 			pondId, username, request.Month,
-			fcPtrLog(request.FreshFeedCollectionId), fcPtrLog(request.PelletFeedCollectionId),
+			lo.FromPtr(request.FreshFeedCollectionId), lo.FromPtr(request.PelletFeedCollectionId),
 			len(request.Entries), len(request.DeleteDays), err,
 		)
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
-	return http.SuccessWithoutData(c)
-}
-
-func fcPtrLog(p *int) any {
-	if p == nil {
-		return "nil"
+	result, err := h.dailyLogService.GetMonth(c.UserContext(), pondId, request.Month)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
-	return *p
+
+	return http.Success(c, result)
 }
 
 // POST /farm/:farmId/daily-logs/import-template

@@ -2,13 +2,13 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"time"
 
-	"github.com/shopspring/decimal"
+	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository/projection"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -117,7 +117,7 @@ func rowToPondWithFarmAndActivePond(row *projection.PondFillQueryRow) *PondWithF
 		FarmId: row.PondFarmId,
 		Name:   row.PondName,
 		Status: row.PondStatus,
-		Area:   decimalFromStringPtr(row.PondArea),
+		Area:   utils.DecimalFromStringPtr(row.PondArea),
 		BaseModel: model.BaseModel{
 			DeletedAt: row.PondDeletedAt,
 			CreatedAt: row.PondCreatedAt,
@@ -128,25 +128,10 @@ func rowToPondWithFarmAndActivePond(row *projection.PondFillQueryRow) *PondWithF
 	}
 	out := &PondWithFarmAndActivePond{Pond: pond, ClientId: row.ClientId, LatestActivityDate: row.LatestActivityDate, LatestActivityType: row.LatestActivityType}
 	if row.ApId != nil {
-		totalCost := decimal.Zero
-		if row.ApTotalCost != nil {
-			if d, err := decimal.NewFromString(*row.ApTotalCost); err == nil {
-				totalCost = d
-			}
-		}
-		totalProfit := decimal.Zero
-		if row.ApTotalProfit != nil {
-			if d, err := decimal.NewFromString(*row.ApTotalProfit); err == nil {
-				totalProfit = d
-			}
-		}
-		netResult := decimal.Zero
-		if row.ApNetResult != nil {
-			if d, err := decimal.NewFromString(*row.ApNetResult); err == nil {
-				netResult = d
-			}
-		}
-		fishTypes := parseFishTypesJSON(row.ApFishTypes)
+		totalCost := utils.DecimalFromStringPtrOrZero(row.ApTotalCost)
+		totalProfit := utils.DecimalFromStringPtrOrZero(row.ApTotalProfit)
+		netResult := utils.DecimalFromStringPtrOrZero(row.ApNetResult)
+		fishTypes := utils.StringSliceFromJSONPtr(row.ApFishTypes)
 		ap := &model.ActivePond{
 			Id:                     *row.ApId,
 			PondId:                 *row.ApPondId,
@@ -156,10 +141,10 @@ func rowToPondWithFarmAndActivePond(row *projection.PondFillQueryRow) *PondWithF
 			TotalCost:              totalCost,
 			TotalProfit:            totalProfit,
 			NetResult:              netResult,
-			TotalFish:              ptrToInt(row.ApTotalFish),
+			TotalFish:              lo.FromPtr(row.ApTotalFish),
 			FishTypes:              fishTypes,
-			FreshFeedCollectionId:  copyIntPtr(row.ApFreshFcId),
-			PelletFeedCollectionId: copyIntPtr(row.ApPelletFcId),
+			FreshFeedCollectionId:  lo.EmptyableToPtr(lo.FromPtr(row.ApFreshFcId)),
+			PelletFeedCollectionId: lo.EmptyableToPtr(lo.FromPtr(row.ApPelletFcId)),
 		}
 		if row.ApCreatedAt != nil && row.ApCreatedBy != nil && row.ApUpdatedAt != nil && row.ApUpdatedBy != nil {
 			ap.BaseModel = model.BaseModel{
@@ -197,43 +182,6 @@ func (r *pondRepository) ListByFarmIdWithActivePond(ctx context.Context, farmId 
 		out = append(out, rowToPondWithFarmAndActivePond(&rows[i]))
 	}
 	return out, nil
-}
-
-func ptrToInt(p *int) int {
-	if p == nil {
-		return 0
-	}
-	return *p
-}
-
-func decimalFromStringPtr(s *string) *decimal.Decimal {
-	if s == nil || *s == "" {
-		return nil
-	}
-	d, err := decimal.NewFromString(*s)
-	if err != nil {
-		return nil
-	}
-	return &d
-}
-
-func copyIntPtr(p *int) *int {
-	if p == nil {
-		return nil
-	}
-	v := *p
-	return &v
-}
-
-func parseFishTypesJSON(s *string) []string {
-	if s == nil || *s == "" {
-		return nil
-	}
-	var out []string
-	if err := json.Unmarshal([]byte(*s), &out); err != nil {
-		return nil
-	}
-	return out
 }
 
 func (r *pondRepository) GetByFarmIdAndName(farmId int, name string) (*model.Pond, error) {

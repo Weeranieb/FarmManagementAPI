@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -177,8 +178,8 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_Success_WithPrices() {
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
 		Id:                     activePondId,
 		PondId:                 1,
-		FreshFeedCollectionId:  intPtr(freshID),
-		PelletFeedCollectionId: intPtr(pelletID),
+		FreshFeedCollectionId:  lo.ToPtr(freshID),
+		PelletFeedCollectionId: lo.ToPtr(pelletID),
 	}), nil)
 	fd := time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)
 	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, activePondId, mock.Anything, mock.Anything).Return([]*model.DailyLog{
@@ -214,8 +215,8 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_DayUsesThailandCalendarWhenUTCDa
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
 		Id:                     activePondId,
 		PondId:                 1,
-		FreshFeedCollectionId:  intPtr(freshID),
-		PelletFeedCollectionId: intPtr(pelletID),
+		FreshFeedCollectionId:  lo.ToPtr(freshID),
+		PelletFeedCollectionId: lo.ToPtr(pelletID),
 	}), nil)
 	// Same civil calendar day as 2026-04-02 in Asia/Bangkok (midnight ICT).
 	fd := time.Date(2026, 4, 1, 17, 0, 0, 0, time.UTC)
@@ -238,8 +239,6 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_DayUsesThailandCalendarWhenUTCDa
 	require.Len(s.T(), out.Entries, 1)
 	assert.Equal(s.T(), 2, out.Entries[0].Day)
 }
-
-func intPtr(v int) *int { return &v }
 
 // readTestXlsx builds an in-memory daily-log template with the post-collapse
 // single-fresh-column layout. Sheet name "1 ซ้าย" matches the legacy fixture so

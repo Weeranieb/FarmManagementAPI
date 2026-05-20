@@ -108,6 +108,10 @@ func (s *DailyLogHandlerTestSuite) TestBulkUpsert_Success() {
 	s.dailyLogService.On("BulkUpsert", mock.Anything, 3, mock.MatchedBy(func(req dto.DailyLogBulkUpsertRequest) bool {
 		return req.Month == body.Month && len(req.Entries) == 1 && req.Entries[0].Day == 1
 	}), "alice").Return(nil)
+	// Handler now refetches the month after a successful upsert so the
+	// response body can prime the client cache.
+	s.dailyLogService.On("GetMonth", mock.Anything, 3, "2024-04").Return(
+		&dto.DailyLogMonthResponse{Entries: []dto.DailyLogEntryResponse{}}, nil)
 
 	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "alice", "userLevel": 1}))
@@ -123,6 +127,7 @@ func (s *DailyLogHandlerTestSuite) TestBulkUpsert_Success() {
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.Equal(s.T(), true, result["result"])
+	assert.NotNil(s.T(), result["data"])
 	s.dailyLogService.AssertExpectations(s.T())
 }
 
