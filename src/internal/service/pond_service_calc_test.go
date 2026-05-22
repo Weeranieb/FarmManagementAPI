@@ -92,6 +92,29 @@ func TestCalcMovePond_WithAdditionalCosts(t *testing.T) {
 	assert.InDelta(t, 1300.0, resp.TotalCost, 1e-9)
 }
 
+func TestCalcMovePond_SplitsCostsBetweenSourceAndDest(t *testing.T) {
+	// GIVEN — a move worth 1000 in fish value with 300 of additional costs;
+	// additional costs split 50/50 between the two ponds.
+	svc := newCalcOnlyService()
+	resp := svc.CalcMovePond(context.Background(), dto.PondMoveCalcRequest{
+		Amount:       10,
+		FishWeight:   decimal.RequireFromString("2"),
+		PricePerUnit: decimal.RequireFromString("50"),
+		AdditionalCosts: []dto.AdditionalCostCalcItem{
+			{Title: "fuel", Cost: decimal.RequireFromString("300")},
+		},
+	})
+
+	// THEN — source treats it as a sale: revenue 1000, cost share 150, net +850.
+	assert.InDelta(t, 1000.0, resp.SourceFishRevenue, 1e-9)
+	assert.InDelta(t, 150.0, resp.SourceAdditionalCost, 1e-9)
+	assert.InDelta(t, 850.0, resp.SourceNetEffect, 1e-9)
+	// And dest treats it as a purchase: fish 1000, cost share 150, total 1150.
+	assert.InDelta(t, 1000.0, resp.DestFishCost, 1e-9)
+	assert.InDelta(t, 150.0, resp.DestAdditionalCost, 1e-9)
+	assert.InDelta(t, 1150.0, resp.DestTotalCost, 1e-9)
+}
+
 func TestCalcSellPond_SumsLineRevenue(t *testing.T) {
 	svc := newCalcOnlyService()
 	resp := svc.CalcSellPond(context.Background(), dto.PondSellCalcRequest{

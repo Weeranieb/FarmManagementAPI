@@ -67,6 +67,36 @@ func (_m *MockActivityRepository) ListByPondID(ctx context.Context, pondId int) 
 	return r0, r1
 }
 
+// SumAdditionalCostsByActivityIDs provides a mock function with given fields: ctx, activityIds
+func (_m *MockActivityRepository) SumAdditionalCostsByActivityIDs(ctx context.Context, activityIds []int) ([]repository.AdditionalCostTotalRow, error) {
+	ret := _m.Called(ctx, activityIds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SumAdditionalCostsByActivityIDs")
+	}
+
+	var r0 []repository.AdditionalCostTotalRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []int) ([]repository.AdditionalCostTotalRow, error)); ok {
+		return rf(ctx, activityIds)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []int) []repository.AdditionalCostTotalRow); ok {
+		r0 = rf(ctx, activityIds)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.AdditionalCostTotalRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
+		r1 = rf(ctx, activityIds)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // SumSellDetailsByActivityIDs provides a mock function with given fields: ctx, activityIds
 func (_m *MockActivityRepository) SumSellDetailsByActivityIDs(ctx context.Context, activityIds []int) ([]repository.SellTotalRow, error) {
 	ret := _m.Called(ctx, activityIds)

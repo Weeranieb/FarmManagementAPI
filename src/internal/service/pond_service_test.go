@@ -690,6 +690,56 @@ func (s *PondServiceTestSuite) TestMovePond_SamePond_ReturnsInvalidInput() {
 	s.pondRepo.AssertExpectations(s.T())
 }
 
+func (s *PondServiceTestSuite) TestMovePond_AmountExceedsSourceStock_ReturnsInsufficientFish() {
+	// GIVEN — source has 100 fish, request asks to move 150
+	sourcePondId := 1
+	req := validPondMoveRequest()
+	req.Amount = 150
+	sourceData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive},
+		ClientId:   1,
+		ActivePond: &model.ActivePond{Id: 10, PondId: sourcePondId, IsActive: true, TotalFish: 100},
+	}
+	destData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: req.ToPondId, FarmId: 1, Name: "P2", Status: constants.FarmStatusActive},
+		ClientId:   1,
+		ActivePond: &model.ActivePond{Id: 20, PondId: req.ToPondId, IsActive: true},
+	}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, sourcePondId).Return(sourceData, nil)
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, req.ToPondId).Return(destData, nil)
+
+	// WHEN — MovePond is called
+	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
+
+	// THEN — ErrPondInsufficientFish; nothing persisted
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	assert.ErrorIs(s.T(), err, errors.ErrPondInsufficientFish)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestMovePond_NonPositiveAmount_ReturnsInvalidInput() {
+	// GIVEN — request asks to move zero fish
+	sourcePondId := 1
+	req := validPondMoveRequest()
+	req.Amount = 0
+	sourceData := &repository.PondWithFarmAndActivePond{
+		Pond:       &model.Pond{Id: sourcePondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive},
+		ClientId:   1,
+		ActivePond: &model.ActivePond{Id: 10, PondId: sourcePondId, IsActive: true, TotalFish: 100},
+	}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, sourcePondId).Return(sourceData, nil)
+
+	// WHEN — MovePond is called
+	resp, err := s.pondService.MovePond(fillPondCtx(), sourcePondId, req, "user")
+
+	// THEN — ErrPondInvalidInput; no destination lookup performed
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), resp)
+	assert.ErrorIs(s.T(), err, errors.ErrPondInvalidInput)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
 func (s *PondServiceTestSuite) TestMovePond_InvalidFishType() {
 	// GIVEN — source and dest valid; request has invalid fish type
 	sourcePondId := 1

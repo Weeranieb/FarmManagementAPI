@@ -271,7 +271,7 @@ func (s *PondHandlerTestSuite) TestMovePond_Success() {
 	// GIVEN — valid move body; username; service returns success response
 	sourcePondId := 1
 	username := "admin"
-	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"pricePerUnit":"10.5","activityDate":"2024-06-01"}`)
+	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"fishWeight":"0.5","pricePerUnit":"10.5","activityDate":"2024-06-01"}`)
 	expectedResponse := &dto.PondMoveResponse{ActivityId: 1, ActivePondId: 10, ToActivePondId: 20}
 	s.pondService.On("MovePond", mock.Anything, sourcePondId, mock.Anything, username).Return(expectedResponse, nil)
 	app := s.movePondApp(username)
@@ -314,7 +314,7 @@ func (s *PondHandlerTestSuite) TestMovePond_InvalidPondID_ReturnsValidationError
 
 func (s *PondHandlerTestSuite) TestMovePond_MissingUsername_ReturnsAuthError() {
 	// GIVEN — valid body; no username in context
-	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"pricePerUnit":"10.5","activityDate":"2024-06-01"}`)
+	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"fishWeight":"0.5","pricePerUnit":"10.5","activityDate":"2024-06-01"}`)
 	app := s.movePondApp("")
 	req := httptest.NewRequest("POST", "/api/v1/pond/1/move", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -338,7 +338,7 @@ func (s *PondHandlerTestSuite) TestMovePond_ServiceError_ErrPondNotFound() {
 	username := "user"
 	s.pondService.On("MovePond", mock.Anything, 999, mock.Anything, username).Return((*dto.PondMoveResponse)(nil), apperrors.ErrPondNotFound)
 	app := s.movePondApp(username)
-	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"pricePerUnit":"10.5","activityDate":"2024-06-01"}`)
+	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"fishWeight":"0.5","pricePerUnit":"10.5","activityDate":"2024-06-01"}`)
 	req := httptest.NewRequest("POST", "/api/v1/pond/999/move", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -358,7 +358,7 @@ func (s *PondHandlerTestSuite) TestMovePond_ServiceError_ErrPondSourceNotActive(
 	username := "user"
 	s.pondService.On("MovePond", mock.Anything, 1, mock.Anything, username).Return((*dto.PondMoveResponse)(nil), apperrors.ErrPondSourceNotActive)
 	app := s.movePondApp(username)
-	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"pricePerUnit":"10.5","activityDate":"2024-06-01"}`)
+	body := []byte(`{"toPondId":2,"fishType":"nil","amount":50,"fishWeight":"0.5","pricePerUnit":"10.5","activityDate":"2024-06-01"}`)
 	req := httptest.NewRequest("POST", "/api/v1/pond/1/move", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -611,6 +611,53 @@ func TestPondFillRequest_Validation(t *testing.T) {
 		err := utils.ValidateStruct(req)
 		// THEN — validation passes
 		require.NoError(t, err)
+	})
+}
+
+// TestPondMoveRequest_Validation ensures PondMoveRequest validation rejects
+// payloads that would book a meaningless move (amount × weight × price = 0).
+// Mirrors the fill-request suite — the move DTO previously used a looser
+// validator (omitempty,decimal_gte0) on FishWeight, allowing zero-weight
+// rows to be persisted. See the comment on PondMoveRequest for the
+// accounting rationale.
+func TestPondMoveRequest_Validation(t *testing.T) {
+	validBase := func() *dto.PondMoveRequest {
+		return &dto.PondMoveRequest{
+			ToPondId:     2,
+			FishType:     "nil",
+			Amount:       100,
+			FishWeight:   decimal.NewFromFloat(0.5),
+			PricePerUnit: decimal.NewFromFloat(70),
+			ActivityDate: "2024-01-15",
+		}
+	}
+
+	t.Run("missing required fields", func(t *testing.T) {
+		err := utils.ValidateStruct(&dto.PondMoveRequest{})
+		require.Error(t, err)
+	})
+	t.Run("amount less than 1", func(t *testing.T) {
+		req := validBase()
+		req.Amount = 0
+		require.Error(t, utils.ValidateStruct(req))
+	})
+	t.Run("fishWeight zero", func(t *testing.T) {
+		req := validBase()
+		req.FishWeight = decimal.Zero
+		require.Error(t, utils.ValidateStruct(req))
+	})
+	t.Run("fishWeight missing (decimal default)", func(t *testing.T) {
+		req := validBase()
+		req.FishWeight = decimal.Decimal{}
+		require.Error(t, utils.ValidateStruct(req))
+	})
+	t.Run("pricePerUnit zero", func(t *testing.T) {
+		req := validBase()
+		req.PricePerUnit = decimal.Zero
+		require.Error(t, utils.ValidateStruct(req))
+	})
+	t.Run("valid request", func(t *testing.T) {
+		require.NoError(t, utils.ValidateStruct(validBase()))
 	})
 }
 

@@ -422,6 +422,7 @@ definitions:
     - activityDate
     - amount
     - fishType
+    - fishWeight
     - pricePerUnit
     - toPondId
     type: object

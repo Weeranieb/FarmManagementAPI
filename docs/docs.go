@@ -3356,6 +3356,7 @@ const docTemplate = `{
                 "activityDate",
                 "amount",
                 "fishType",
+                "fishWeight",
                 "pricePerUnit",
                 "toPondId"
             ],

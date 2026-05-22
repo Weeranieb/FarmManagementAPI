@@ -47,9 +47,10 @@ var codeToHTTP = map[int]int{
 	ErrPondAlreadyExists.Code: http.StatusConflict,
 	ErrPondInvalidInput.Code:  http.StatusUnprocessableEntity,
 	ErrInvalidFishType.Code:   http.StatusUnprocessableEntity,
-	ErrPondSourceNotActive.Code: http.StatusUnprocessableEntity,
-	ErrPondNotActive.Code:       http.StatusUnprocessableEntity,
-	ErrPondInMaintenance.Code:   http.StatusUnprocessableEntity,
+	ErrPondSourceNotActive.Code:   http.StatusUnprocessableEntity,
+	ErrPondNotActive.Code:         http.StatusUnprocessableEntity,
+	ErrPondInMaintenance.Code:     http.StatusUnprocessableEntity,
+	ErrPondInsufficientFish.Code:  http.StatusUnprocessableEntity,
 
 	// Worker
 	ErrWorkerNotFound.Code:      http.StatusNotFound,

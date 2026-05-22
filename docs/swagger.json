@@ -3350,6 +3350,7 @@
                 "activityDate",
                 "amount",
                 "fishType",
+                "fishWeight",
                 "pricePerUnit",
                 "toPondId"
             ],
