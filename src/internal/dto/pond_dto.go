@@ -121,11 +121,17 @@ type PondFillResponse struct {
 }
 
 // PondMoveRequest is the body for POST /pond/:pondId/move (transfer fish to another pond).
+//
+// Amount, FishWeight, and PricePerUnit must ALL be > 0 — the fish value
+// booked into both ponds is amount × weight × price, so a zero in any of
+// the three writes a meaningless row (e.g. cost = 0 for the source's "sale"
+// and the destination's "purchase"). The validators below mirror this:
+// amount uses min=1, weight and price use decimal_gt0 (no omitempty).
 type PondMoveRequest struct {
 	ToPondId        int                  `json:"toPondId" validate:"required"`
 	FishType        string               `json:"fishType" validate:"required"`
 	Amount          int                  `json:"amount" validate:"required,min=1"`
-	FishWeight      decimal.Decimal      `json:"fishWeight,omitempty" validate:"omitempty,decimal_gte0" swaggertype:"number"`
+	FishWeight      decimal.Decimal      `json:"fishWeight" validate:"required,decimal_gt0" swaggertype:"number"`
 	PricePerUnit    decimal.Decimal      `json:"pricePerUnit" validate:"required,decimal_gt0" swaggertype:"number"`
 	AdditionalCosts []AdditionalCostItem `json:"additionalCosts,omitempty" validate:"dive"`
 	ActivityDate    string               `json:"activityDate" validate:"required"`
@@ -205,6 +211,12 @@ type PondMoveCalcRequest struct {
 }
 
 // PondMoveCalcResponse mirrors the cost-relevant fields of the move preview.
+//
+// A move is booked as a sale from the source's perspective AND a purchase
+// from the destination's perspective. The Source*/Dest* fields below expose
+// that split so each side's P&L impact is unambiguous in the UI. Additional
+// costs are split 50/50 between the two ponds — same allocation the service
+// applies when persisting the move.
 type PondMoveCalcResponse struct {
 	Quantity             int                  `json:"quantity"`
 	AvgWeightKg          float64              `json:"avgWeightKg"`
@@ -214,6 +226,14 @@ type PondMoveCalcResponse struct {
 	AdditionalCosts      []AdditionalCostLine `json:"additionalCosts"`
 	AdditionalCostsTotal float64              `json:"additionalCostsTotal"`
 	TotalCost            float64              `json:"totalCost"`
+	// Source pond (treats the move as a sale).
+	SourceFishRevenue    float64 `json:"sourceFishRevenue"`
+	SourceAdditionalCost float64 `json:"sourceAdditionalCost"`
+	SourceNetEffect      float64 `json:"sourceNetEffect"`
+	// Destination pond (treats the move as a purchase).
+	DestFishCost       float64 `json:"destFishCost"`
+	DestAdditionalCost float64 `json:"destAdditionalCost"`
+	DestTotalCost      float64 `json:"destTotalCost"`
 }
 
 // PondSellCalcDetailItem is one row in a sell-calc request. Looser than the
@@ -276,20 +296,32 @@ type PondFillPreviewResponse struct {
 }
 
 // PondMovePreviewResponse is returned by POST /pond/:pondId/move/preview.
+// See PondMoveCalcResponse for the source/destination cost-split rationale —
+// the same split is surfaced here so the review screen can show both sides
+// without needing a second round-trip.
 type PondMovePreviewResponse struct {
-	Valid            bool                 `json:"valid"`
-	Species          string               `json:"species"`
-	Quantity         int                  `json:"quantity"`
-	AvgWeightKg      float64              `json:"avgWeightKg"`
-	TotalWeight      float64              `json:"totalWeight"`
-	CostPerUnit      float64              `json:"costPerUnit"`
-	BaseTransferCost float64              `json:"baseTransferCost"`
-	AdditionalCosts  []AdditionalCostLine `json:"additionalCosts"`
-	TotalCost        float64              `json:"totalCost"`
-	StockBefore      int                  `json:"stockBefore"`
-	StockAfter       int                  `json:"stockAfter"`
-	StockDelta       int                  `json:"stockDelta"`
-	ValidationError  string               `json:"validationError,omitempty"`
+	Valid                bool                 `json:"valid"`
+	Species              string               `json:"species"`
+	Quantity             int                  `json:"quantity"`
+	AvgWeightKg          float64              `json:"avgWeightKg"`
+	TotalWeight          float64              `json:"totalWeight"`
+	CostPerUnit          float64              `json:"costPerUnit"`
+	BaseTransferCost     float64              `json:"baseTransferCost"`
+	AdditionalCosts      []AdditionalCostLine `json:"additionalCosts"`
+	AdditionalCostsTotal float64              `json:"additionalCostsTotal"`
+	TotalCost            float64              `json:"totalCost"`
+	// Source pond (treats the move as a sale).
+	SourceFishRevenue    float64 `json:"sourceFishRevenue"`
+	SourceAdditionalCost float64 `json:"sourceAdditionalCost"`
+	SourceNetEffect      float64 `json:"sourceNetEffect"`
+	// Destination pond (treats the move as a purchase).
+	DestFishCost       float64 `json:"destFishCost"`
+	DestAdditionalCost float64 `json:"destAdditionalCost"`
+	DestTotalCost      float64 `json:"destTotalCost"`
+	StockBefore        int     `json:"stockBefore"`
+	StockAfter         int     `json:"stockAfter"`
+	StockDelta         int     `json:"stockDelta"`
+	ValidationError    string  `json:"validationError,omitempty"`
 }
 
 // PondSellPreviewItem is one row in the sale details summary.
@@ -315,9 +347,14 @@ type PondSellPreviewResponse struct {
 // by GET /pond/:pondId/activities. Total is computed server-side so the
 // client doesn't need to know the fill/move (amount*pricePerUnit) vs sell
 // (sum of sell_details.weight * price_per_unit) shape.
+//
+// Move activities appear in both the source and destination pond's history.
+// Direction is "in" when the requested pond is the destination (FromPondName
+// is set) and "out" otherwise (ToPondName is set for outgoing moves).
 type ActivityResponse struct {
 	Id           int       `json:"id"`
-	Mode         string    `json:"mode"` // fill | move | sell
+	Mode         string    `json:"mode"`      // fill | move | sell
+	Direction    string    `json:"direction"` // in | out
 	ActivityDate time.Time `json:"activityDate"`
 	FishType     string    `json:"fishType"`
 	Amount       int       `json:"amount"`
@@ -325,4 +362,5 @@ type ActivityResponse struct {
 	Total        float64   `json:"total"`
 	Merchant     *string   `json:"merchant,omitempty"`
 	ToPondName   *string   `json:"toPondName,omitempty"`
+	FromPondName *string   `json:"fromPondName,omitempty"`
 }

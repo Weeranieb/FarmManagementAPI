@@ -167,6 +167,11 @@ var (
 		Code:    500076,
 		Message: "Pond is in maintenance; move and sell are not allowed",
 	}
+
+	ErrPondInsufficientFish = &AppError{
+		Code:    500077,
+		Message: "Move amount exceeds source pond stock",
+	}
 )
 
 // Worker errors (500080-500089)

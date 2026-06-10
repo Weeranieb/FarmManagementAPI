@@ -189,11 +189,18 @@ func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.Ac
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
-	// Collect sell activity IDs so we can compute totals from sell_details.
+	// Collect sell activity IDs so we can compute totals from sell_details,
+	// and fill/move activity IDs so we can fold their additional_costs into
+	// the displayed total (matches CalculateFillCost / CalculateMoveCost
+	// used at submit time).
 	sellIds := make([]int, 0)
+	fillMoveIds := make([]int, 0)
 	for _, r := range rows {
-		if r.Mode == "sell" {
+		switch r.Mode {
+		case "sell":
 			sellIds = append(sellIds, r.Id)
+		default:
+			fillMoveIds = append(fillMoveIds, r.Id)
 		}
 	}
 
@@ -209,19 +216,45 @@ func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.Ac
 		}
 	}
 
+	// Additional costs apply to all activity modes (fill/move/sell). For
+	// sell we already roll them into sellTotals separately if we ever wire
+	// that, but the current sell branch uses revenue only — see frontend
+	// for the netRevenue computation. Here we fold extra costs into
+	// fill/move totals to match the at-submit formula.
+	additionalCostTotals := map[int]float64{}
+	if len(fillMoveIds) > 0 {
+		totals, err := s.activityRepo.SumAdditionalCostsByActivityIDs(ctx, fillMoveIds)
+		if err != nil {
+			return nil, errors.ErrGeneric.Wrap(err)
+		}
+		for _, t := range totals {
+			f, _ := t.Total.Float64()
+			additionalCostTotals[t.ActivityId] = f
+		}
+	}
+
 	out := make([]*dto.ActivityResponse, 0, len(rows))
 	for _, r := range rows {
 		pricePerUnit, _ := r.PricePerUnit.Float64()
+		fishWeight, _ := r.FishWeight.Float64()
 		var total float64
 		switch r.Mode {
 		case "sell":
 			total = sellTotals[r.Id]
 		default:
-			total = float64(r.Amount) * pricePerUnit
+			// amount × fish_weight × price_per_unit + Σ additional_costs.
+			// Mirrors utils.CalculateFillCost / CalculateMoveCost so the
+			// activity history matches the cost shown on submit.
+			total = float64(r.Amount)*fishWeight*pricePerUnit + additionalCostTotals[r.Id]
+		}
+		direction := "out"
+		if r.IsIncoming {
+			direction = "in"
 		}
 		out = append(out, &dto.ActivityResponse{
 			Id:           r.Id,
 			Mode:         r.Mode,
+			Direction:    direction,
 			ActivityDate: r.ActivityDate,
 			FishType:     r.FishType,
 			Amount:       r.Amount,
@@ -229,6 +262,7 @@ func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.Ac
 			Total:        total,
 			Merchant:     r.MerchantName,
 			ToPondName:   r.ToPondName,
+			FromPondName: r.FromPondName,
 		})
 	}
 	return out, nil
@@ -477,6 +511,9 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 	if sourcePondId == request.ToPondId {
 		return nil, errors.ErrPondInvalidInput
 	}
+	if request.Amount <= 0 {
+		return nil, errors.ErrPondInvalidInput
+	}
 
 	destData, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, request.ToPondId)
 	if err != nil {
@@ -495,6 +532,12 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 	}
 
 	sourceActive := sourceData.ActivePond
+	// Refuse moves that would drain the source past zero. Without this the
+	// caller would see TotalFish silently clamped to 0 (see sourceTotalFish
+	// below) and the off-by-N would only show up as data drift.
+	if request.Amount > sourceActive.TotalFish {
+		return nil, errors.ErrPondInsufficientFish
+	}
 	destPond := destData.Pond
 	destActive := destData.ActivePond
 
@@ -880,28 +923,48 @@ func (s *pondService) PreviewMovePond(ctx context.Context, sourcePondId int, req
 	}
 
 	stockBefore := sourceData.ActivePond.TotalFish
+	if request.Amount <= 0 {
+		return &dto.PondMovePreviewResponse{Valid: false, ValidationError: errors.ErrPondInvalidInput.Message}, nil
+	}
+	if request.Amount > stockBefore {
+		return &dto.PondMovePreviewResponse{Valid: false, ValidationError: errors.ErrPondInsufficientFish.Message}, nil
+	}
 
 	fishCost, additionalCost := utils.CalculateMoveCost(request.Amount, request.PricePerUnit, request.FishWeight, request.AdditionalCosts)
+	halfAdditional := additionalCost.Div(decimal.NewFromInt(2))
+	destTotal := fishCost.Add(halfAdditional)
+	sourceNet := fishCost.Sub(halfAdditional)
+
 	baseCost, _ := fishCost.Float64()
 	additionalTotal, _ := additionalCost.Float64()
+	halfAdditionalF, _ := halfAdditional.Float64()
+	destTotalF, _ := destTotal.Float64()
+	sourceNetF, _ := sourceNet.Float64()
 	pricePerUnit, _ := request.PricePerUnit.Float64()
 	fishWeight, _ := request.FishWeight.Float64()
 	totalWeight := float64(request.Amount) * fishWeight
 	additionalLines := buildAdditionalCostLines(request.AdditionalCosts)
 
 	return &dto.PondMovePreviewResponse{
-		Valid:            true,
-		Species:          request.FishType,
-		Quantity:         request.Amount,
-		AvgWeightKg:      fishWeight,
-		TotalWeight:      totalWeight,
-		CostPerUnit:      pricePerUnit,
-		BaseTransferCost: baseCost,
-		AdditionalCosts:  additionalLines,
-		TotalCost:        baseCost + additionalTotal,
-		StockBefore:      stockBefore,
-		StockAfter:       max(stockBefore-request.Amount, 0),
-		StockDelta:       -request.Amount,
+		Valid:                true,
+		Species:              request.FishType,
+		Quantity:             request.Amount,
+		AvgWeightKg:          fishWeight,
+		TotalWeight:          totalWeight,
+		CostPerUnit:          pricePerUnit,
+		BaseTransferCost:     baseCost,
+		AdditionalCosts:      additionalLines,
+		AdditionalCostsTotal: additionalTotal,
+		TotalCost:            baseCost + additionalTotal,
+		SourceFishRevenue:    baseCost,
+		SourceAdditionalCost: halfAdditionalF,
+		SourceNetEffect:      sourceNetF,
+		DestFishCost:         baseCost,
+		DestAdditionalCost:   halfAdditionalF,
+		DestTotalCost:        destTotalF,
+		StockBefore:          stockBefore,
+		StockAfter:           max(stockBefore-request.Amount, 0),
+		StockDelta:           -request.Amount,
 	}, nil
 }
 
@@ -992,13 +1055,22 @@ func (s *pondService) CalcFillPond(_ context.Context, request dto.PondFillCalcRe
 
 // CalcMovePond returns live cost/weight totals for the move form. Pure math.
 // Move cost formula: amount × fishWeight × pricePerUnit + additionalCosts.
+// Returns a per-side split so the review UI can show source (treated as a
+// sale) and destination (treated as a purchase) impacts separately.
 func (s *pondService) CalcMovePond(_ context.Context, request dto.PondMoveCalcRequest) *dto.PondMoveCalcResponse {
 	addCosts := toAdditionalCostItems(request.AdditionalCosts)
 	fishCost, additionalCost := utils.CalculateMoveCost(request.Amount, request.PricePerUnit, request.FishWeight, addCosts)
+	halfAdditional := additionalCost.Div(decimal.NewFromInt(2))
 	totalCost := fishCost.Add(additionalCost)
+	destTotal := fishCost.Add(halfAdditional)
+	sourceNet := fishCost.Sub(halfAdditional)
+
 	fishCostF, _ := fishCost.Float64()
 	additionalCostF, _ := additionalCost.Float64()
+	halfAdditionalF, _ := halfAdditional.Float64()
 	totalCostF, _ := totalCost.Float64()
+	destTotalF, _ := destTotal.Float64()
+	sourceNetF, _ := sourceNet.Float64()
 	pricePerUnit, _ := request.PricePerUnit.Float64()
 	fishWeight, _ := request.FishWeight.Float64()
 	return &dto.PondMoveCalcResponse{
@@ -1010,6 +1082,12 @@ func (s *pondService) CalcMovePond(_ context.Context, request dto.PondMoveCalcRe
 		AdditionalCosts:      buildAdditionalCostLines(addCosts),
 		AdditionalCostsTotal: additionalCostF,
 		TotalCost:            totalCostF,
+		SourceFishRevenue:    fishCostF,
+		SourceAdditionalCost: halfAdditionalF,
+		SourceNetEffect:      sourceNetF,
+		DestFishCost:         fishCostF,
+		DestAdditionalCost:   halfAdditionalF,
+		DestTotalCost:        destTotalF,
 	}
 }
 
