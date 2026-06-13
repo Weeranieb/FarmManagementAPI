@@ -121,4 +121,5 @@ func (r *Router) setupProtectedRoutes(api fiber.Router) {
 	r.setupFeedCollectionRoutes(protected)
 	r.setupFeedPriceHistoryRoutes(protected)
 	r.setupDailyLogRoutes(protected)
+	r.setupActivityRoutes(protected)
 }

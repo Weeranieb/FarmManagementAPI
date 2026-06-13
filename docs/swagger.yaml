@@ -644,6 +644,43 @@ info:
   title: Boonma Farm API
   version: "1.0"
 paths:
+  /activity:
+    get:
+      consumes:
+      - application/json
+      description: Newest discrete events (fill/move/sell) across all of the client's
+        ponds, ordered by activity date desc. Daily-log saves are not included. Optional
+        ?limit caps the row count (omit or 0 for the full history).
+      parameters:
+      - description: Max rows to return; 0 or omitted = all
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Get the activity feed
+      tags:
+      - activity
   /auth/login:
     post:
       consumes:
