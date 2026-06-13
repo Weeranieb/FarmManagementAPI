@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.5](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.4...v0.2.5) (2026-06-13)
+
+
+### Features
+
+* **activity:** add GET /activity endpoint for recent client activities ([#33](https://github.com/Weeranieb/FarmManagementAPI/issues/33)) ([0ae41d2](https://github.com/Weeranieb/FarmManagementAPI/commit/0ae41d2057403bb72e4a9d93f718fbc83f7c271f))
+
 ## [0.2.4](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.3...v0.2.4) (2026-05-19)
 
 
