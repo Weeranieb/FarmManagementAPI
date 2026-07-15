@@ -25,10 +25,6 @@ var (
 	app *fiber.App
 )
 
-var (
-	LoadConfigFunc = config.LoadConfig
-)
-
 // @title Boonma Farm API
 // @version 1.0
 // @description A Boonma Farm application with Fiber, GORM, and Dependency Injection
@@ -43,16 +39,16 @@ var (
 // @name jwt_token
 // @description JWT token stored in HTTP-only cookie (automatically sent by browser)
 func main() {
-	conf := LoadConfigFunc()
+	conf := config.LoadConfig()
 	logging.Init(conf.App.Environment, conf.App.LogLevel)
 
 	// Dependency Injection
 	container := di.NewContainer(conf)
 
-	// Start Fiber + Router
-	setupAndStartServer(conf, container)
+	// Wire Fiber + routes; Listen stays in main so the shutdown handler
+	// is registered before the blocking call.
+	setupServer(conf, container)
 
-	// Graceful shutdown
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -69,7 +65,7 @@ func main() {
 	}
 }
 
-func setupAndStartServer(conf *config.Config, container *dig.Container) {
+func setupServer(conf *config.Config, container *dig.Container) {
 	app = fiber.New(fiber.Config{
 		ReadBufferSize: 60 * 1024,
 		BodyLimit:      10 * 1024 * 1024, // 10MB
@@ -100,10 +96,6 @@ func setupAndStartServer(conf *config.Config, container *dig.Container) {
 	}
 
 	router.SetupRoutes(app, conf, handlers)
-	if err := app.Listen(conf.GetServerAddress()); err != nil {
-		slog.Error("failed to start server", "err", err)
-		os.Exit(1)
-	}
 }
 
 func shutdownServer() {

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
@@ -10,7 +9,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=FishSizeGradeHandler --output=./mocks --outpkg=handler --filename=fish_size_grade_handler.go --structname=MockFishSizeGradeHandler --with-expecter=false
 type FishSizeGradeHandler interface {
 	GetDropdown(c *fiber.Ctx) error
 }
@@ -36,11 +34,6 @@ func NewFishSizeGradeHandler(fishSizeGradeService service.FishSizeGradeService) 
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /fish-size-grade/dropdown [get]
 func (h *fishSizeGradeHandlerImpl) GetDropdown(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	items, err := h.fishSizeGradeService.GetDropdown()
 	if err != nil {

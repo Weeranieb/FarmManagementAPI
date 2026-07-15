@@ -1,13 +1,9 @@
 package handler
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
-	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -34,22 +30,14 @@ func NewFarmGroupHandler(farmGroupService service.FarmGroupService) FarmGroupHan
 func (h *farmGroupHandlerImpl) AddFarmGroup(c *fiber.Ctx) error {
 	var request dto.CreateFarmGroupRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
 	if err := validateAndParse(c, &request); err != nil {
 		return err
 	}
 
-	isAdmin, err := utils.IsClientAdminOrAbove(c.UserContext())
-	if err != nil || !isAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
-
-	if err := validateClientAccess(c, request.ClientId); err != nil {
+	if err := requireClientAccess(c, request.ClientId); err != nil {
 		return err
 	}
 
@@ -62,16 +50,9 @@ func (h *farmGroupHandlerImpl) AddFarmGroup(c *fiber.Ctx) error {
 }
 
 func (h *farmGroupHandlerImpl) GetFarmGroup(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseParamInt(c, "id", "Invalid farm group ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid farm group ID")
+		return err
 	}
 
 	result, err := h.farmGroupService.Get(id)
@@ -79,9 +60,8 @@ func (h *farmGroupHandlerImpl) GetFarmGroup(c *fiber.Ctx) error {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
-	canAccess, accessErr := utils.CanAccessClient(c.UserContext(), result.ClientId)
-	if accessErr != nil || !canAccess {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAccess(c, result.ClientId); err != nil {
+		return err
 	}
 
 	return http.Success(c, result)
@@ -90,19 +70,12 @@ func (h *farmGroupHandlerImpl) GetFarmGroup(c *fiber.Ctx) error {
 func (h *farmGroupHandlerImpl) UpdateFarmGroup(c *fiber.Ctx) error {
 	var request dto.UpdateFarmGroupRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
 	if err := validateAndParse(c, &request); err != nil {
 		return err
 	}
 
-	isAdmin, err := utils.IsClientAdminOrAbove(c.UserContext())
-	if err != nil || !isAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
 	existing, err := h.farmGroupService.Get(request.Id)
@@ -110,9 +83,8 @@ func (h *farmGroupHandlerImpl) UpdateFarmGroup(c *fiber.Ctx) error {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
-	canAccess, accessErr := utils.CanAccessClient(c.UserContext(), existing.ClientId)
-	if accessErr != nil || !canAccess {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAccess(c, existing.ClientId); err != nil {
+		return err
 	}
 
 	if err := h.farmGroupService.Update(c.UserContext(), request); err != nil {
@@ -123,34 +95,9 @@ func (h *farmGroupHandlerImpl) UpdateFarmGroup(c *fiber.Ctx) error {
 }
 
 func (h *farmGroupHandlerImpl) ListFarmGroup(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	var clientId int
-
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	clientId, err := resolveListClientId(c)
 	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
-	if isSuperAdmin {
-		clientIdStr := c.Query("clientId")
-		if clientIdStr != "" {
-			clientIdVal, err := strconv.Atoi(clientIdStr)
-			if err != nil {
-				return http.Error(c, errors.ErrValidationFailed.Code, "Invalid clientId parameter")
-			}
-			clientId = clientIdVal
-		}
-	} else {
-		clientIdPtr := utils.GetClientId(c.UserContext())
-		if clientIdPtr == nil {
-			return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
-		}
-		clientId = *clientIdPtr
+		return err
 	}
 
 	list, err := h.farmGroupService.List(clientId)
@@ -162,34 +109,9 @@ func (h *farmGroupHandlerImpl) ListFarmGroup(c *fiber.Ctx) error {
 }
 
 func (h *farmGroupHandlerImpl) GetFarmGroupDropdown(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	var clientId int
-
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	clientId, err := resolveListClientId(c)
 	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
-	if isSuperAdmin {
-		clientIdStr := c.Query("clientId")
-		if clientIdStr != "" {
-			clientIdVal, err := strconv.Atoi(clientIdStr)
-			if err != nil {
-				return http.Error(c, errors.ErrValidationFailed.Code, "Invalid clientId parameter")
-			}
-			clientId = clientIdVal
-		}
-	} else {
-		clientIdPtr := utils.GetClientId(c.UserContext())
-		if clientIdPtr == nil {
-			return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
-		}
-		clientId = *clientIdPtr
+		return err
 	}
 
 	items, err := h.farmGroupService.GetDropdown(clientId)

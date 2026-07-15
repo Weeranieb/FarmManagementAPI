@@ -424,8 +424,7 @@ func (s *FarmHandlerTestSuite) TestAddFarm_ClientAdmin_Allowed() {
 
 func (s *FarmHandlerTestSuite) TestAddFarm_ClientAdmin_WrongClient_Denied() {
 	// GIVEN — client-admin for client 1, but request targets client 2.
-	// validateClientAccess returns a sentinel error that short-circuits the
-	// handler with a 403 (ErrAuthPermissionDenied).
+	// requireClientAccess short-circuits with a 403 (ErrAuthPermissionDenied).
 	createReq := &dto.CreateFarmRequest{
 		ClientId: 2,
 		Name:     "Test Farm",

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
@@ -13,7 +12,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=UserHandler --output=./mocks --outpkg=handler --filename=user_handler.go --structname=MockUserHandler --with-expecter=false
 type UserHandler interface {
 	AddUser(c *fiber.Ctx) error
 	GetUser(c *fiber.Ctx) error
@@ -52,12 +50,6 @@ func NewUserHandler(userService service.UserService) UserHandler {
 func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 	var addUser dto.CreateUserRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
 	if err := validateAndParse(c, &addUser); err != nil {
 		return err
 	}
@@ -68,9 +60,8 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 	}
 	clientId := utils.GetClientId(c.UserContext())
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
 	newUser, err := h.userService.Create(c.UserContext(), addUser, username, clientId)
@@ -96,11 +87,6 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user [get]
 func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	id, err := utils.GetUserId(c.UserContext())
 	if err != nil {
@@ -131,12 +117,6 @@ func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
 // @Router       /user [put]
 func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 	var updateUser dto.UpdateUserRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &updateUser); err != nil {
 		return err
@@ -179,20 +159,13 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 func (h *userHandlerImpl) AdminUpdateUser(c *fiber.Ctx) error {
 	var body dto.AdminUpdateUserRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
-	userId, err := strconv.Atoi(c.Params("id"))
+	userId, err := parseParamInt(c, "id", "Invalid user ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid user ID")
+		return err
 	}
 
 	if err := validateAndParse(c, &body); err != nil {
@@ -230,20 +203,13 @@ func (h *userHandlerImpl) AdminUpdateUser(c *fiber.Ctx) error {
 func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
 	var body dto.AdminResetPasswordRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
-	userId, err := strconv.Atoi(c.Params("id"))
+	userId, err := parseParamInt(c, "id", "Invalid user ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid user ID")
+		return err
 	}
 
 	if err := validateAndParse(c, &body); err != nil {
@@ -279,12 +245,6 @@ func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
 // @Router       /user/password [put]
 func (h *userHandlerImpl) ChangePassword(c *fiber.Ctx) error {
 	var body dto.ChangePasswordRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	userId, err := utils.GetUserId(c.UserContext())
 	if err != nil {
@@ -323,20 +283,14 @@ func (h *userHandlerImpl) ChangePassword(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/{id} [delete]
 func (h *userHandlerImpl) DeleteUser(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
-	userId, err := strconv.Atoi(c.Params("id"))
+	userId, err := parseParamInt(c, "id", "Invalid user ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid user ID")
+		return err
 	}
 
 	actor, err := utils.GetUsername(c.UserContext())
@@ -368,11 +322,6 @@ func (h *userHandlerImpl) DeleteUser(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/list [get]
 func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
 	if err != nil {

@@ -12,8 +12,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	fiberSwagger "github.com/swaggo/fiber-swagger"
 )
 
@@ -29,16 +27,12 @@ func SetupRoutes(app *fiber.App, conf *config.Config, handlers *handler.Handler)
 	}
 
 	// ── Global middleware ──────────────────────────────────────────────
-	// 1. Recover — catch panics and return 500 instead of crashing
-	app.Use(recover.New())
+	// Recover + AccessLog are registered in cmd/api (stack traces / structured logs).
 
-	// 2. Logger — log every request
-	app.Use(logger.New())
-
-	// 3. Helmet — security headers (X-Frame-Options, X-Content-Type-Options, etc.)
+	// 1. Helmet — security headers (X-Frame-Options, X-Content-Type-Options, etc.)
 	app.Use(helmet.New())
 
-	// 4. CORS — restrict allowed origins in production
+	// 2. CORS — restrict allowed origins in production
 	corsOrigins := conf.Cors.AllowedOrigins
 	if corsOrigins == "" {
 		corsOrigins = "*"
@@ -63,7 +57,7 @@ func SetupRoutes(app *fiber.App, conf *config.Config, handlers *handler.Handler)
 	// ── API routes (with rate limiter) ────────────────────────────────
 	api := app.Group("/api/v1")
 
-	// 5. Rate limiter — applied only to /api/v1 routes
+	// 3. Rate limiter — applied only to /api/v1 routes
 	window := time.Duration(conf.Security.RateLimitWindow) * time.Second
 	if window <= 0 {
 		window = 60 * time.Second

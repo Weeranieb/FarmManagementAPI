@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
@@ -78,24 +80,58 @@ func validateAndParse(c *fiber.Ctx, target any) error {
 	return nil
 }
 
-// validateClientAccess checks if the user can access the target clientId
-// Super admin (clientId == nil) can access any clientId
-// Regular users can only access their own clientId
-func validateClientAccess(c *fiber.Ctx, targetClientId int) error {
-	clientId, canAccess := utils.GetClientIdForAccess(c.UserContext())
-	if !canAccess {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+func parseParamInt(c *fiber.Ctx, name, errMsg string) (int, error) {
+	id, err := strconv.Atoi(c.Params(name))
+	if err != nil {
+		return 0, http.Error(c, errors.ErrValidationFailed.Code, errMsg)
 	}
+	return id, nil
+}
 
-	// Super admin can access any clientId
-	if clientId == nil {
-		return nil
-	}
-
-	// Regular users can only access their own clientId
-	if *clientId != targetClientId {
+func requireSuperAdmin(c *fiber.Ctx) error {
+	ok, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil || !ok {
 		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
-
 	return nil
+}
+
+func requireClientAdmin(c *fiber.Ctx) error {
+	ok, err := utils.IsClientAdminOrAbove(c.UserContext())
+	if err != nil || !ok {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+	return nil
+}
+
+func requireClientAccess(c *fiber.Ctx, targetClientId int) error {
+	ok, err := utils.CanAccessClient(c.UserContext(), targetClientId)
+	if err != nil || !ok {
+		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	}
+	return nil
+}
+
+// resolveListClientId returns an optional client filter for list/dropdown endpoints.
+// Super admin: optional ?clientId= (0 = no filter). Others: JWT client id.
+func resolveListClientId(c *fiber.Ctx) (int, error) {
+	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	if err != nil {
+		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+	if isSuperAdmin {
+		if clientIdStr := c.Query("clientId"); clientIdStr != "" {
+			clientIdVal, err := strconv.Atoi(clientIdStr)
+			if err != nil {
+				return 0, http.Error(c, errors.ErrValidationFailed.Code, "Invalid clientId parameter")
+			}
+			return clientIdVal, nil
+		}
+		return 0, nil
+	}
+	clientIdPtr := utils.GetClientId(c.UserContext())
+	if clientIdPtr == nil {
+		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
+	return *clientIdPtr, nil
 }

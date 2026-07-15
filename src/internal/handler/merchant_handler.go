@@ -1,9 +1,6 @@
 package handler
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
@@ -13,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=MerchantHandler --output=./mocks --outpkg=handler --filename=merchant_handler.go --structname=MockMerchantHandler --with-expecter=false
 type MerchantHandler interface {
 	AddMerchant(c *fiber.Ctx) error
 	GetMerchant(c *fiber.Ctx) error
@@ -49,22 +45,14 @@ func NewMerchantHandler(merchantService service.MerchantService) MerchantHandler
 func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 	var createMerchantRequest dto.CreateMerchantRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
 	if err := validateAndParse(c, &createMerchantRequest); err != nil {
 		return err
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
-	// Get username
 	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
@@ -92,17 +80,10 @@ func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant/{id} [get]
 func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
-	// Get id from param
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseParamInt(c, "id", "Invalid merchant ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid merchant ID")
+		return err
 	}
 
 	merchant, err := h.merchantService.Get(id)
@@ -125,11 +106,6 @@ func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant [get]
 func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	merchantList, err := h.merchantService.GetList()
 	if err != nil {
@@ -156,22 +132,14 @@ func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
 func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 	var updateMerchantRequest dto.UpdateMerchantRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
 	if err := validateAndParse(c, &updateMerchantRequest); err != nil {
 		return err
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
-	// Get username
 	username, err := utils.GetUsername(c.UserContext())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
@@ -201,21 +169,14 @@ func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant/{id} [delete]
 func (h *merchantHandlerImpl) DeleteMerchant(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseParamInt(c, "id", "Invalid merchant ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid merchant ID")
+		return err
 	}
 
 	if err := h.merchantService.Delete(c.UserContext(), id); err != nil {

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 
-	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -11,7 +10,6 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=ActivityService --output=./mocks --outpkg=service --filename=activity_service.go --structname=MockActivityService --with-expecter=false
 type ActivityService interface {
 	// ListFeed returns the newest discrete events (fill / move / sell) across
 	// every pond the caller's client owns, ordered by activity date desc.
@@ -43,46 +41,14 @@ func (s *activityService) ListFeed(ctx context.Context, limit int) ([]*dto.Activ
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
-	// Same total rules as pondService.ListActivities: sell totals from
-	// sell_details, fill/move totals folded with additional_costs.
-	sellIds := make([]int, 0)
-	fillMoveIds := make([]int, 0)
+	modes := make([]activityIDMode, 0, len(rows))
 	for _, r := range rows {
-		switch r.Mode {
-		case constants.ActivityModeSell:
-			sellIds = append(sellIds, r.Id)
-		default:
-			fillMoveIds = append(fillMoveIds, r.Id)
-		}
+		modes = append(modes, activityIDMode{id: r.Id, mode: r.Mode})
 	}
-
-	type sellTotal struct {
-		total  float64
-		weight float64
-	}
-	sellTotals := map[int]sellTotal{}
-	if len(sellIds) > 0 {
-		totals, err := s.activityRepo.SumSellDetailsByActivityIDs(ctx, sellIds)
-		if err != nil {
-			return nil, errors.ErrGeneric.Wrap(err)
-		}
-		for _, t := range totals {
-			total, _ := t.Total.Float64()
-			weight, _ := t.TotalWeight.Float64()
-			sellTotals[t.SellId] = sellTotal{total: total, weight: weight}
-		}
-	}
-
-	additionalCostTotals := map[int]float64{}
-	if len(fillMoveIds) > 0 {
-		totals, err := s.activityRepo.SumAdditionalCostsByActivityIDs(ctx, fillMoveIds)
-		if err != nil {
-			return nil, errors.ErrGeneric.Wrap(err)
-		}
-		for _, t := range totals {
-			f, _ := t.Total.Float64()
-			additionalCostTotals[t.ActivityId] = f
-		}
+	sellIds, fillMoveIds := partitionActivityIDs(modes)
+	sellTotals, additionalCostTotals, err := loadActivityCostTotals(ctx, s.activityRepo, sellIds, fillMoveIds)
+	if err != nil {
+		return nil, err
 	}
 
 	out := make([]*dto.ActivityFeedItem, 0, len(rows))
@@ -96,12 +62,10 @@ func (s *activityService) ListFeed(ctx context.Context, limit int) ([]*dto.Activ
 		case constants.ActivityModeSell:
 			st := sellTotals[r.Id]
 			total = st.total
-			totalWeight = lo.ToPtr(st.weight)
+			w := st.weight
+			totalWeight = &w
 		default:
-			// amount × fish_weight × price_per_unit + Σ additional_costs —
-			// mirrors utils.CalculateFillCost / CalculateMoveCost so the feed
-			// matches the cost shown on submit.
-			total = float64(r.Amount)*fishWeight*pricePerUnit + additionalCostTotals[r.Id]
+			total = fillMoveActivityTotal(r.Amount, fishWeight, pricePerUnit, additionalCostTotals[r.Id])
 		}
 
 		out = append(out, &dto.ActivityFeedItem{

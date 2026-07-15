@@ -29,11 +29,6 @@ type ErrorResponseModel struct {
 	Fields    []FieldError `json:"fields,omitempty"`
 }
 
-func (err *ErrorResponseModel) Error(c *fiber.Ctx, code string, errMessage string) {
-	err.Code = code
-	err.Message = fmt.Sprint(errMessage)
-}
-
 // isClientSafeCode reports whether an error code's wrapped detail can be
 // exposed to clients. Validation (500010–500019) and domain rule codes
 // (≥ 500020) wrap human-readable messages by convention. Internal/database
