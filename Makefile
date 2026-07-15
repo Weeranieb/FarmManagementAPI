@@ -20,6 +20,10 @@ gen-swag:
 test:
 	go test  ./...
 
+# Same family as CI (.github/workflows/ci.yml → golangci-lint v2.12)
+lint:
+	PATH="$$(go env GOPATH)/bin:$$PATH" golangci-lint run ./...
+
 migrate-new:
 	@if [ -z "$(name)" ]; then \
 		echo "Usage: make migrate-new name=<migration_name>"; \

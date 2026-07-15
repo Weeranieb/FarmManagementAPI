@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"syscall"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
@@ -17,8 +16,8 @@ import (
 	_ "github.com/weeranieb/boonmafarm-backend/docs"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	"go.uber.org/dig"
+	"gorm.io/gorm"
 )
 
 var (
@@ -72,30 +71,22 @@ func setupServer(conf *config.Config, container *dig.Container) {
 		ErrorHandler:   appmiddleware.ErrorHandler,
 	})
 
-	app.Use(appmiddleware.RequestID())
-	app.Use(logging.AccessLog())
-	app.Use(recover.New(recover.Config{
-		EnableStackTrace: true,
-		StackTraceHandler: func(c *fiber.Ctx, e any) {
-			logging.FromCtx(c).Error("panic recovered",
-				"panic", e,
-				"stack", string(debug.Stack()),
-			)
-		},
-	}))
+	logging.UseHTTP(app)
 
 	// Construct the Handler using DI container
 	var handlers *handler.Handler
+	var db *gorm.DB
 
-	err := container.Invoke(func(h *handler.Handler) {
+	err := container.Invoke(func(h *handler.Handler, d *gorm.DB) {
 		handlers = h
+		db = d
 	})
 	if err != nil {
 		slog.Error("DI error", "err", err)
 		os.Exit(1)
 	}
 
-	router.SetupRoutes(app, conf, handlers)
+	router.SetupRoutes(app, conf, handlers, db)
 }
 
 func shutdownServer() {

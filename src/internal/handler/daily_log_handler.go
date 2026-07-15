@@ -2,11 +2,9 @@ package handler
 
 import (
 	"io"
-	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
@@ -91,12 +89,6 @@ func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) error {
 
 	err = h.dailyLogService.BulkUpsert(c.UserContext(), pondId, request, username)
 	if err != nil {
-		log.Printf(
-			"[daily-log][bulk-upsert] pondId=%d user=%s month=%s freshFcId=%v pelletFcId=%v entries=%d deleteDays=%d err=%v",
-			pondId, username, request.Month,
-			lo.FromPtr(request.FreshFeedCollectionId), lo.FromPtr(request.PelletFeedCollectionId),
-			len(request.Entries), len(request.DeleteDays), err,
-		)
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 

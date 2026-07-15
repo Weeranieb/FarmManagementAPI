@@ -7,27 +7,31 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/handler"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/middleware"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/metrics"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	fiberSwagger "github.com/swaggo/fiber-swagger"
+	"gorm.io/gorm"
 )
 
 type Router struct {
 	handlers *handler.Handler
 	conf     *config.Config
+	db       *gorm.DB
 }
 
-func SetupRoutes(app *fiber.App, conf *config.Config, handlers *handler.Handler) {
+func SetupRoutes(app *fiber.App, conf *config.Config, handlers *handler.Handler, db *gorm.DB) {
 	r := &Router{
 		handlers: handlers,
 		conf:     conf,
+		db:       db,
 	}
 
 	// ── Global middleware ──────────────────────────────────────────────
-	// Recover + AccessLog are registered in cmd/api (stack traces / structured logs).
+	// Recover + AccessLog + metrics are registered via logging.UseHTTP in cmd/api and app.
 
 	// 1. Helmet — security headers (X-Frame-Options, X-Content-Type-Options, etc.)
 	app.Use(helmet.New())
@@ -48,7 +52,8 @@ func SetupRoutes(app *fiber.App, conf *config.Config, handlers *handler.Handler)
 		AllowCredentials: allowCredentials,
 		AllowOrigins:     corsOrigins,
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Request-ID,traceparent,tracestate",
+		ExposeHeaders:    "X-Request-ID",
 	}))
 
 	// ── Public routes (no rate limit) ─────────────────────────────────
@@ -88,10 +93,10 @@ func (r *Router) setupPublicRoutes(app *fiber.App) {
 	// Swagger documentation
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
-	// Health check
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "ok"})
-	})
+	// Liveness (cheap) / readiness (DB) / Prometheus text
+	app.Get("/health", handler.Live)
+	app.Get("/ready", handler.Ready(r.db))
+	app.Get("/metrics", metrics.Handler())
 }
 
 func (r *Router) setupPublicAPIRoutes(api fiber.Router) {
