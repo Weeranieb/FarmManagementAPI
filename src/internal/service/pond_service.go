@@ -189,48 +189,14 @@ func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.Ac
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
-	// Collect sell activity IDs so we can compute totals from sell_details,
-	// and fill/move activity IDs so we can fold their additional_costs into
-	// the displayed total (matches CalculateFillCost / CalculateMoveCost
-	// used at submit time).
-	sellIds := make([]int, 0)
-	fillMoveIds := make([]int, 0)
+	modes := make([]activityIDMode, 0, len(rows))
 	for _, r := range rows {
-		switch r.Mode {
-		case "sell":
-			sellIds = append(sellIds, r.Id)
-		default:
-			fillMoveIds = append(fillMoveIds, r.Id)
-		}
+		modes = append(modes, activityIDMode{id: r.Id, mode: r.Mode})
 	}
-
-	sellTotals := map[int]float64{}
-	if len(sellIds) > 0 {
-		totals, err := s.activityRepo.SumSellDetailsByActivityIDs(ctx, sellIds)
-		if err != nil {
-			return nil, errors.ErrGeneric.Wrap(err)
-		}
-		for _, t := range totals {
-			f, _ := t.Total.Float64()
-			sellTotals[t.SellId] = f
-		}
-	}
-
-	// Additional costs apply to all activity modes (fill/move/sell). For
-	// sell we already roll them into sellTotals separately if we ever wire
-	// that, but the current sell branch uses revenue only — see frontend
-	// for the netRevenue computation. Here we fold extra costs into
-	// fill/move totals to match the at-submit formula.
-	additionalCostTotals := map[int]float64{}
-	if len(fillMoveIds) > 0 {
-		totals, err := s.activityRepo.SumAdditionalCostsByActivityIDs(ctx, fillMoveIds)
-		if err != nil {
-			return nil, errors.ErrGeneric.Wrap(err)
-		}
-		for _, t := range totals {
-			f, _ := t.Total.Float64()
-			additionalCostTotals[t.ActivityId] = f
-		}
+	sellIds, fillMoveIds := partitionActivityIDs(modes)
+	sellTotals, additionalCostTotals, err := loadActivityCostTotals(ctx, s.activityRepo, sellIds, fillMoveIds)
+	if err != nil {
+		return nil, err
 	}
 
 	out := make([]*dto.ActivityResponse, 0, len(rows))
@@ -239,13 +205,10 @@ func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.Ac
 		fishWeight, _ := r.FishWeight.Float64()
 		var total float64
 		switch r.Mode {
-		case "sell":
-			total = sellTotals[r.Id]
+		case constants.ActivityModeSell:
+			total = sellTotals[r.Id].total
 		default:
-			// amount × fish_weight × price_per_unit + Σ additional_costs.
-			// Mirrors utils.CalculateFillCost / CalculateMoveCost so the
-			// activity history matches the cost shown on submit.
-			total = float64(r.Amount)*fishWeight*pricePerUnit + additionalCostTotals[r.Id]
+			total = fillMoveActivityTotal(r.Amount, fishWeight, pricePerUnit, additionalCostTotals[r.Id])
 		}
 		direction := "out"
 		if r.IsIncoming {
@@ -862,7 +825,7 @@ func (s *pondService) PreviewFillPond(ctx context.Context, pondId int, request d
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	if !ok {
-		return &dto.PondFillPreviewResponse{Valid: false, ValidationError: errors.ErrAuthPermissionDenied.Message}, nil
+		return nil, errors.ErrAuthPermissionDenied
 	}
 	if !constants.IsValidFishType(request.FishType) {
 		return &dto.PondFillPreviewResponse{Valid: false, ValidationError: errors.ErrInvalidFishType.Message}, nil
@@ -913,7 +876,7 @@ func (s *pondService) PreviewMovePond(ctx context.Context, sourcePondId int, req
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	if !ok {
-		return &dto.PondMovePreviewResponse{Valid: false, ValidationError: errors.ErrAuthPermissionDenied.Message}, nil
+		return nil, errors.ErrAuthPermissionDenied
 	}
 	if sourcePondId == request.ToPondId {
 		return &dto.PondMovePreviewResponse{Valid: false, ValidationError: errors.ErrPondInvalidInput.Message}, nil
@@ -981,7 +944,7 @@ func (s *pondService) PreviewSellPond(ctx context.Context, pondId int, request d
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	if !ok {
-		return &dto.PondSellPreviewResponse{Valid: false, ValidationError: errors.ErrAuthPermissionDenied.Message}, nil
+		return nil, errors.ErrAuthPermissionDenied
 	}
 	if err := s.validateSellMerchantIfSet(request.MerchantId); err != nil {
 		return &dto.PondSellPreviewResponse{Valid: false, ValidationError: err.Error()}, nil

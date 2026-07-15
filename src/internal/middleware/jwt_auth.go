@@ -24,6 +24,8 @@ func JWTAuthMiddleware(jwtSecret string) fiber.Handler {
 			// "/api/v1/user", // System setup user endpoint
 			"/swagger",
 			"/health",
+			"/ready",
+			"/metrics",
 		}
 
 		// Check if the current path is public

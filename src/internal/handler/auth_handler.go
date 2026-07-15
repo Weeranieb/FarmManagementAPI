@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
@@ -12,7 +11,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=AuthHandler --output=./mocks --outpkg=handler --filename=auth_handler.go --structname=MockAuthHandler --with-expecter=false
 type AuthHandler interface {
 	Register(c *fiber.Ctx) error
 	Login(c *fiber.Ctx) error
@@ -44,12 +42,6 @@ func NewAuthHandler(authService service.AuthService) AuthHandler {
 func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
 	var registerRequest dto.RegisterRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
 	if err := validateAndParse(c, &registerRequest); err != nil {
 		return err
 	}
@@ -77,12 +69,6 @@ func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
 // @Router       /auth/login [post]
 func (h *authHandlerImpl) Login(c *fiber.Ctx) error {
 	var loginRequest dto.LoginRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &loginRequest); err != nil {
 		return err

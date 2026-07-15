@@ -124,7 +124,6 @@ func (s *PondServiceTestSuite) setupReposWithTxForTransaction() {
 		}
 	})
 	s.additionalCostRepo.On("WithTx", mock.Anything).Return(s.additionalCostRepo)
-	s.additionalCostRepo.On("Create", mock.Anything, mock.Anything).Maybe().Return(nil)
 	s.additionalCostRepo.On("CreateBatch", mock.Anything, mock.Anything).Maybe().Return(nil)
 	s.sellDetailRepo.On("WithTx", mock.Anything).Return(s.sellDetailRepo)
 	s.sellDetailRepo.On("CreateBatch", mock.Anything, mock.Anything).Maybe().Return(nil)
@@ -1384,9 +1383,9 @@ func (s *PondServiceTestSuite) TestBulkImportFarmPond_ExistingFarmMixedPonds() {
 	req := dto.BulkImportFarmPondRequest{
 		Farms: []dto.BulkImportFarmItem{
 			{Name: farmName, Ponds: []dto.BulkImportPondItem{
-				{Name: "PNew"},                                // create
-				{Name: "PUpdate", Area: newDecimal("3.0")},    // update area
-				{Name: "PUnchanged"},                          // matched, no area → no write
+				{Name: "PNew"}, // create
+				{Name: "PUpdate", Area: newDecimal("3.0")}, // update area
+				{Name: "PUnchanged"},                       // matched, no area → no write
 			}},
 		},
 	}

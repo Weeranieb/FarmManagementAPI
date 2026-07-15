@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"syscall"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
@@ -17,16 +16,12 @@ import (
 	_ "github.com/weeranieb/boonmafarm-backend/docs"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	"go.uber.org/dig"
+	"gorm.io/gorm"
 )
 
 var (
 	app *fiber.App
-)
-
-var (
-	LoadConfigFunc = config.LoadConfig
 )
 
 // @title Boonma Farm API
@@ -43,16 +38,16 @@ var (
 // @name jwt_token
 // @description JWT token stored in HTTP-only cookie (automatically sent by browser)
 func main() {
-	conf := LoadConfigFunc()
+	conf := config.LoadConfig()
 	logging.Init(conf.App.Environment, conf.App.LogLevel)
 
 	// Dependency Injection
 	container := di.NewContainer(conf)
 
-	// Start Fiber + Router
-	setupAndStartServer(conf, container)
+	// Wire Fiber + routes; Listen stays in main so the shutdown handler
+	// is registered before the blocking call.
+	setupServer(conf, container)
 
-	// Graceful shutdown
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -69,41 +64,29 @@ func main() {
 	}
 }
 
-func setupAndStartServer(conf *config.Config, container *dig.Container) {
+func setupServer(conf *config.Config, container *dig.Container) {
 	app = fiber.New(fiber.Config{
 		ReadBufferSize: 60 * 1024,
 		BodyLimit:      10 * 1024 * 1024, // 10MB
 		ErrorHandler:   appmiddleware.ErrorHandler,
 	})
 
-	app.Use(appmiddleware.RequestID())
-	app.Use(logging.AccessLog())
-	app.Use(recover.New(recover.Config{
-		EnableStackTrace: true,
-		StackTraceHandler: func(c *fiber.Ctx, e any) {
-			logging.FromCtx(c).Error("panic recovered",
-				"panic", e,
-				"stack", string(debug.Stack()),
-			)
-		},
-	}))
+	logging.UseHTTP(app)
 
 	// Construct the Handler using DI container
 	var handlers *handler.Handler
+	var db *gorm.DB
 
-	err := container.Invoke(func(h *handler.Handler) {
+	err := container.Invoke(func(h *handler.Handler, d *gorm.DB) {
 		handlers = h
+		db = d
 	})
 	if err != nil {
 		slog.Error("DI error", "err", err)
 		os.Exit(1)
 	}
 
-	router.SetupRoutes(app, conf, handlers)
-	if err := app.Listen(conf.GetServerAddress()); err != nil {
-		slog.Error("failed to start server", "err", err)
-		os.Exit(1)
-	}
+	router.SetupRoutes(app, conf, handlers, db)
 }
 
 func shutdownServer() {

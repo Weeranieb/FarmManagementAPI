@@ -1,9 +1,6 @@
 package handler
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
@@ -13,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=FarmHandler --output=./mocks --outpkg=handler --filename=farm_handler.go --structname=MockFarmHandler --with-expecter=false
 type FarmHandler interface {
 	AddFarm(c *fiber.Ctx) error
 	GetFarm(c *fiber.Ctx) error
@@ -32,7 +28,6 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 	}
 }
 
-// POST /farm
 // Add a new farm entry. Allowed for super admin (any client) or client admin (their own client only).
 // @Summary      Add a new farm entry
 // @Description  Add a new farm entry with the provided details. Requires client-admin role or above.
@@ -50,24 +45,14 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 	var createFarmRequest dto.CreateFarmRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
 	if err := validateAndParse(c, &createFarmRequest); err != nil {
 		return err
 	}
 
-	// Must be client admin or super admin.
-	isAdmin, err := utils.IsClientAdminOrAbove(c.UserContext())
-	if err != nil || !isAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
-
-	// Client admin can only target their own client; super admin any client.
-	if err := validateClientAccess(c, createFarmRequest.ClientId); err != nil {
+	if err := requireClientAccess(c, createFarmRequest.ClientId); err != nil {
 		return err
 	}
 
@@ -79,7 +64,6 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 	return http.Success(c, newFarm)
 }
 
-// GET /farm/:id
 // Get farm by ID.
 // @Summary      Get farm by ID
 // @Description  Retrieve details of a specific farm by its ID
@@ -94,20 +78,12 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm/{id} [get]
 func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
-	// Get id from param
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseParamInt(c, "id", "Invalid farm ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid farm ID")
+		return err
 	}
 
-	// Get clientId
 	clientIdPtr, canAccess := utils.GetClientIdForAccess(c.UserContext())
 	if !canAccess {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
@@ -121,7 +97,6 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 	return http.Success(c, farm)
 }
 
-// GET /farm
 // Get list of farms associated with the current client.
 // @Summary      Get list of farms
 // @Description  Retrieve a list of farms associated with the current client
@@ -136,36 +111,10 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm [get]
 func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
-	var clientId int
-
-	// Check if user is super admin
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	clientId, err := resolveListClientId(c)
 	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
-	if isSuperAdmin {
-		// Super admin can optionally filter by clientId query parameter
-		clientIdStr := c.Query("clientId")
-		if clientIdStr != "" {
-			clientIdVal, err := strconv.Atoi(clientIdStr)
-			if err != nil {
-				return http.Error(c, errors.ErrValidationFailed.Code, "Invalid clientId parameter")
-			}
-			clientId = clientIdVal
-		}
-	} else {
-		clientIdPtr := utils.GetClientId(c.UserContext())
-		if clientIdPtr == nil {
-			return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
-		}
-		clientId = *clientIdPtr
+		return err
 	}
 
 	farmList, err := h.farmService.GetList(clientId)
@@ -176,7 +125,6 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 	return http.Success(c, farmList)
 }
 
-// GET /farm/hierarchy
 // Get farms with nested ponds for the current client (Existing Data view).
 // @Summary      Get farm hierarchy with ponds
 // @Description  Retrieve all farms for the client with their nested ponds (for Existing Data view). Super admin may pass clientId query param.
@@ -191,34 +139,10 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm/hierarchy [get]
 func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
-	var clientId int
-
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	clientId, err := resolveListClientId(c)
 	if err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
-	if isSuperAdmin {
-		clientIdStr := c.Query("clientId")
-		if clientIdStr != "" {
-			clientIdVal, err := strconv.Atoi(clientIdStr)
-			if err != nil {
-				return http.Error(c, errors.ErrValidationFailed.Code, "Invalid clientId parameter")
-			}
-			clientId = clientIdVal
-		}
-	} else {
-		clientIdPtr := utils.GetClientId(c.UserContext())
-		if clientIdPtr == nil {
-			return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
-		}
-		clientId = *clientIdPtr
+		return err
 	}
 
 	list, err := h.farmService.GetHierarchy(clientId)
@@ -229,7 +153,6 @@ func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
 	return http.Success(c, list)
 }
 
-// PUT /farm/:id
 // Update farm entry. Super admin only.
 // @Summary      Update farm entry
 // @Description  Update details of a farm entry. Super admin only. Id in path; body contains name.
@@ -246,15 +169,9 @@ func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm/{id} [put]
 func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	id, err := strconv.Atoi(c.Params("id"))
+	id, err := parseParamInt(c, "id", "Invalid farm ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid farm ID")
+		return err
 	}
 
 	var body dto.UpdateFarmBody
@@ -262,9 +179,8 @@ func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
 		return err
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
 	updateReq := dto.UpdateFarmRequest{Id: id, Name: body.Name}

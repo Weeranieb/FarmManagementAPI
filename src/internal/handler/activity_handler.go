@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -41,11 +40,6 @@ func NewActivityHandler(activityService service.ActivityService) ActivityHandler
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /activity [get]
 func (h *activityHandlerImpl) GetActivityFeed(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	limit := 0
 	if raw := c.Query("limit"); raw != "" {

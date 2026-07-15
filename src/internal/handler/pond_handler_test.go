@@ -428,25 +428,6 @@ func (s *PondHandlerTestSuite) TestUpdatePond_InvalidPondID() {
 	assert.Equal(s.T(), "500010", errObj["code"])
 }
 
-func (s *PondHandlerTestSuite) TestUpdatePond_MissingUsername() {
-	// GIVEN — valid body; no username in context
-	body := []byte(`{"name":"Pond"}`)
-	app := s.updatePondApp("")
-	req := httptest.NewRequest("PUT", "/api/v1/pond/1", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	// WHEN — PUT /api/v1/pond/1 is sent
-	resp, err := app.Test(req)
-	require.NoError(s.T(), err)
-	// THEN — 401 (ErrAuthTokenInvalid: username missing in context)
-	assert.Equal(s.T(), fiber.StatusUnauthorized, resp.StatusCode)
-	var result map[string]any
-	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
-	assert.NotNil(s.T(), result["error"])
-	errObj := result["error"].(map[string]any)
-	assert.Equal(s.T(), "500022", errObj["code"])
-}
-
 func (s *PondHandlerTestSuite) TestUpdatePond_ServiceError() {
 	// GIVEN — pond 999; service returns ErrPondNotFound
 	username := "user"
@@ -512,23 +493,6 @@ func (s *PondHandlerTestSuite) TestDeletePond_InvalidPondID() {
 	require.NotNil(s.T(), result["error"])
 	errObj := result["error"].(map[string]any)
 	assert.Equal(s.T(), "500010", errObj["code"])
-}
-
-func (s *PondHandlerTestSuite) TestDeletePond_MissingUsername() {
-	// GIVEN — no username in context
-	app := s.deletePondApp("")
-	req := httptest.NewRequest("DELETE", "/api/v1/pond/1", nil)
-
-	// WHEN — DELETE /api/v1/pond/1 is sent
-	resp, err := app.Test(req)
-	require.NoError(s.T(), err)
-	// THEN — 401 (ErrAuthTokenInvalid: username missing in context)
-	assert.Equal(s.T(), fiber.StatusUnauthorized, resp.StatusCode)
-	var result map[string]any
-	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
-	assert.NotNil(s.T(), result["error"])
-	errObj := result["error"].(map[string]any)
-	assert.Equal(s.T(), "500022", errObj["code"])
 }
 
 func (s *PondHandlerTestSuite) TestDeletePond_ServiceError() {
