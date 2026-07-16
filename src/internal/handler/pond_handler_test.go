@@ -187,7 +187,7 @@ func (s *PondHandlerTestSuite) fillPondApp(username string) *fiber.App {
 func (s *PondHandlerTestSuite) TestFillPond_InvalidPondID_ReturnsValidationError() {
 	// GIVEN — body with invalid pond id "abc"
 	s.pondService.On("FillPond", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return((*dto.PondFillResponse)(nil), errors.New("")).Maybe()
-	body := []byte(`{"fishType":"nil","amount":100,"pricePerUnit":10.5,"activityDate":"2024-01-15"}`)
+	body := []byte(`{"fishType":"nil","amount":100,"fishWeight":0.5,"pricePerUnit":10.5,"activityDate":"2024-01-15"}`)
 	app := s.fillPondApp("user")
 	req := httptest.NewRequest("POST", "/api/v1/pond/abc/fill", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -210,7 +210,7 @@ func (s *PondHandlerTestSuite) TestFillPond_InvalidPondID_ReturnsValidationError
 func (s *PondHandlerTestSuite) TestFillPond_MissingUsername_ReturnsAuthError() {
 	// GIVEN — valid body; no username in context
 	s.pondService.On("FillPond", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return((*dto.PondFillResponse)(nil), errors.New("")).Maybe()
-	body := []byte(`{"fishType":"nil","amount":100,"pricePerUnit":10.5,"activityDate":"2024-01-15"}`)
+	body := []byte(`{"fishType":"nil","amount":100,"fishWeight":0.5,"pricePerUnit":10.5,"activityDate":"2024-01-15"}`)
 	app := s.fillPondApp("")
 	req := httptest.NewRequest("POST", "/api/v1/pond/1/fill", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -234,7 +234,7 @@ func (s *PondHandlerTestSuite) TestFillPond_Success() {
 	// GIVEN — valid fill body; username; service returns success response
 	pondId := 1
 	username := "admin"
-	body := []byte(`{"fishType":"nil","amount":100,"pricePerUnit":10.5,"activityDate":"2024-01-15"}`)
+	body := []byte(`{"fishType":"nil","amount":100,"fishWeight":0.5,"pricePerUnit":10.5,"activityDate":"2024-01-15"}`)
 	expectedResponse := &dto.PondFillResponse{ActivityId: 1, ActivePondId: 1}
 	s.pondService.On("FillPond", mock.Anything, pondId, mock.Anything, username).Return(expectedResponse, nil)
 	app := s.fillPondApp(username)
@@ -568,6 +568,7 @@ func TestPondFillRequest_Validation(t *testing.T) {
 		req := &dto.PondFillRequest{
 			FishType:     "nil",
 			Amount:       100,
+			FishWeight:   decimal.NewFromFloat(0.5),
 			PricePerUnit: decimal.NewFromFloat(10.5),
 			ActivityDate: "2024-01-15",
 		}

@@ -1327,7 +1327,22 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.PondResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1686,7 +1701,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PondResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1850,6 +1877,77 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/{pondId}/cycles": {
+            "get": {
+                "description": "Return every production cycle (active + closed) for a pond, newest first, each with its P\u0026L (totalCost, totalRevenue, feedCost, netResult). Feed cost for the active cycle is derived live; closed cycles use the value frozen at close.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "List pond production cycles",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.PondCycleResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -3329,6 +3427,44 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PondCycleResponse": {
+            "type": "object",
+            "properties": {
+                "endDate": {
+                    "type": "string"
+                },
+                "feedCost": {
+                    "type": "number"
+                },
+                "fishTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "netResult": {
+                    "type": "number"
+                },
+                "startDate": {
+                    "type": "string"
+                },
+                "totalCost": {
+                    "type": "number"
+                },
+                "totalFish": {
+                    "type": "integer"
+                },
+                "totalRevenue": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.PondFillCalcRequest": {
             "type": "object",
             "properties": {
@@ -3356,6 +3492,7 @@ const docTemplate = `{
                 "activityDate",
                 "amount",
                 "fishType",
+                "fishWeight",
                 "pricePerUnit"
             ],
             "properties": {
@@ -3376,6 +3513,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "fishWeight": {
+                    "description": "FishWeight (avg kg/fish) is required: fill cost = amount × fishWeight ×\npricePerUnit, so a missing weight would silently book a zero stock cost.",
                     "type": "number"
                 },
                 "pricePerUnit": {
@@ -3451,6 +3589,72 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PondResponse": {
+            "type": "object",
+            "properties": {
+                "ageDays": {
+                    "type": "integer"
+                },
+                "area": {
+                    "type": "number"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "farmId": {
+                    "type": "integer"
+                },
+                "feedCost": {
+                    "type": "number"
+                },
+                "fishTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "latestActivityDate": {
+                    "type": "string"
+                },
+                "latestActivityType": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "netResult": {
+                    "type": "number"
+                },
+                "startDate": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "totalCost": {
+                    "description": "Cycle P\u0026L for the currently-active cycle (nil when the pond has none).\nTotalCost/TotalRevenue are the accumulated transactional figures;\nFeedCost is derived live from daily logs + feed price history; NetResult\n= TotalRevenue − TotalCost − FeedCost.",
+                    "type": "number"
+                },
+                "totalFish": {
+                    "type": "integer"
+                },
+                "totalRevenue": {
+                    "type": "number"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.PondSellCalcDetailItem": {
             "type": "object",
             "properties": {
@@ -3488,13 +3692,16 @@ const docTemplate = `{
         "dto.PondSellDetailItem": {
             "type": "object",
             "required": [
+                "fishCount",
                 "fishSizeGradeId",
                 "pricePerUnit",
                 "weight"
             ],
             "properties": {
                 "fishCount": {
-                    "type": "integer"
+                    "description": "FishCount is required: the active pond tracks stock by head count, so every\nsold line must state how many fish it removes to keep total_fish accurate.",
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "fishSizeGradeId": {
                     "type": "integer"

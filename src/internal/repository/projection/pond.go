@@ -28,6 +28,7 @@ type PondFillQueryRow struct {
 	ApTotalCost        *string        `gorm:"column:ap_total_cost"`
 	ApTotalProfit      *string        `gorm:"column:ap_total_profit"`
 	ApNetResult        *string        `gorm:"column:ap_net_result"`
+	ApFeedCost         *string        `gorm:"column:ap_feed_cost"`
 	ApTotalFish        *int           `gorm:"column:ap_total_fish"`
 	ApFishTypes        *string        `gorm:"column:ap_fish_types"`
 	ApFreshFcId        *int           `gorm:"column:ap_fresh_feed_collection_id"`

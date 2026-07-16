@@ -19,6 +19,7 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/repository/mocks"
+	svcmocks "github.com/weeranieb/boonmafarm-backend/src/internal/service/mocks"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/transaction"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 
@@ -36,6 +37,8 @@ type PondServiceTestSuite struct {
 	sellDetailRepo     *mocks.MockSellDetailRepository
 	merchantRepo       *mocks.MockMerchantRepository
 	fishSizeGradeRepo  *mocks.MockFishSizeGradeRepository
+	feedCostCalc       *svcmocks.MockFeedCostCalculator
+	feedCostReturn     decimal.Decimal
 	db                 *gorm.DB
 	pondService        PondService
 }
@@ -49,6 +52,7 @@ func (s *PondServiceTestSuite) SetupTest() {
 	s.sellDetailRepo = mocks.NewMockSellDetailRepository(s.T())
 	s.merchantRepo = mocks.NewMockMerchantRepository(s.T())
 	s.fishSizeGradeRepo = mocks.NewMockFishSizeGradeRepository(s.T())
+	s.feedCostCalc = svcmocks.NewMockFeedCostCalculator(s.T())
 	var err error
 	s.db, err = gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	s.Require().NoError(err)
@@ -63,10 +67,32 @@ func (s *PondServiceTestSuite) SetupTest() {
 		SellDetailRepo:     s.sellDetailRepo,
 		MerchantRepo:       s.merchantRepo,
 		FishSizeGradeRepo:  s.fishSizeGradeRepo,
+		FeedCostCalc:       s.feedCostCalc,
 		TxManager:          transaction.NewManager(s.db),
 	})
 	s.pondRepo.On("WithTx", mock.Anything).Maybe().Return(s.pondRepo)
 	s.farmRepo.On("WithTx", mock.Anything).Maybe().Return(s.farmRepo)
+	// Default feed cost is zero so existing net-result assertions (revenue −
+	// cost) hold. Feed-cost tests set s.feedCostReturn before acting; the
+	// function-based returns below read it at call time for both single and
+	// batch paths.
+	s.feedCostReturn = decimal.Zero
+	s.feedCostCalc.On("CalcCycleFeedCost", mock.Anything, mock.Anything).Maybe().Return(
+		func(_ context.Context, _ *model.ActivePond) decimal.Decimal { return s.feedCostReturn },
+		func(_ context.Context, _ *model.ActivePond) error { return nil },
+	)
+	s.feedCostCalc.On("CalcCycleFeedCostBatch", mock.Anything, mock.Anything).Maybe().Return(
+		func(_ context.Context, aps []*model.ActivePond) map[int]decimal.Decimal {
+			m := make(map[int]decimal.Decimal, len(aps))
+			for _, ap := range aps {
+				if ap != nil {
+					m[ap.Id] = s.feedCostReturn
+				}
+			}
+			return m
+		},
+		func(_ context.Context, _ []*model.ActivePond) error { return nil },
+	)
 }
 
 // fillPondCtx returns a context with super admin (userLevel 3) so CanAccessClient allows any client.
@@ -909,6 +935,7 @@ func (s *PondServiceTestSuite) TestMovePond_Success_MarkToClose() {
 	assert.Equal(s.T(), int64(20), resp.ToActivePondId)
 	assert.NotNil(s.T(), updatedPond, "pondRepo.Update should be called for source pond when MarkToClose is true")
 	assert.Equal(s.T(), constants.FarmStatusMaintenance, updatedPond.Status)
+	assert.Equal(s.T(), 0, sourceActive.TotalFish, "closing via move empties the pond, same as a sell that closes")
 	s.pondRepo.AssertExpectations(s.T())
 	s.farmRepo.AssertExpectations(s.T())
 }
@@ -937,6 +964,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success_WithAdditionalCosts() {
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
 	s.mockFishSizeGradesForValidRequest()
 	s.setupReposWithTxForTransaction()
+	s.activePondRepo.On("GetByIDForUpdate", mock.Anything, activePond.Id).Return(activePond, nil)
 	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{pond}, constants.FarmStatusActive)
 
 	// WHEN — SellPond is called
@@ -1134,6 +1162,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success() {
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
 	s.mockFishSizeGradesForValidRequest()
 	s.setupReposWithTxForTransaction()
+	s.activePondRepo.On("GetByIDForUpdate", mock.Anything, activePond.Id).Return(activePond, nil)
 	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{pond}, constants.FarmStatusActive)
 
 	// WHEN — SellPond is called
@@ -1175,6 +1204,7 @@ func (s *PondServiceTestSuite) TestSellPond_Success_MarkToClose() {
 	}).Return(nil)
 	s.mockFishSizeGradesForValidRequest()
 	s.setupReposWithTxForTransaction()
+	s.activePondRepo.On("GetByIDForUpdate", mock.Anything, activePond.Id).Return(activePond, nil)
 	pondAfter := &model.Pond{Id: pondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusMaintenance}
 	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{pondAfter}, constants.FarmStatusActive)
 
@@ -1190,6 +1220,174 @@ func (s *PondServiceTestSuite) TestSellPond_Success_MarkToClose() {
 	assert.Equal(s.T(), constants.FarmStatusMaintenance, updatedPond.Status)
 	s.pondRepo.AssertExpectations(s.T())
 	s.farmRepo.AssertExpectations(s.T())
+}
+
+// TestSellPond_ReducesTotalFish verifies a (non-closing) sale draws the pond's
+// head count down by the sum of the sell lines' FishCount.
+func (s *PondServiceTestSuite) TestSellPond_ReducesTotalFish() {
+	pondId := 1
+	req := validPondSellRequest()
+	fishCount := 200
+	req.Details[0].FishCount = &fishCount
+	pond := &model.Pond{Id: pondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive}
+	activePond := &model.ActivePond{
+		Id: 10, PondId: pondId, IsActive: true,
+		TotalCost: decimal.RequireFromString("1000"), TotalProfit: decimal.Zero,
+		TotalFish: 500, FishTypes: []string{constants.FishTypeNil},
+	}
+	data := &repository.PondWithFarmAndActivePond{Pond: pond, ClientId: 1, ActivePond: activePond}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.mockFishSizeGradesForValidRequest()
+	s.setupReposWithTxForTransaction()
+	s.activePondRepo.On("GetByIDForUpdate", mock.Anything, activePond.Id).Return(activePond, nil)
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{pond}, constants.FarmStatusActive)
+
+	_, err := s.pondService.SellPond(fillPondCtx(), pondId, req, "user")
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), 300, activePond.TotalFish, "500 stocked − 200 sold")
+	assert.False(s.T(), activePond.FeedCost.Valid, "feed cost is only snapshotted on close")
+}
+
+// TestSellPond_InsufficientFish rejects a sale of more fish than the pond holds.
+func (s *PondServiceTestSuite) TestSellPond_InsufficientFish() {
+	pondId := 1
+	req := validPondSellRequest()
+	fishCount := 999
+	req.Details[0].FishCount = &fishCount
+	pond := &model.Pond{Id: pondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive}
+	activePond := &model.ActivePond{
+		Id: 10, PondId: pondId, IsActive: true, TotalFish: 500,
+		FishTypes: []string{constants.FishTypeNil},
+	}
+	data := &repository.PondWithFarmAndActivePond{Pond: pond, ClientId: 1, ActivePond: activePond}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.mockFishSizeGradesForValidRequest()
+
+	_, err := s.pondService.SellPond(fillPondCtx(), pondId, req, "user")
+
+	assert.ErrorIs(s.T(), err, errors.ErrPondInsufficientFish)
+}
+
+// TestSellPond_ConcurrentOversell_Rejected covers the race the row lock guards:
+// the pre-transaction check passes against a stale head count (500), but by the
+// time the transaction acquires the lock a concurrent sell has drawn stock down
+// to 50, so the locked re-check rejects the oversell — and the specific
+// ErrPondInsufficientFish (422) survives the transaction wrapper rather than
+// collapsing to a generic 500.
+func (s *PondServiceTestSuite) TestSellPond_ConcurrentOversell_Rejected() {
+	pondId := 1
+	req := validPondSellRequest()
+	fishCount := 100
+	req.Details[0].FishCount = &fishCount
+	pond := &model.Pond{Id: pondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive}
+	// Stale snapshot seen before the transaction: 500 fish, so 100 passes the
+	// pre-check.
+	activePond := &model.ActivePond{
+		Id: 10, PondId: pondId, IsActive: true, TotalFish: 500,
+		FishTypes: []string{constants.FishTypeNil},
+	}
+	// Authoritative locked row: a concurrent sell already dropped stock to 50.
+	locked := &model.ActivePond{
+		Id: 10, PondId: pondId, IsActive: true, TotalFish: 50,
+		FishTypes: []string{constants.FishTypeNil},
+	}
+	data := &repository.PondWithFarmAndActivePond{Pond: pond, ClientId: 1, ActivePond: activePond}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.mockFishSizeGradesForValidRequest()
+	s.setupReposWithTxForTransaction()
+	s.activePondRepo.On("GetByIDForUpdate", mock.Anything, activePond.Id).Return(locked, nil)
+
+	_, err := s.pondService.SellPond(fillPondCtx(), pondId, req, "user")
+
+	assert.ErrorIs(s.T(), err, errors.ErrPondInsufficientFish)
+}
+
+// TestSellPond_MarkToClose_SnapshotsFeedCost verifies closing empties the pond,
+// freezes the cycle feed cost into feed_cost, and folds it into net_result.
+func (s *PondServiceTestSuite) TestSellPond_MarkToClose_SnapshotsFeedCost() {
+	pondId := 1
+	req := validPondSellRequest() // revenue = 100kg × 50 = 5000
+	req.MarkToClose = true
+	fishCount := 300
+	req.Details[0].FishCount = &fishCount
+	s.feedCostReturn = decimal.RequireFromString("1500")
+	pond := &model.Pond{Id: pondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive}
+	activePond := &model.ActivePond{
+		Id: 10, PondId: pondId, IsActive: true,
+		TotalCost: decimal.RequireFromString("1000"), TotalProfit: decimal.Zero,
+		TotalFish: 500, FishTypes: []string{constants.FishTypeNil},
+	}
+	data := &repository.PondWithFarmAndActivePond{Pond: pond, ClientId: 1, ActivePond: activePond}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+	s.pondRepo.On("Update", mock.Anything, mock.Anything).Maybe().Return(nil)
+	s.mockFishSizeGradesForValidRequest()
+	s.setupReposWithTxForTransaction()
+	s.activePondRepo.On("GetByIDForUpdate", mock.Anything, activePond.Id).Return(activePond, nil)
+	pondAfter := &model.Pond{Id: pondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusMaintenance}
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{pondAfter}, constants.FarmStatusActive)
+
+	_, err := s.pondService.SellPond(fillPondCtx(), pondId, req, "user")
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), 0, activePond.TotalFish, "closing empties the pond")
+	assert.False(s.T(), activePond.IsActive)
+	require.True(s.T(), activePond.FeedCost.Valid)
+	assert.True(s.T(), decimal.RequireFromString("1500").Equal(activePond.FeedCost.Decimal))
+	// net = revenue 5000 − cost 1000 − feed 1500 = 2500
+	assert.True(s.T(), decimal.RequireFromString("2500").Equal(activePond.NetResult),
+		"net_result should include feed cost, got %s", activePond.NetResult)
+}
+
+// TestListCycles verifies cycle history P&L: the active cycle derives feed cost
+// live (net = revenue − cost − feed), a post-feature closed cycle uses its
+// snapshot, and a legacy closed cycle (feed_cost NULL) is returned as stored.
+func (s *PondServiceTestSuite) TestListCycles() {
+	pondId := 1
+	s.feedCostReturn = decimal.RequireFromString("700")
+	pond := &model.Pond{Id: pondId, FarmId: 1, Name: "P1", Status: constants.FarmStatusActive}
+	data := &repository.PondWithFarmAndActivePond{Pond: pond, ClientId: 1}
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(data, nil)
+
+	end := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	feed1500 := decimal.RequireFromString("1500")
+	cycles := []*model.ActivePond{
+		// active: net = 2000 − 1000 − 700(derived) = 300
+		{Id: 30, PondId: pondId, IsActive: true, TotalCost: decimal.RequireFromString("1000"),
+			TotalProfit: decimal.RequireFromString("2000"), NetResult: decimal.RequireFromString("1000"), TotalFish: 500},
+		// closed post-feature: snapshot feed 1500, stored net 1500
+		{Id: 20, PondId: pondId, IsActive: false, EndDate: &end, TotalCost: decimal.RequireFromString("5000"),
+			TotalProfit: decimal.RequireFromString("8000"), NetResult: feed1500, FeedCost: decimal.NullDecimal{Decimal: feed1500, Valid: true}},
+		// legacy closed: feed_cost NULL, stored net 1000 (pre-feed)
+		{Id: 10, PondId: pondId, IsActive: false, EndDate: &end, TotalCost: decimal.RequireFromString("3000"),
+			TotalProfit: decimal.RequireFromString("4000"), NetResult: decimal.RequireFromString("1000")},
+	}
+	s.activePondRepo.On("ListByPondID", mock.Anything, pondId).Return(cycles, nil)
+
+	out, err := s.pondService.ListCycles(fillPondCtx(), pondId)
+
+	require.NoError(s.T(), err)
+	require.Len(s.T(), out, 3)
+	// active
+	assert.True(s.T(), out[0].IsActive)
+	require.NotNil(s.T(), out[0].FeedCost)
+	assert.InDelta(s.T(), 700, *out[0].FeedCost, 0.001)
+	assert.InDelta(s.T(), 300, out[0].NetResult, 0.001)
+	// closed post-feature: snapshot
+	assert.False(s.T(), out[1].IsActive)
+	require.NotNil(s.T(), out[1].FeedCost)
+	assert.InDelta(s.T(), 1500, *out[1].FeedCost, 0.001)
+	assert.InDelta(s.T(), 1500, out[1].NetResult, 0.001)
+	// legacy closed: no feed cost, stored net unchanged
+	assert.Nil(s.T(), out[2].FeedCost, "legacy closed cycle has no feed snapshot")
+	assert.InDelta(s.T(), 1000, out[2].NetResult, 0.001)
+}
+
+// TestListCycles_PondNotFound returns a not-found error when the pond is missing.
+func (s *PondServiceTestSuite) TestListCycles_PondNotFound() {
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 99).Return((*repository.PondWithFarmAndActivePond)(nil), nil)
+	_, err := s.pondService.ListCycles(fillPondCtx(), 99)
+	assert.ErrorIs(s.T(), err, errors.ErrPondNotFound)
 }
 
 // --- BulkImportFarmPond validation ---
@@ -1344,10 +1542,10 @@ func (s *PondServiceTestSuite) TestBulkImportFarmPond_NewFarmAndPonds() {
 	s.pondRepo.On("GetByFarmIdAndName", 10, "P1").Return(nil, nil)
 	s.pondRepo.On("GetByFarmIdAndName", 10, "P2").Return(nil, nil)
 	s.pondRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *model.Pond) bool {
-		return p.FarmId == 10 && p.Name == "P1" && p.Status == constants.FarmStatusMaintenance && p.Area != nil
+		return p.FarmId == 10 && p.Name == "P1" && p.Status == constants.FarmStatusMaintenance && p.Area.Valid
 	})).Return(nil)
 	s.pondRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *model.Pond) bool {
-		return p.FarmId == 10 && p.Name == "P2" && p.Status == constants.FarmStatusMaintenance && p.Area == nil
+		return p.FarmId == 10 && p.Name == "P2" && p.Status == constants.FarmStatusMaintenance && !p.Area.Valid
 	})).Return(nil)
 	// Sync farm status: both new ponds are maintenance → status stays maintenance, no Update.
 	s.expectFarmStatusSyncAfterMutation(10, []*model.Pond{
@@ -1400,7 +1598,7 @@ func (s *PondServiceTestSuite) TestBulkImportFarmPond_ExistingFarmMixedPonds() {
 	existingUpdate := &model.Pond{Id: 100, FarmId: farmId, Name: "PUpdate", Status: constants.FarmStatusActive}
 	s.pondRepo.On("GetByFarmIdAndName", farmId, "PUpdate").Return(existingUpdate, nil)
 	s.pondRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *model.Pond) bool {
-		return p.Id == 100 && p.Area != nil && p.Area.String() == "3"
+		return p.Id == 100 && p.Area.Valid && p.Area.Decimal.String() == "3"
 	})).Return(nil)
 	// PUnchanged → found, but no area provided → no Update call.
 	existingUnchanged := &model.Pond{Id: 101, FarmId: farmId, Name: "PUnchanged", Status: constants.FarmStatusMaintenance}

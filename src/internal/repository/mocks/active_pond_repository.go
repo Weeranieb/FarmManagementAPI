@@ -67,6 +67,66 @@ func (_m *MockActivePondRepository) GetActiveByPondID(ctx context.Context, pondI
 	return r0, r1
 }
 
+// GetByIDForUpdate provides a mock function with given fields: ctx, id
+func (_m *MockActivePondRepository) GetByIDForUpdate(ctx context.Context, id int) (*model.ActivePond, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByIDForUpdate")
+	}
+
+	var r0 *model.ActivePond
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) (*model.ActivePond, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) *model.ActivePond); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.ActivePond)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListByPondID provides a mock function with given fields: ctx, pondId
+func (_m *MockActivePondRepository) ListByPondID(ctx context.Context, pondId int) ([]*model.ActivePond, error) {
+	ret := _m.Called(ctx, pondId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByPondID")
+	}
+
+	var r0 []*model.ActivePond
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*model.ActivePond, error)); ok {
+		return rf(ctx, pondId)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*model.ActivePond); ok {
+		r0 = rf(ctx, pondId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.ActivePond)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, pondId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: ctx, activePond
 func (_m *MockActivePondRepository) Update(ctx context.Context, activePond *model.ActivePond) error {
 	ret := _m.Called(ctx, activePond)

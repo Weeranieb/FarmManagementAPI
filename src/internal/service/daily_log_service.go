@@ -103,6 +103,14 @@ func (s *dailyLogService) ensureFarmTemplateImportAccess(ctx context.Context, fa
 	return nil
 }
 
+// resolvePrices returns, per date, the price actually in effect that day (the
+// latest PriceUpdatedDate on or before the date) — or nil when the date
+// predates every recorded price. This is the display path for GetMonth's
+// per-day unit price column: unlike resolveFeedPrice (used for whole-cycle
+// feed-cost accounting, which falls back to the nearest available price so a
+// pre-history day still contributes a cost), a blank cell here is the correct,
+// honest signal that no price was recorded yet for that day. Do not merge
+// this with resolveFeedPrice — the two callers want different fallbacks.
 func (s *dailyLogService) resolvePrices(feedCollectionId int, dates []time.Time) (map[time.Time]*decimal.Decimal, error) {
 	history, err := s.feedPriceHistoryRepo.ListByFeedCollectionId(feedCollectionId)
 	if err != nil {

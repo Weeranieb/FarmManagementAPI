@@ -17,6 +17,7 @@ type PondHandler interface {
 	GetPond(c *fiber.Ctx) error
 	GetPondList(c *fiber.Ctx) error
 	GetPondActivities(c *fiber.Ctx) error
+	GetPondCycles(c *fiber.Ctx) error
 	UpdatePond(c *fiber.Ctx) error
 	DeletePond(c *fiber.Ctx) error
 	FillPond(c *fiber.Ctx) error
@@ -83,7 +84,7 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Param        id path int true "Pond ID"
-// @Success      200  {object}  http.ResponseModel
+// @Success      200  {object}  http.ResponseModel{data=dto.PondResponse}
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
@@ -131,6 +132,34 @@ func (h *pondHandlerImpl) GetPondActivities(c *fiber.Ctx) error {
 	return http.Success(c, activities)
 }
 
+// List a pond's production cycles with per-cycle P&L.
+// @Summary      List pond production cycles
+// @Description  Return every production cycle (active + closed) for a pond, newest first, each with its P&L (totalCost, totalRevenue, feedCost, netResult). Feed cost for the active cycle is derived live; closed cycles use the value frozen at close.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Param        pondId path int true "Pond ID"
+// @Success      200  {object}  http.ResponseModel{data=[]dto.PondCycleResponse}
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
+// @Failure      404  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/cycles [get]
+func (h *pondHandlerImpl) GetPondCycles(c *fiber.Ctx) error {
+
+	id, err := parseParamInt(c, "pondId", "Invalid pond ID")
+	if err != nil {
+		return err
+	}
+
+	cycles, err := h.pondService.ListCycles(c.UserContext(), id)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, cycles)
+}
+
 // Get a list of ponds by farm ID.
 // @Summary      Get a list of ponds by farm ID
 // @Description  Retrieve a list of ponds belonging to a specific farm
@@ -138,7 +167,7 @@ func (h *pondHandlerImpl) GetPondActivities(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Param        farmId query int true "Farm ID"
-// @Success      200  {object}  http.ResponseModel
+// @Success      200  {object}  http.ResponseModel{data=[]dto.PondResponse}
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond [get]

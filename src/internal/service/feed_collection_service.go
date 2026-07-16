@@ -59,10 +59,9 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 		return nil, errors.ErrValidationFailed.Wrap(fmt.Errorf("invalid feedType"))
 	}
 
-	var fcr *decimal.Decimal
+	var fcr decimal.NullDecimal
 	if request.Fcr != nil {
-		d := decimal.NewFromFloat(*request.Fcr)
-		fcr = &d
+		fcr = decimal.NullDecimal{Decimal: decimal.NewFromFloat(*request.Fcr), Valid: true}
 	}
 
 	// Start transaction (ctx used so BaseModel hooks can set CreatedBy/UpdatedBy)
@@ -162,8 +161,7 @@ func (s *feedCollectionService) Update(ctx context.Context, request dto.UpdateFe
 		existingFeedCollection.FeedType = request.FeedType
 	}
 	if request.Fcr != nil {
-		d := decimal.NewFromFloat(*request.Fcr)
-		existingFeedCollection.Fcr = &d
+		existingFeedCollection.Fcr = decimal.NullDecimal{Decimal: decimal.NewFromFloat(*request.Fcr), Valid: true}
 	}
 
 	// Update feed collection (UpdatedBy set via BaseModel hook from ctx)
@@ -212,8 +210,8 @@ func (s *feedCollectionService) toFeedCollectionResponse(feedCollection *model.F
 		UpdatedAt: feedCollection.UpdatedAt,
 		UpdatedBy: feedCollection.UpdatedBy,
 	}
-	if feedCollection.Fcr != nil {
-		v := feedCollection.Fcr.InexactFloat64()
+	if feedCollection.Fcr.Valid {
+		v := feedCollection.Fcr.Decimal.InexactFloat64()
 		resp.Fcr = &v
 	}
 	return resp

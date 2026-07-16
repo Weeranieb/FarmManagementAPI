@@ -342,6 +342,31 @@ definitions:
     - password
     - username
     type: object
+  dto.PondCycleResponse:
+    properties:
+      endDate:
+        type: string
+      feedCost:
+        type: number
+      fishTypes:
+        items:
+          type: string
+        type: array
+      id:
+        type: integer
+      isActive:
+        type: boolean
+      netResult:
+        type: number
+      startDate:
+        type: string
+      totalCost:
+        type: number
+      totalFish:
+        type: integer
+      totalRevenue:
+        type: number
+    type: object
   dto.PondFillCalcRequest:
     properties:
       additionalCosts:
@@ -370,6 +395,9 @@ definitions:
       fishType:
         type: string
       fishWeight:
+        description: |-
+          FishWeight (avg kg/fish) is required: fill cost = amount × fishWeight ×
+          pricePerUnit, so a missing weight would silently book a zero stock cost.
         type: number
       pricePerUnit:
         type: number
@@ -379,6 +407,7 @@ definitions:
     - activityDate
     - amount
     - fishType
+    - fishWeight
     - pricePerUnit
     type: object
   dto.PondMoveCalcRequest:
@@ -426,6 +455,54 @@ definitions:
     - pricePerUnit
     - toPondId
     type: object
+  dto.PondResponse:
+    properties:
+      ageDays:
+        type: integer
+      area:
+        type: number
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      farmId:
+        type: integer
+      feedCost:
+        type: number
+      fishTypes:
+        items:
+          type: string
+        type: array
+      id:
+        type: integer
+      latestActivityDate:
+        type: string
+      latestActivityType:
+        type: string
+      name:
+        type: string
+      netResult:
+        type: number
+      startDate:
+        type: string
+      status:
+        type: string
+      totalCost:
+        description: |-
+          Cycle P&L for the currently-active cycle (nil when the pond has none).
+          TotalCost/TotalRevenue are the accumulated transactional figures;
+          FeedCost is derived live from daily logs + feed price history; NetResult
+          = TotalRevenue − TotalCost − FeedCost.
+        type: number
+      totalFish:
+        type: integer
+      totalRevenue:
+        type: number
+      updatedAt:
+        type: string
+      updatedBy:
+        type: string
+    type: object
   dto.PondSellCalcDetailItem:
     properties:
       fishCount:
@@ -451,6 +528,10 @@ definitions:
   dto.PondSellDetailItem:
     properties:
       fishCount:
+        description: |-
+          FishCount is required: the active pond tracks stock by head count, so every
+          sold line must state how many fish it removes to keep total_fish accurate.
+        minimum: 1
         type: integer
       fishSizeGradeId:
         type: integer
@@ -459,6 +540,7 @@ definitions:
       weight:
         type: number
     required:
+    - fishCount
     - fishSizeGradeId
     - pricePerUnit
     - weight
@@ -1478,7 +1560,14 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/http.ResponseModel'
+            allOf:
+            - $ref: '#/definitions/http.ResponseModel'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.PondResponse'
+                  type: array
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -1575,7 +1664,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/http.ResponseModel'
+            allOf:
+            - $ref: '#/definitions/http.ResponseModel'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PondResponse'
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -1661,6 +1755,53 @@ paths:
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
       summary: List pond activity history
+      tags:
+      - pond
+  /pond/{pondId}/cycles:
+    get:
+      consumes:
+      - application/json
+      description: Return every production cycle (active + closed) for a pond, newest
+        first, each with its P&L (totalCost, totalRevenue, feedCost, netResult). Feed
+        cost for the active cycle is derived live; closed cycles use the value frozen
+        at close.
+      parameters:
+      - description: Pond ID
+        in: path
+        name: pondId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/http.ResponseModel'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.PondCycleResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+      summary: List pond production cycles
       tags:
       - pond
   /pond/{pondId}/daily-logs:

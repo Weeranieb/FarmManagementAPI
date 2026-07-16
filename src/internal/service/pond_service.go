@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -29,6 +30,7 @@ type PondService interface {
 	GetList(ctx context.Context, farmId int) ([]*dto.PondResponse, error)
 	Delete(ctx context.Context, id int) error
 	ListActivities(ctx context.Context, pondId int) ([]*dto.ActivityResponse, error)
+	ListCycles(ctx context.Context, pondId int) ([]*dto.PondCycleResponse, error)
 	FillPond(ctx context.Context, pondId int, request dto.PondFillRequest, username string) (*dto.PondFillResponse, error)
 	MovePond(ctx context.Context, sourcePondId int, request dto.PondMoveRequest, username string) (*dto.PondMoveResponse, error)
 	SellPond(ctx context.Context, pondId int, request dto.PondSellRequest, username string) (*dto.PondSellResponse, error)
@@ -52,6 +54,7 @@ type PondServiceParams struct {
 	SellDetailRepo     repository.SellDetailRepository
 	MerchantRepo       repository.MerchantRepository
 	FishSizeGradeRepo  repository.FishSizeGradeRepository
+	FeedCostCalc       FeedCostCalculator
 	TxManager          transaction.Manager
 }
 
@@ -64,6 +67,7 @@ type pondService struct {
 	sellDetailRepo     repository.SellDetailRepository
 	merchantRepo       repository.MerchantRepository
 	fishSizeGradeRepo  repository.FishSizeGradeRepository
+	feedCostCalc       FeedCostCalculator
 	txManager          transaction.Manager
 }
 
@@ -77,6 +81,7 @@ func NewPondService(params PondServiceParams) PondService {
 		sellDetailRepo:     params.SellDetailRepo,
 		merchantRepo:       params.MerchantRepo,
 		fishSizeGradeRepo:  params.FishSizeGradeRepo,
+		feedCostCalc:       params.FeedCostCalc,
 		txManager:          params.TxManager,
 	}
 }
@@ -137,7 +142,7 @@ func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRe
 			FarmId: request.FarmId,
 			Name:   utils.NormalizePondNameForStore(item.Name),
 			Status: constants.FarmStatusMaintenance,
-			Area:   item.Area,
+			Area:   utils.NullDecimalFromDecimalPtr(item.Area),
 		})
 	}
 
@@ -168,7 +173,58 @@ func (s *pondService) Get(ctx context.Context, id int) (*dto.PondResponse, error
 	if pa == nil {
 		return nil, errors.ErrPondNotFound
 	}
-	return s.toPondResponseFromPondWithActive(pa), nil
+	resp := s.toPondResponseFromPondWithActive(pa)
+	if pa.ActivePond != nil {
+		feedCost, err := s.feedCostCalc.CalcCycleFeedCost(ctx, pa.ActivePond)
+		if err != nil {
+			// Feed cost is derived from separate tables (daily logs + price
+			// history). If that read fails, still return the pond with nil
+			// financials rather than failing the whole detail request.
+			slog.ErrorContext(ctx, "feed cost calc failed; returning pond without financials",
+				"pond_id", id, "error", err)
+		} else {
+			setPondFinancials(resp, pa.ActivePond, feedCost)
+		}
+	}
+	return resp, nil
+}
+
+// cyclePLFloats maps a cycle's decimal P&L to the float64s the response layer
+// uses: accumulated cost and revenue, the given feed cost, and the live net
+// result (revenue − cost − feed). Single source of the net formula so the
+// pond-detail and cycle-list read paths can't diverge.
+func cyclePLFloats(ap *model.ActivePond, feedCost decimal.Decimal) (totalCost, totalRevenue, feed, net float64) {
+	totalCost, _ = ap.TotalCost.Float64()
+	totalRevenue, _ = ap.TotalProfit.Float64()
+	feed, _ = feedCost.Float64()
+	net, _ = ap.TotalProfit.Sub(ap.TotalCost).Sub(feedCost).Float64()
+	return
+}
+
+// setPondFinancials fills the cycle P&L fields on resp from the active pond's
+// stored transactional figures plus a derived (or snapshotted) feed cost.
+// NetResult is computed live as revenue − cost − feed so an active cycle's
+// figure always reflects current feed consumption.
+func setPondFinancials(resp *dto.PondResponse, ap *model.ActivePond, feedCost decimal.Decimal) {
+	totalCost, totalRevenue, feed, net := cyclePLFloats(ap, feedCost)
+	resp.TotalCost = &totalCost
+	resp.TotalRevenue = &totalRevenue
+	resp.FeedCost = &feed
+	resp.NetResult = &net
+}
+
+// applyCloseFeedSnapshot freezes the cycle's derived feed cost onto ap and folds
+// it into the final net result. Shared by the sell-close and move-close paths so
+// both close semantics stay identical. Reads ap.TotalProfit/TotalCost, which the
+// caller must have already set to their final values.
+func (s *pondService) applyCloseFeedSnapshot(ctx context.Context, ap *model.ActivePond) error {
+	feedCost, err := s.feedCostCalc.CalcCycleFeedCost(ctx, ap)
+	if err != nil {
+		return err
+	}
+	ap.FeedCost = decimal.NullDecimal{Decimal: feedCost, Valid: true}
+	ap.NetResult = ap.TotalProfit.Sub(ap.TotalCost).Sub(feedCost)
+	return nil
 }
 
 // ListActivities returns the fill/move/sell activity timeline for a pond,
@@ -231,6 +287,88 @@ func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.Ac
 	return out, nil
 }
 
+// ListCycles returns every production cycle of a pond (active + closed), newest
+// first, each with its P&L. Feed cost for the active cycle is derived live;
+// closed cycles use the value frozen at close (nil for legacy cycles closed
+// before feed-cost accounting). Access is scoped to the pond's client since the
+// response exposes financial figures.
+func (s *pondService) ListCycles(ctx context.Context, pondId int) ([]*dto.PondCycleResponse, error) {
+	data, err := s.pondRepo.GetByIDWithFarmAndActivePond(ctx, pondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if data == nil || data.Pond == nil {
+		return nil, errors.ErrPondNotFound
+	}
+	if data.ClientId == 0 {
+		return nil, errors.ErrFarmNotFound
+	}
+	ok, err := utils.CanAccessClient(ctx, data.ClientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return nil, errors.ErrAuthPermissionDenied
+	}
+
+	cycles, err := s.activePondRepo.ListByPondID(ctx, pondId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+
+	// Feed cost is derived only for still-active cycles (closed ones carry a
+	// snapshot); batch the active ones so there is no per-cycle query.
+	activeCycles := make([]*model.ActivePond, 0, len(cycles))
+	for _, c := range cycles {
+		if c.IsActive {
+			activeCycles = append(activeCycles, c)
+		}
+	}
+	feedByAp, err := s.feedCostCalc.CalcCycleFeedCostBatch(ctx, activeCycles)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+
+	out := make([]*dto.PondCycleResponse, 0, len(cycles))
+	for _, c := range cycles {
+		out = append(out, buildPondCycleResponse(c, feedByAp))
+	}
+	return out, nil
+}
+
+// buildPondCycleResponse maps one cycle to its P&L response. For an active cycle
+// feed cost is taken from the derived batch and net = revenue − cost − feed; for
+// a closed cycle the frozen snapshot is used as-is (feed_cost may be nil for
+// legacy cycles, in which case net_result is the pre-feed figure it was stored
+// with).
+func buildPondCycleResponse(c *model.ActivePond, feedByAp map[int]decimal.Decimal) *dto.PondCycleResponse {
+	totalCost, _ := c.TotalCost.Float64()
+	totalRevenue, _ := c.TotalProfit.Float64()
+	resp := &dto.PondCycleResponse{
+		Id:           c.Id,
+		StartDate:    c.StartDate,
+		EndDate:      c.EndDate,
+		IsActive:     c.IsActive,
+		TotalFish:    c.TotalFish,
+		FishTypes:    c.FishTypes,
+		TotalCost:    totalCost,
+		TotalRevenue: totalRevenue,
+	}
+	if c.IsActive {
+		_, _, feed, net := cyclePLFloats(c, feedByAp[c.Id])
+		resp.FeedCost = &feed
+		resp.NetResult = net
+		return resp
+	}
+	if c.FeedCost.Valid {
+		feed, _ := c.FeedCost.Decimal.Float64()
+		resp.FeedCost = &feed
+	}
+	net, _ := c.NetResult.Float64()
+	resp.NetResult = net
+	return resp
+}
+
 func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest) error {
 	existing, err := s.pondRepo.GetByID(req.Id)
 	if err != nil {
@@ -252,7 +390,7 @@ func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest) err
 		existing.Status = req.Status
 	}
 	if req.Area != nil {
-		existing.Area = req.Area
+		existing.Area = utils.NullDecimalFromDecimalPtr(req.Area)
 	}
 
 	// Enforce unique pond name per farm when name was updated
@@ -290,8 +428,27 @@ func (s *pondService) GetList(ctx context.Context, farmId int) ([]*dto.PondRespo
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	responses := make([]*dto.PondResponse, 0, len(list))
+	activePonds := make([]*model.ActivePond, 0, len(list))
 	for _, pa := range list {
 		responses = append(responses, s.toPondResponseFromPondWithActive(pa))
+		if pa != nil && pa.ActivePond != nil {
+			activePonds = append(activePonds, pa.ActivePond)
+		}
+	}
+	// Derive feed cost for every active cycle in one batch (no N+1) so the
+	// listing shows a net result that already accounts for feed. Degrade
+	// gracefully: if the feed-data read fails, return the listing without
+	// financials rather than failing the whole farm view.
+	feedByAp, err := s.feedCostCalc.CalcCycleFeedCostBatch(ctx, activePonds)
+	if err != nil {
+		slog.ErrorContext(ctx, "batch feed cost calc failed; listing without financials",
+			"farm_id", farmId, "error", err)
+		return responses, nil
+	}
+	for i, pa := range list {
+		if pa != nil && pa.ActivePond != nil {
+			setPondFinancials(responses[i], pa.ActivePond, feedByAp[pa.ActivePond.Id])
+		}
 	}
 	return responses, nil
 }
@@ -571,6 +728,15 @@ func (s *pondService) MovePond(ctx context.Context, sourcePondId int, request dt
 		sourceActive.NetResult = sourceNetResult
 		sourceActive.TotalFish = sourceTotalFish
 		if request.MarkToClose {
+			// Closing ends the cycle and empties the pond (same semantics as a
+			// sell that closes): any fish not moved out are written off, so a
+			// closed cycle never reports residual stock.
+			sourceActive.TotalFish = 0
+			// Freeze the source cycle's derived feed cost and fold it into the
+			// final net result (same close semantics as a sell that closes).
+			if err := s.applyCloseFeedSnapshot(ctx, sourceActive); err != nil {
+				return err
+			}
 			sourceActive.IsActive = false
 			sourceActive.EndDate = &activityDate
 		}
@@ -655,6 +821,18 @@ func (s *pondService) validateSellMerchantIfSet(merchantId *int) error {
 	return nil
 }
 
+// sumSellFishCount totals the head count across sell detail lines. FishCount is
+// required at the DTO layer; a nil is treated as 0 defensively.
+func sumSellFishCount(details []dto.PondSellDetailItem) int {
+	total := 0
+	for _, d := range details {
+		if d.FishCount != nil {
+			total += *d.FishCount
+		}
+	}
+	return total
+}
+
 func buildSellDetailModels(activityId int, details []dto.PondSellDetailItem) []*model.SellDetail {
 	out := make([]*model.SellDetail, 0, len(details))
 	for _, d := range details {
@@ -698,12 +876,26 @@ func (s *pondService) SellPond(ctx context.Context, pondId int, request dto.Pond
 	activePond := data.ActivePond
 	pond := data.Pond
 
+	// Stock is tracked by head count; refuse selling more fish than the pond
+	// holds. This pre-transaction check gives the common case a clean 422; the
+	// authoritative guard is the row-locked re-check inside the transaction
+	// (executeSellTransaction), which serializes concurrent sells.
+	if sumSellFishCount(request.Details) > activePond.TotalFish {
+		return nil, errors.ErrPondInsufficientFish
+	}
+
 	var resp *dto.PondSellResponse
 	err = s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
 		resp, err = s.executeSellTransaction(ctx, tx, activePond, pond, request, activityDate)
 		return err
 	})
 	if err != nil {
+		// Preserve the specific insufficient-fish error (surfaced by the locked
+		// re-check) so a concurrent oversell still returns 422, not 500. The tx
+		// manager returns the callback error verbatim, so the sentinel is intact.
+		if err == errors.ErrPondInsufficientFish {
+			return nil, errors.ErrPondInsufficientFish
+		}
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	return resp, nil
@@ -722,6 +914,26 @@ func (s *pondService) executeSellTransaction(
 	activePondRepo := s.activePondRepo.WithTx(tx)
 	pondRepo := s.pondRepo.WithTx(tx)
 
+	// Re-read the cycle under a row lock so a concurrent sell/move on the same
+	// cycle serializes behind this lock. Adopt the locked row's authoritative
+	// figures (head count + running totals) onto the working copy so a
+	// concurrent commit isn't lost, then re-check stock — this rejects an
+	// oversell the pre-transaction check couldn't see (both sales read the same
+	// stale count before either committed).
+	locked, err := activePondRepo.GetByIDForUpdate(ctx, activePond.Id)
+	if err != nil {
+		return nil, err
+	}
+	if locked == nil {
+		return nil, errors.ErrPondNotFound
+	}
+	activePond.TotalFish = locked.TotalFish
+	activePond.TotalCost = locked.TotalCost
+	activePond.TotalProfit = locked.TotalProfit
+	if sumSellFishCount(request.Details) > activePond.TotalFish {
+		return nil, errors.ErrPondInsufficientFish
+	}
+
 	// Calculate
 	revenue, additionalCostTotal := utils.CalculateSellTotals(request.Details, request.AdditionalCosts)
 	newTotalCost := activePond.TotalCost
@@ -730,6 +942,13 @@ func (s *pondService) executeSellTransaction(
 	}
 	newTotalProfit := activePond.TotalProfit.Add(revenue)
 	newNetResult := newTotalProfit.Sub(newTotalCost)
+
+	// Stock is tracked by head count: a sale removes the sold fish; closing
+	// empties the pond entirely.
+	newTotalFish := max(activePond.TotalFish-sumSellFishCount(request.Details), 0)
+	if request.MarkToClose {
+		newTotalFish = 0
+	}
 
 	// Mapping
 	activity := &model.Activity{
@@ -750,7 +969,13 @@ func (s *pondService) executeSellTransaction(
 	activePond.TotalCost = newTotalCost
 	activePond.TotalProfit = newTotalProfit
 	activePond.NetResult = newNetResult
+	activePond.TotalFish = newTotalFish
+	// On close, freeze feed cost and fold it into net result (active cycles keep
+	// net = profit − cost and derive feed cost on read, so feed_cost stays NULL).
 	if request.MarkToClose {
+		if err := s.applyCloseFeedSnapshot(ctx, activePond); err != nil {
+			return nil, err
+		}
 		activePond.IsActive = false
 		activePond.EndDate = &activityDate
 	}
@@ -1253,7 +1478,7 @@ func (s *pondService) BulkImportFarmPond(ctx context.Context, clientId int, requ
 						FarmId: targetFarm.Id,
 						Name:   pondName,
 						Status: constants.FarmStatusMaintenance,
-						Area:   p.Area,
+						Area:   utils.NullDecimalFromDecimalPtr(p.Area),
 					}
 					if err := pondRepo.Create(ctx, newPond); err != nil {
 						return errors.ErrGeneric.Wrap(err)
@@ -1262,7 +1487,7 @@ func (s *pondService) BulkImportFarmPond(ctx context.Context, clientId int, requ
 					farmResult.PondsCreated++
 				} else {
 					if p.Area != nil {
-						existingPond.Area = p.Area
+						existingPond.Area = utils.NullDecimalFromDecimalPtr(p.Area)
 						if err := pondRepo.Update(ctx, existingPond); err != nil {
 							return errors.ErrGeneric.Wrap(err)
 						}
@@ -1302,7 +1527,7 @@ func (s *pondService) toPondResponseFromPondWithActive(pa *repository.PondWithFa
 		FarmId:    pond.FarmId,
 		Name:      pond.Name,
 		Status:    pond.Status,
-		Area:      pond.Area,
+		Area:      utils.DecimalPtrFromNullDecimal(pond.Area),
 		CreatedAt: pond.CreatedAt,
 		CreatedBy: pond.CreatedBy,
 		UpdatedAt: pond.UpdatedAt,

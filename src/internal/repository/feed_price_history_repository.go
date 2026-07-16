@@ -17,6 +17,7 @@ type FeedPriceHistoryRepository interface {
 	GetByID(id int) (*model.FeedPriceHistory, error)
 	GetByFeedCollectionIdAndDate(feedCollectionId int, priceUpdatedDate time.Time) (*model.FeedPriceHistory, error)
 	ListByFeedCollectionId(feedCollectionId int) ([]*model.FeedPriceHistory, error)
+	ListByFeedCollectionIds(feedCollectionIds []int) ([]*model.FeedPriceHistory, error)
 	Update(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error
 }
 
@@ -67,6 +68,20 @@ func (r *feedPriceHistoryRepository) ListByFeedCollectionId(feedCollectionId int
 	var feedPriceHistories []*model.FeedPriceHistory
 	err := r.db.Where("feed_collection_id = ? AND deleted_at IS NULL", feedCollectionId).
 		Order("price_updated_date DESC").
+		Find(&feedPriceHistories).Error
+	return feedPriceHistories, err
+}
+
+// ListByFeedCollectionIds returns price history for several feed collections in
+// one query (used by whole-cycle feed-cost aggregation). Returns an empty slice
+// when no ids are given. Callers group and order by FeedCollectionId themselves
+// (see groupPriceHistoryAscending), so no ORDER BY is imposed here.
+func (r *feedPriceHistoryRepository) ListByFeedCollectionIds(feedCollectionIds []int) ([]*model.FeedPriceHistory, error) {
+	if len(feedCollectionIds) == 0 {
+		return []*model.FeedPriceHistory{}, nil
+	}
+	var feedPriceHistories []*model.FeedPriceHistory
+	err := r.db.Where("feed_collection_id IN ? AND deleted_at IS NULL", feedCollectionIds).
 		Find(&feedPriceHistories).Error
 	return feedPriceHistories, err
 }
