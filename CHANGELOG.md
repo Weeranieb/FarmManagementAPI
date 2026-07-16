@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.6](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.5...v0.2.6) (2026-07-16)
+
+
+### Features
+
+* pond cycle P&L with derived/snapshotted feed cost ([#37](https://github.com/Weeranieb/FarmManagementAPI/issues/37)) ([a59e526](https://github.com/Weeranieb/FarmManagementAPI/commit/a59e526fb234a940afdce18ab915b266b779fe8a))
+
 ## [0.2.5](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.4...v0.2.5) (2026-06-13)
 
 
