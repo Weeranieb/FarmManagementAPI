@@ -142,6 +142,36 @@ func (_m *MockFeedPriceHistoryRepository) ListByFeedCollectionId(feedCollectionI
 	return r0, r1
 }
 
+// ListByFeedCollectionIds provides a mock function with given fields: feedCollectionIds
+func (_m *MockFeedPriceHistoryRepository) ListByFeedCollectionIds(feedCollectionIds []int) ([]*model.FeedPriceHistory, error) {
+	ret := _m.Called(feedCollectionIds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByFeedCollectionIds")
+	}
+
+	var r0 []*model.FeedPriceHistory
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]int) ([]*model.FeedPriceHistory, error)); ok {
+		return rf(feedCollectionIds)
+	}
+	if rf, ok := ret.Get(0).(func([]int) []*model.FeedPriceHistory); ok {
+		r0 = rf(feedCollectionIds)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.FeedPriceHistory)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func([]int) error); ok {
+		r1 = rf(feedCollectionIds)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: ctx, feedPriceHistory
 func (_m *MockFeedPriceHistoryRepository) Update(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error {
 	ret := _m.Called(ctx, feedPriceHistory)

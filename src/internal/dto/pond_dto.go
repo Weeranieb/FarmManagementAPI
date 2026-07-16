@@ -80,21 +80,47 @@ type UpdatePondBody struct {
 }
 
 type PondResponse struct {
-	Id                 int              `json:"id"`
-	FarmId             int              `json:"farmId"`
-	Name               string           `json:"name"`
-	TotalFish          *int             `json:"totalFish"`
-	Status             string           `json:"status"`
-	Area               *decimal.Decimal `json:"area,omitempty" swaggertype:"number"`
-	FishTypes          []string         `json:"fishTypes"`
-	AgeDays            *int             `json:"ageDays"`
-	StartDate          *time.Time       `json:"startDate"`
-	LatestActivityDate *time.Time       `json:"latestActivityDate"`
-	LatestActivityType *string          `json:"latestActivityType"`
-	CreatedAt          time.Time        `json:"createdAt"`
-	CreatedBy          string           `json:"createdBy"`
-	UpdatedAt          time.Time        `json:"updatedAt"`
-	UpdatedBy          string           `json:"updatedBy"`
+	Id        int              `json:"id"`
+	FarmId    int              `json:"farmId"`
+	Name      string           `json:"name"`
+	TotalFish *int             `json:"totalFish"`
+	Status    string           `json:"status"`
+	Area      *decimal.Decimal `json:"area,omitempty" swaggertype:"number"`
+	FishTypes []string         `json:"fishTypes"`
+	AgeDays   *int             `json:"ageDays"`
+	// Cycle P&L for the currently-active cycle (nil when the pond has none).
+	// TotalCost/TotalRevenue are the accumulated transactional figures;
+	// FeedCost is derived live from daily logs + feed price history; NetResult
+	// = TotalRevenue − TotalCost − FeedCost.
+	TotalCost          *float64   `json:"totalCost"`
+	TotalRevenue       *float64   `json:"totalRevenue"`
+	FeedCost           *float64   `json:"feedCost"`
+	NetResult          *float64   `json:"netResult"`
+	StartDate          *time.Time `json:"startDate"`
+	LatestActivityDate *time.Time `json:"latestActivityDate"`
+	LatestActivityType *string    `json:"latestActivityType"`
+	CreatedAt          time.Time  `json:"createdAt"`
+	CreatedBy          string     `json:"createdBy"`
+	UpdatedAt          time.Time  `json:"updatedAt"`
+	UpdatedBy          string     `json:"updatedBy"`
+}
+
+// PondCycleResponse is one production cycle of a pond (active or closed) with
+// its P&L, returned by GET /pond/:pondId/cycles. FeedCost is nil for legacy
+// cycles closed before feed-cost accounting existed; for the active cycle it is
+// derived live and NetResult = TotalRevenue − TotalCost − FeedCost, while for a
+// closed cycle both are the values frozen at close.
+type PondCycleResponse struct {
+	Id           int        `json:"id"`
+	StartDate    time.Time  `json:"startDate"`
+	EndDate      *time.Time `json:"endDate"`
+	IsActive     bool       `json:"isActive"`
+	TotalFish    int        `json:"totalFish"`
+	FishTypes    []string   `json:"fishTypes"`
+	TotalCost    float64    `json:"totalCost"`
+	TotalRevenue float64    `json:"totalRevenue"`
+	FeedCost     *float64   `json:"feedCost"`
+	NetResult    float64    `json:"netResult"`
 }
 
 // AdditionalCostItem represents a single additional cost with a title and amount.
@@ -105,9 +131,11 @@ type AdditionalCostItem struct {
 
 // PondFillRequest is the body for POST /pond/:pondId/fill (add fish to pond).
 type PondFillRequest struct {
-	FishType        string               `json:"fishType" validate:"required"`
-	Amount          int                  `json:"amount" validate:"required,min=1"`
-	FishWeight      decimal.Decimal      `json:"fishWeight,omitempty" validate:"omitempty,decimal_gt0" swaggertype:"number"`
+	FishType string `json:"fishType" validate:"required"`
+	Amount   int    `json:"amount" validate:"required,min=1"`
+	// FishWeight (avg kg/fish) is required: fill cost = amount × fishWeight ×
+	// pricePerUnit, so a missing weight would silently book a zero stock cost.
+	FishWeight      decimal.Decimal      `json:"fishWeight" validate:"required,decimal_gt0" swaggertype:"number"`
 	PricePerUnit    decimal.Decimal      `json:"pricePerUnit" validate:"required,decimal_gt0" swaggertype:"number"`
 	AdditionalCosts []AdditionalCostItem `json:"additionalCosts,omitempty" validate:"dive"`
 	ActivityDate    string               `json:"activityDate" validate:"required"`
@@ -151,7 +179,9 @@ type PondSellDetailItem struct {
 	FishSizeGradeId int             `json:"fishSizeGradeId" validate:"required"`
 	Weight          decimal.Decimal `json:"weight" validate:"required,decimal_gt0" swaggertype:"number"`
 	PricePerUnit    decimal.Decimal `json:"pricePerUnit" validate:"required,decimal_gt0" swaggertype:"number"`
-	FishCount       *int            `json:"fishCount,omitempty"`
+	// FishCount is required: the active pond tracks stock by head count, so every
+	// sold line must state how many fish it removes to keep total_fish accurate.
+	FishCount *int `json:"fishCount" validate:"required,min=1"`
 }
 
 // PondSellRequest is the body for POST /pond/:pondId/sell.

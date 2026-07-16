@@ -87,6 +87,36 @@ func (_m *MockDailyLogRepository) ListByActivePondAndMonth(ctx context.Context, 
 	return r0, r1
 }
 
+// ListByActivePondIds provides a mock function with given fields: ctx, activePondIds
+func (_m *MockDailyLogRepository) ListByActivePondIds(ctx context.Context, activePondIds []int) ([]*model.DailyLog, error) {
+	ret := _m.Called(ctx, activePondIds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByActivePondIds")
+	}
+
+	var r0 []*model.DailyLog
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []int) ([]*model.DailyLog, error)); ok {
+		return rf(ctx, activePondIds)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []int) []*model.DailyLog); ok {
+		r0 = rf(ctx, activePondIds)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.DailyLog)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
+		r1 = rf(ctx, activePondIds)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListIDAndFeedDateByActivePondRange provides a mock function with given fields: ctx, activePondId, min, max
 func (_m *MockDailyLogRepository) ListIDAndFeedDateByActivePondRange(ctx context.Context, activePondId int, min time.Time, max time.Time) ([]repository.DailyLogIDFeedDate, error) {
 	ret := _m.Called(ctx, activePondId, min, max)

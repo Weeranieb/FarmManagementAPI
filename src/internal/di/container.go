@@ -55,6 +55,7 @@ func NewContainer(conf *config.Config) *dig.Container {
 	mustProvide(c, service.NewFeedCollectionService)
 	mustProvide(c, service.NewFeedPriceHistoryService)
 	mustProvide(c, service.NewFishSizeGradeService)
+	mustProvide(c, service.NewFeedCostCalculator)
 	mustProvide(c, service.NewDailyLogService)
 	mustProvide(c, service.NewActivityService)
 

@@ -22,6 +22,7 @@ func (r *Router) setupPondRoutes(group fiber.Router) {
 	pond.Post("/:pondId/move", r.handlers.PondHandler.MovePond)
 	pond.Post("/:pondId/sell", r.handlers.PondHandler.SellPond)
 	pond.Get("/:pondId/activities", r.handlers.PondHandler.GetPondActivities)
+	pond.Get("/:pondId/cycles", r.handlers.PondHandler.GetPondCycles)
 	pond.Get("/:id", r.handlers.PondHandler.GetPond)
 	pond.Put("/:id", r.handlers.PondHandler.UpdatePond)
 	pond.Delete("/:id", r.handlers.PondHandler.DeletePond)
