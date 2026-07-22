@@ -30,7 +30,10 @@ type ActivityFeedItem struct {
 	// to the username when the user record no longer exists.
 	CreatedByName string  `json:"createdByName"`
 	PondName      string  `json:"pondName"`
-	ToPondName    *string `json:"toPondName,omitempty"` // move only — destination pond
+	// FarmName is the farm the source pond belongs to — shown as a secondary
+	// label so a feed row is identifiable when pond names repeat across farms.
+	FarmName   string  `json:"farmName"`
+	ToPondName *string `json:"toPondName,omitempty"` // move only — destination pond
 	FishType      string  `json:"fishType"`
 	Amount        int     `json:"amount"`
 	FishWeight    float64 `json:"fishWeight"`

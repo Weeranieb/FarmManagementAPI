@@ -15,6 +15,7 @@ type FeedPriceHistoryService interface {
 	Create(ctx context.Context, request dto.CreateFeedPriceHistoryRequest, username string) (*dto.FeedPriceHistoryResponse, error)
 	Get(id int) (*dto.FeedPriceHistoryResponse, error)
 	Update(ctx context.Context, request dto.UpdateFeedPriceHistoryRequest, username string) error
+	Delete(ctx context.Context, id int) error
 	GetAll(feedCollectionId int) ([]*dto.FeedPriceHistoryResponse, error)
 }
 
@@ -88,6 +89,21 @@ func (s *feedPriceHistoryService) Update(ctx context.Context, request dto.Update
 
 	// UpdatedBy set via BaseModel hook from ctx
 	if err := s.feedPriceHistoryRepo.Update(ctx, existingFeedPriceHistory); err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	return nil
+}
+
+func (s *feedPriceHistoryService) Delete(ctx context.Context, id int) error {
+	existingFeedPriceHistory, err := s.feedPriceHistoryRepo.GetByID(id)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existingFeedPriceHistory == nil {
+		return errors.ErrFeedPriceHistoryNotFound
+	}
+
+	if err := s.feedPriceHistoryRepo.Delete(ctx, id); err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	return nil

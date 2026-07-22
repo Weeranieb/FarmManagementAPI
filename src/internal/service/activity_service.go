@@ -76,6 +76,7 @@ func (s *activityService) ListFeed(ctx context.Context, limit int) ([]*dto.Activ
 			CreatedBy:     r.CreatedBy,
 			CreatedByName: r.CreatedByName,
 			PondName:      r.PondName,
+			FarmName:      r.FarmName,
 			ToPondName:    r.ToPondName,
 			FishType:      r.FishType,
 			Amount:        r.Amount,

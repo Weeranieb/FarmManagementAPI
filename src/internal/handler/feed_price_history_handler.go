@@ -16,6 +16,7 @@ type FeedPriceHistoryHandler interface {
 	AddFeedPriceHistory(c *fiber.Ctx) error
 	GetFeedPriceHistory(c *fiber.Ctx) error
 	UpdateFeedPriceHistory(c *fiber.Ctx) error
+	DeleteFeedPriceHistory(c *fiber.Ctx) error
 	GetAllFeedPriceHistory(c *fiber.Ctx) error
 }
 
@@ -80,6 +81,19 @@ func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c *fiber.Ctx) error
 
 	err = h.feedPriceHistoryService.Update(c.UserContext(), updateFeedPriceHistory, username)
 	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.SuccessWithoutData(c)
+}
+
+func (h *feedPriceHistoryHandlerImpl) DeleteFeedPriceHistory(c *fiber.Ctx) error {
+	id, err := parseParamInt(c, "id", "Invalid feed price history ID")
+	if err != nil {
+		return err
+	}
+
+	if err := h.feedPriceHistoryService.Delete(c.UserContext(), id); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
