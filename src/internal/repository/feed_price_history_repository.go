@@ -19,6 +19,7 @@ type FeedPriceHistoryRepository interface {
 	ListByFeedCollectionId(feedCollectionId int) ([]*model.FeedPriceHistory, error)
 	ListByFeedCollectionIds(feedCollectionIds []int) ([]*model.FeedPriceHistory, error)
 	Update(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error
+	Delete(ctx context.Context, id int) error
 }
 
 type feedPriceHistoryRepository struct {
@@ -88,4 +89,10 @@ func (r *feedPriceHistoryRepository) ListByFeedCollectionIds(feedCollectionIds [
 
 func (r *feedPriceHistoryRepository) Update(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error {
 	return r.db.WithContext(ctx).Save(feedPriceHistory).Error
+}
+
+// Delete soft-deletes a price-history row (BaseModel.DeletedAt), so it drops out
+// of every `deleted_at IS NULL` read but stays recoverable.
+func (r *feedPriceHistoryRepository) Delete(ctx context.Context, id int) error {
+	return r.db.WithContext(ctx).Delete(&model.FeedPriceHistory{}, id).Error
 }

@@ -52,6 +52,7 @@ type ActivityFeedRow struct {
 	CreatedBy     string          `gorm:"column:created_by"`
 	CreatedByName string          `gorm:"column:created_by_name"`
 	PondName      string          `gorm:"column:pond_name"`
+	FarmName      string          `gorm:"column:farm_name"`
 	ToPondName    *string         `gorm:"column:to_pond_name"`
 	FishType      string          `gorm:"column:fish_type"`
 	Amount        int             `gorm:"column:amount"`
@@ -148,6 +149,7 @@ SELECT
   a.created_by AS created_by,
   COALESCE(u.first_name, a.created_by) AS created_by_name,
   fp.name AS pond_name,
+  f.name AS farm_name,
   tp.name AS to_pond_name,
   a.fish_type AS fish_type,
   a.amount AS amount,
