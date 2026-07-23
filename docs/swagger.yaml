@@ -157,6 +157,10 @@ definitions:
         type: string
       name:
         type: string
+      packSizeKg:
+        type: number
+      supplier:
+        type: string
       unit:
         type: string
     required:
@@ -166,6 +170,8 @@ definitions:
   dto.CreateFeedPriceHistoryItemRequest:
     properties:
       price:
+        type: number
+      pricePerKg:
         type: number
       priceUpdatedDate:
         type: string
@@ -593,6 +599,28 @@ definitions:
       name:
         type: string
     type: object
+  dto.UpdateFeedCollectionRequest:
+    properties:
+      fcr:
+        type: number
+      feedType:
+        enum:
+        - fresh
+        - pellet
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      packSizeKg:
+        type: number
+      supplier:
+        type: string
+      unit:
+        type: string
+    required:
+    - id
+    type: object
   dto.UpdateMerchantRequest:
     properties:
       contactNumber:
@@ -690,29 +718,6 @@ definitions:
       name:
         type: string
       ownerName:
-        type: string
-      updated_at:
-        type: string
-      updated_by:
-        type: string
-    type: object
-  model.FeedCollection:
-    properties:
-      clientId:
-        type: integer
-      created_at:
-        type: string
-      created_by:
-        type: string
-      fcr:
-        type: number
-      feedType:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      unit:
         type: string
       updated_at:
         type: string
@@ -1313,7 +1318,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/model.FeedCollection'
+          $ref: '#/definitions/dto.UpdateFeedCollectionRequest'
       produces:
       - application/json
       responses:
