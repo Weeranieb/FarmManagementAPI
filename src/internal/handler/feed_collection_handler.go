@@ -109,7 +109,7 @@ func (h *feedCollectionHandlerImpl) GetFeedCollection(c *fiber.Ctx) error {
 // @Produce      json
 // @Security     BearerAuth
 // @Security     CookieAuth
-// @Param        body body model.FeedCollection true "Updated feed collection data"
+// @Param        body body dto.UpdateFeedCollectionRequest true "Updated feed collection data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel

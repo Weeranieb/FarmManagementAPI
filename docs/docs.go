@@ -894,7 +894,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.FeedCollection"
+                            "$ref": "#/definitions/dto.UpdateFeedCollectionRequest"
                         }
                     }
                 ],
@@ -3153,6 +3153,12 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "packSizeKg": {
+                    "type": "number"
+                },
+                "supplier": {
+                    "type": "string"
+                },
                 "unit": {
                     "type": "string"
                 }
@@ -3166,6 +3172,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "price": {
+                    "type": "number"
+                },
+                "pricePerKg": {
                     "type": "number"
                 },
                 "priceUpdatedDate": {
@@ -3785,6 +3794,39 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.UpdateFeedCollectionRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "fcr": {
+                    "type": "number"
+                },
+                "feedType": {
+                    "type": "string",
+                    "enum": [
+                        "fresh",
+                        "pellet"
+                    ]
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "packSizeKg": {
+                    "type": "number"
+                },
+                "supplier": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.UpdateMerchantRequest": {
             "type": "object",
             "required": [
@@ -3928,41 +3970,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "ownerName": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.FeedCollection": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "fcr": {
-                    "type": "number"
-                },
-                "feedType": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "unit": {
                     "type": "string"
                 },
                 "updated_at": {
