@@ -9,6 +9,14 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.8](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.7...v0.2.8) (2026-07-23)
+
+
+### Features
+
+* activity farm name + delete feed price-history endpoint ([#41](https://github.com/Weeranieb/FarmManagementAPI/issues/41)) ([5ef7ccd](https://github.com/Weeranieb/FarmManagementAPI/commit/5ef7ccd4d9c16e02f518e29f43686ca9e8e93455))
+* feed-collection per-pack pricing + pack size, supplier ([#43](https://github.com/Weeranieb/FarmManagementAPI/issues/43)) ([cb050b1](https://github.com/Weeranieb/FarmManagementAPI/commit/cb050b112a61a0b25e2b3f1104d0faf7ba6a6bd5))
+
 ## [0.2.7](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.6...v0.2.7) (2026-07-16)
 
 
