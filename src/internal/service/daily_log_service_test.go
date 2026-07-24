@@ -208,6 +208,82 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_Success_WithPrices() {
 	assert.True(s.T(), out.Entries[0].FreshUnitPrice.Equal(price10))
 }
 
+// Pellet is logged in กก. but priced per ถุง, so GetMonth must expose the
+// per-กก. snapshot (PricePerKg), not the per-ถุง headline Price — otherwise the
+// client's quantity(kg) × price over-states pellet cost by kilo-per-bag. Fresh
+// (logged and priced per ลัง) keeps using Price.
+func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceIsPerKg() {
+	ctx := dailyLogCtxSuperAdmin()
+	activePondId := 10
+	freshID, pelletID := 11, 12
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
+		Id:                     activePondId,
+		PondId:                 1,
+		FreshFeedCollectionId:  lo.ToPtr(freshID),
+		PelletFeedCollectionId: lo.ToPtr(pelletID),
+	}), nil)
+	fd := time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)
+	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, activePondId, mock.Anything, mock.Anything).Return([]*model.DailyLog{
+		{
+			Id:            1,
+			ActivePondId:  activePondId,
+			FeedDate:      fd,
+			Fresh:         decimal.RequireFromString("1"),
+			PelletMorning: decimal.RequireFromString("2"),
+		},
+	}, nil)
+	s.feedCollectionRepo.On("GetByID", freshID).Return(&model.FeedCollection{Id: freshID, Name: "F", Unit: "ลัง", FeedType: constants.FeedTypeFresh}, nil)
+	s.feedCollectionRepo.On("GetByID", pelletID).Return(&model.FeedCollection{Id: pelletID, Name: "P", Unit: "ถุง", FeedType: constants.FeedTypePellet}, nil)
+
+	freshPerCrate := decimal.RequireFromString("250")
+	pelletPerBag := decimal.RequireFromString("500") // per ถุง (headline) — must NOT be exposed
+	pelletPerKg := decimal.RequireFromString("25")   // per กก. snapshot (500 / 20)
+	updated := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	s.priceHistoryRepo.On("ListByFeedCollectionId", freshID).Return([]*model.FeedPriceHistory{
+		{FeedCollectionId: freshID, Price: freshPerCrate, PriceUpdatedDate: updated},
+	}, nil)
+	s.priceHistoryRepo.On("ListByFeedCollectionId", pelletID).Return([]*model.FeedPriceHistory{
+		{FeedCollectionId: pelletID, Price: pelletPerBag, PricePerKg: decimal.NewNullDecimal(pelletPerKg), PriceUpdatedDate: updated},
+	}, nil)
+
+	out, err := s.svc.GetMonth(ctx, 1, "2024-03")
+	assert.NoError(s.T(), err)
+	require.Len(s.T(), out.Entries, 1)
+	require.NotNil(s.T(), out.Entries[0].FreshUnitPrice)
+	require.NotNil(s.T(), out.Entries[0].PelletUnitPrice)
+	assert.True(s.T(), out.Entries[0].FreshUnitPrice.Equal(freshPerCrate), "fresh unit price is per ลัง (Price)")
+	assert.True(s.T(), out.Entries[0].PelletUnitPrice.Equal(pelletPerKg), "pellet unit price is per กก. (PricePerKg), not per ถุง")
+}
+
+// A pellet price row without a PricePerKg snapshot must resolve to a blank cell
+// rather than the per-ถุง headline Price, matching feed_cost_calculator.go.
+func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceBlankWhenNoPerKgSnapshot() {
+	ctx := dailyLogCtxSuperAdmin()
+	activePondId := 10
+	freshID, pelletID := 11, 12
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
+		Id:                     activePondId,
+		PondId:                 1,
+		FreshFeedCollectionId:  lo.ToPtr(freshID),
+		PelletFeedCollectionId: lo.ToPtr(pelletID),
+	}), nil)
+	fd := time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)
+	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, activePondId, mock.Anything, mock.Anything).Return([]*model.DailyLog{
+		{Id: 1, ActivePondId: activePondId, FeedDate: fd, PelletMorning: decimal.RequireFromString("2")},
+	}, nil)
+	s.feedCollectionRepo.On("GetByID", freshID).Return(&model.FeedCollection{Id: freshID, Name: "F", Unit: "ลัง", FeedType: constants.FeedTypeFresh}, nil)
+	s.feedCollectionRepo.On("GetByID", pelletID).Return(&model.FeedCollection{Id: pelletID, Name: "P", Unit: "ถุง", FeedType: constants.FeedTypePellet}, nil)
+	s.priceHistoryRepo.On("ListByFeedCollectionId", freshID).Return([]*model.FeedPriceHistory{}, nil)
+	s.priceHistoryRepo.On("ListByFeedCollectionId", pelletID).Return([]*model.FeedPriceHistory{
+		{FeedCollectionId: pelletID, Price: decimal.RequireFromString("500"), PriceUpdatedDate: time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)},
+	}, nil)
+
+	out, err := s.svc.GetMonth(ctx, 1, "2024-03")
+	assert.NoError(s.T(), err)
+	require.Len(s.T(), out.Entries, 1)
+	assert.Nil(s.T(), out.Entries[0].PelletUnitPrice, "pellet with no PricePerKg snapshot resolves to blank, not the per-ถุง Price")
+}
+
 func (s *DailyLogServiceTestSuite) TestGetMonth_DayUsesThailandCalendarWhenUTCDateDiffers() {
 	ctx := dailyLogCtxSuperAdmin()
 	activePondId := 10
