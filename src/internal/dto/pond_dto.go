@@ -381,6 +381,11 @@ type PondSellPreviewResponse struct {
 // Move activities appear in both the source and destination pond's history.
 // Direction is "in" when the requested pond is the destination (FromPondName
 // is set) and "out" otherwise (ToPondName is set for outgoing moves).
+// A sell row carries no amount/price/weight of its own — those live on its
+// sell_details lines — so Amount, PricePerUnit, TotalWeight and AdditionalCost
+// are filled from the summed detail lines instead. Total stays gross revenue
+// for a sell (AdditionalCost is reported separately), while fill/move already
+// have their additional costs folded into Total.
 type ActivityResponse struct {
 	Id           int       `json:"id"`
 	Mode         string    `json:"mode"`      // fill | move | sell
@@ -390,7 +395,12 @@ type ActivityResponse struct {
 	Amount       int       `json:"amount"`
 	PricePerUnit float64   `json:"pricePerUnit"`
 	Total        float64   `json:"total"`
-	Merchant     *string   `json:"merchant,omitempty"`
-	ToPondName   *string   `json:"toPondName,omitempty"`
-	FromPondName *string   `json:"fromPondName,omitempty"`
+	// TotalWeight (kg) is set for sells only — the summed sell_details.weight.
+	TotalWeight *float64 `json:"totalWeight,omitempty"`
+	// AdditionalCost is the summed additional_costs of the activity. Omitted
+	// when zero; for fill/move it is already part of Total.
+	AdditionalCost *float64 `json:"additionalCost,omitempty"`
+	Merchant       *string  `json:"merchant,omitempty"`
+	ToPondName     *string  `json:"toPondName,omitempty"`
+	FromPondName   *string  `json:"fromPondName,omitempty"`
 }

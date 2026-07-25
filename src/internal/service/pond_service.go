@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/shopspring/decimal"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
@@ -259,10 +260,21 @@ func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.Ac
 	for _, r := range rows {
 		pricePerUnit, _ := r.PricePerUnit.Float64()
 		fishWeight, _ := r.FishWeight.Float64()
+		amount := r.Amount
 		var total float64
+		var totalWeight *float64
 		switch r.Mode {
 		case constants.ActivityModeSell:
-			total = sellTotals[r.Id].total
+			st := sellTotals[r.Id]
+			total = st.total
+			// A sell row's own amount/price/weight columns stay empty — every
+			// figure comes off its detail lines. Average price per kg is derived
+			// so the client doesn't have to divide (and guard against 0 kg).
+			amount = st.fishCount
+			totalWeight = lo.ToPtr(st.weight)
+			if st.weight > 0 {
+				pricePerUnit = st.total / st.weight
+			}
 		default:
 			total = fillMoveActivityTotal(r.Amount, fishWeight, pricePerUnit, additionalCostTotals[r.Id])
 		}
@@ -271,17 +283,19 @@ func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.Ac
 			direction = "in"
 		}
 		out = append(out, &dto.ActivityResponse{
-			Id:           r.Id,
-			Mode:         r.Mode,
-			Direction:    direction,
-			ActivityDate: r.ActivityDate,
-			FishType:     r.FishType,
-			Amount:       r.Amount,
-			PricePerUnit: pricePerUnit,
-			Total:        total,
-			Merchant:     r.MerchantName,
-			ToPondName:   r.ToPondName,
-			FromPondName: r.FromPondName,
+			Id:             r.Id,
+			Mode:           r.Mode,
+			Direction:      direction,
+			ActivityDate:   r.ActivityDate,
+			FishType:       r.FishType,
+			Amount:         amount,
+			PricePerUnit:   pricePerUnit,
+			Total:          total,
+			TotalWeight:    totalWeight,
+			AdditionalCost: lo.EmptyableToPtr(additionalCostTotals[r.Id]),
+			Merchant:       r.MerchantName,
+			ToPondName:     r.ToPondName,
+			FromPondName:   r.FromPondName,
 		})
 	}
 	return out, nil

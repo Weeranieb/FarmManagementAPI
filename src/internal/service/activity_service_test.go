@@ -78,7 +78,9 @@ func (s *ActivityServiceTestSuite) TestListFeedComputesTotalsPerMode() {
 	s.activityRepo.On("SumSellDetailsByActivityIDs", clientCtx(), []int{401}).Return([]repository.SellTotalRow{
 		{SellId: 401, Total: decimal.NewFromInt(24180), TotalWeight: decimal.NewFromInt(312)},
 	}, nil)
-	s.activityRepo.On("SumAdditionalCostsByActivityIDs", clientCtx(), []int{302, 212}).Return([]repository.AdditionalCostTotalRow{
+	// Sell ids lead: additional costs are summed for every mode (the pond
+	// activity timeline reports a sale's costs alongside its gross revenue).
+	s.activityRepo.On("SumAdditionalCostsByActivityIDs", clientCtx(), []int{401, 302, 212}).Return([]repository.AdditionalCostTotalRow{
 		{ActivityId: 302, Total: decimal.NewFromInt(500)},
 	}, nil)
 
