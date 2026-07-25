@@ -7,15 +7,15 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type MerchantHandler interface {
-	AddMerchant(c *fiber.Ctx) error
-	GetMerchant(c *fiber.Ctx) error
-	GetMerchantList(c *fiber.Ctx) error
-	UpdateMerchant(c *fiber.Ctx) error
-	DeleteMerchant(c *fiber.Ctx) error
+	AddMerchant(c fiber.Ctx) error
+	GetMerchant(c fiber.Ctx) error
+	GetMerchantList(c fiber.Ctx) error
+	UpdateMerchant(c fiber.Ctx) error
+	DeleteMerchant(c fiber.Ctx) error
 }
 
 type merchantHandlerImpl struct {
@@ -42,7 +42,7 @@ func NewMerchantHandler(merchantService service.MerchantService) MerchantHandler
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant [post]
-func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
+func (h *merchantHandlerImpl) AddMerchant(c fiber.Ctx) error {
 	var createMerchantRequest dto.CreateMerchantRequest
 
 	if err := validateAndParse(c, &createMerchantRequest); err != nil {
@@ -53,12 +53,12 @@ func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	newMerchant, err := h.merchantService.Create(c.UserContext(), createMerchantRequest, username)
+	newMerchant, err := h.merchantService.Create(c.Context(), createMerchantRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -79,7 +79,7 @@ func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant/{id} [get]
-func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
+func (h *merchantHandlerImpl) GetMerchant(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "id", "Invalid merchant ID")
 	if err != nil {
@@ -105,7 +105,7 @@ func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant [get]
-func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
+func (h *merchantHandlerImpl) GetMerchantList(c fiber.Ctx) error {
 
 	merchantList, err := h.merchantService.GetList()
 	if err != nil {
@@ -129,7 +129,7 @@ func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant [put]
-func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
+func (h *merchantHandlerImpl) UpdateMerchant(c fiber.Ctx) error {
 	var updateMerchantRequest dto.UpdateMerchantRequest
 
 	if err := validateAndParse(c, &updateMerchantRequest); err != nil {
@@ -140,12 +140,12 @@ func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.merchantService.Update(c.UserContext(), updateMerchantRequest, username)
+	err = h.merchantService.Update(c.Context(), updateMerchantRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -168,7 +168,7 @@ func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant/{id} [delete]
-func (h *merchantHandlerImpl) DeleteMerchant(c *fiber.Ctx) error {
+func (h *merchantHandlerImpl) DeleteMerchant(c fiber.Ctx) error {
 
 	if err := requireSuperAdmin(c); err != nil {
 		return err
@@ -179,7 +179,7 @@ func (h *merchantHandlerImpl) DeleteMerchant(c *fiber.Ctx) error {
 		return err
 	}
 
-	if err := h.merchantService.Delete(c.UserContext(), id); err != nil {
+	if err := h.merchantService.Delete(c.Context(), id); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 

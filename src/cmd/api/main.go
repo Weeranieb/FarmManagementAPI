@@ -15,7 +15,7 @@ import (
 
 	_ "github.com/weeranieb/boonmafarm-backend/docs"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"go.uber.org/dig"
 	"gorm.io/gorm"
 )

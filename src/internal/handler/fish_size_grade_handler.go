@@ -6,11 +6,11 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type FishSizeGradeHandler interface {
-	GetDropdown(c *fiber.Ctx) error
+	GetDropdown(c fiber.Ctx) error
 }
 
 type fishSizeGradeHandlerImpl struct {
@@ -33,7 +33,7 @@ func NewFishSizeGradeHandler(fishSizeGradeService service.FishSizeGradeService) 
 // @Success      200  {object}  http.ResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /fish-size-grade/dropdown [get]
-func (h *fishSizeGradeHandlerImpl) GetDropdown(c *fiber.Ctx) error {
+func (h *fishSizeGradeHandlerImpl) GetDropdown(c fiber.Ctx) error {
 
 	items, err := h.fishSizeGradeService.GetDropdown()
 	if err != nil {

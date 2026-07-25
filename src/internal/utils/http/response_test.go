@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/require"
 
@@ -35,9 +35,9 @@ func newApp() *fiber.App {
 
 func TestNewError_ValidationFailure_Returns422_WithFields(t *testing.T) {
 	app := newApp()
-	app.Post("/x", func(c *fiber.Ctx) error {
+	app.Post("/x", func(c fiber.Ctx) error {
 		var body registerDTO
-		if err := c.BodyParser(&body); err != nil {
+		if err := c.Bind().Body(&body); err != nil {
 			return httputil.NewError(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Wrap(err))
 		}
 		if err := utils.ValidateStruct(&body); err != nil {
@@ -69,9 +69,9 @@ func TestNewError_ValidationFailure_Returns422_WithFields(t *testing.T) {
 
 func TestNewError_BadJSONBody_Returns400(t *testing.T) {
 	app := newApp()
-	app.Post("/x", func(c *fiber.Ctx) error {
+	app.Post("/x", func(c fiber.Ctx) error {
 		var body registerDTO
-		if err := c.BodyParser(&body); err != nil {
+		if err := c.Bind().Body(&body); err != nil {
 			return httputil.NewError(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Wrap(err))
 		}
 		return httputil.Success(c, nil)
@@ -93,7 +93,7 @@ func TestNewError_BadJSONBody_Returns400(t *testing.T) {
 
 func TestNewError_NotFoundCode_Returns404(t *testing.T) {
 	app := newApp()
-	app.Get("/x", func(c *fiber.Ctx) error {
+	app.Get("/x", func(c fiber.Ctx) error {
 		return httputil.NewError(c, errors.ErrGeneric.Code, errors.ErrFarmNotFound)
 	})
 
@@ -108,7 +108,7 @@ func TestNewError_NotFoundCode_Returns404(t *testing.T) {
 
 func TestNewError_AlreadyExistsCode_Returns409(t *testing.T) {
 	app := newApp()
-	app.Post("/x", func(c *fiber.Ctx) error {
+	app.Post("/x", func(c fiber.Ctx) error {
 		return httputil.NewError(c, errors.ErrGeneric.Code, errors.ErrUserEmailAlreadyExists)
 	})
 
@@ -119,7 +119,7 @@ func TestNewError_AlreadyExistsCode_Returns409(t *testing.T) {
 
 func TestNewError_AuthInvalidCredentials_Returns401(t *testing.T) {
 	app := newApp()
-	app.Post("/x", func(c *fiber.Ctx) error {
+	app.Post("/x", func(c fiber.Ctx) error {
 		return httputil.NewError(c, errors.ErrGeneric.Code, errors.ErrAuthInvalidCredentials)
 	})
 
@@ -130,7 +130,7 @@ func TestNewError_AuthInvalidCredentials_Returns401(t *testing.T) {
 
 func TestNewError_PermissionDenied_Returns403(t *testing.T) {
 	app := newApp()
-	app.Get("/x", func(c *fiber.Ctx) error {
+	app.Get("/x", func(c fiber.Ctx) error {
 		return httputil.NewError(c, errors.ErrGeneric.Code, errors.ErrAuthPermissionDenied)
 	})
 
@@ -142,7 +142,7 @@ func TestNewError_PermissionDenied_Returns403(t *testing.T) {
 func TestNewError_InternalCode_DoesNotLeakWrappedDetails(t *testing.T) {
 	// 500001 (ErrGeneric) is NOT client-safe — wrapped err must stay on server.
 	app := newApp()
-	app.Get("/x", func(c *fiber.Ctx) error {
+	app.Get("/x", func(c fiber.Ctx) error {
 		return httputil.NewError(c, errors.ErrGeneric.Code, errors.ErrGeneric.Wrap(
 			validator.ValidationErrors{}, // arbitrary inner err
 		))
@@ -165,7 +165,7 @@ func TestPanicInHandler_ReturnsGeneric500_NoStackInBody(t *testing.T) {
 	app := fiber.New(fiber.Config{ErrorHandler: appmw.ErrorHandler})
 	app.Use(appmw.RequestID())
 	app.Use(recover.New())
-	app.Get("/boom", func(c *fiber.Ctx) error {
+	app.Get("/boom", func(c fiber.Ctx) error {
 		panic("simulated handler bug")
 	})
 
@@ -183,7 +183,7 @@ func TestPanicInHandler_ReturnsGeneric500_NoStackInBody(t *testing.T) {
 
 func TestRequestID_FromClientHeader_IsEchoed(t *testing.T) {
 	app := newApp()
-	app.Get("/x", func(c *fiber.Ctx) error {
+	app.Get("/x", func(c fiber.Ctx) error {
 		return httputil.NewError(c, errors.ErrGeneric.Code, errors.ErrFarmNotFound)
 	})
 

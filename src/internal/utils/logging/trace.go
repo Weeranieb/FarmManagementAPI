@@ -3,7 +3,7 @@ package logging
 import (
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 // TraceParent parses an inbound W3C traceparent header (if valid) and stashes
 // trace_id for slog. No OpenTelemetry SDK — zero cold-start cost when absent.
 func TraceParent() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		if tid := parseTraceID(c.Get("traceparent")); tid != "" {
 			c.Locals(TraceIDKey, tid)
 		}
@@ -23,7 +23,7 @@ func TraceParent() fiber.Handler {
 }
 
 // TraceIDFrom returns the trace_id from Locals, or "".
-func TraceIDFrom(c *fiber.Ctx) string {
+func TraceIDFrom(c fiber.Ctx) string {
 	if c == nil {
 		return ""
 	}

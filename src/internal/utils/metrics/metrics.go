@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // ponytail: global mutex is fine at our QPS; upgrade to sync/atomic maps if contention shows up.
@@ -44,7 +44,7 @@ func newHist() *hist {
 
 // Middleware records http_requests_total and http_request_duration_seconds after the handler.
 func Middleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
 		status := c.Response().StatusCode()
@@ -61,7 +61,7 @@ func Middleware() fiber.Handler {
 
 // Handler serves Prometheus text exposition format.
 func Handler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		c.Set(fiber.HeaderContentType, "text/plain; version=0.0.4; charset=utf-8")
 		return c.SendString(Exposition())
 	}
@@ -166,7 +166,7 @@ func observe(method, route string, status int, seconds float64) {
 
 // RouteLabel returns the Fiber route template, or "unmatched" for 404s.
 // Never use c.Path() for labels — raw paths explode cardinality.
-func RouteLabel(c *fiber.Ctx, err error) string {
+func RouteLabel(c fiber.Ctx, err error) string {
 	var fe *fiber.Error
 	if errors.As(err, &fe) && fe.Code == fiber.StatusNotFound {
 		return "unmatched"

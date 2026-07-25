@@ -3,7 +3,7 @@ package middleware
 import (
 	stderrors "errors"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	httputil "github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -20,7 +20,7 @@ import (
 //
 // Goal: produce exactly the same error envelope as http.NewError so clients
 // never have to handle two shapes.
-func ErrorHandler(c *fiber.Ctx, err error) error {
+func ErrorHandler(c fiber.Ctx, err error) error {
 	if err == nil {
 		return nil
 	}

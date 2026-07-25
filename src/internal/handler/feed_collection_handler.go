@@ -9,14 +9,14 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type FeedCollectionHandler interface {
-	AddFeedCollection(c *fiber.Ctx) error
-	GetFeedCollection(c *fiber.Ctx) error
-	UpdateFeedCollection(c *fiber.Ctx) error
-	ListFeedCollection(c *fiber.Ctx) error
+	AddFeedCollection(c fiber.Ctx) error
+	GetFeedCollection(c fiber.Ctx) error
+	UpdateFeedCollection(c fiber.Ctx) error
+	ListFeedCollection(c fiber.Ctx) error
 }
 
 type feedCollectionHandlerImpl struct {
@@ -43,14 +43,14 @@ func NewFeedCollectionHandler(feedCollectionService service.FeedCollectionServic
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /feed-collection [post]
-func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
+func (h *feedCollectionHandlerImpl) AddFeedCollection(c fiber.Ctx) error {
 	var createFeedCollectionRequest dto.CreateFeedCollectionRequest
 
 	if err := validateAndParse(c, &createFeedCollectionRequest); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -60,7 +60,7 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 		return err
 	}
 
-	result, err := h.feedCollectionService.Create(c.UserContext(), createFeedCollectionRequest, username, clientId)
+	result, err := h.feedCollectionService.Create(c.Context(), createFeedCollectionRequest, username, clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -81,7 +81,7 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /feed-collection/{id} [get]
-func (h *feedCollectionHandlerImpl) GetFeedCollection(c *fiber.Ctx) error {
+func (h *feedCollectionHandlerImpl) GetFeedCollection(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "id", "Invalid feed collection ID")
 	if err != nil {
@@ -114,19 +114,19 @@ func (h *feedCollectionHandlerImpl) GetFeedCollection(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /feed-collection [put]
-func (h *feedCollectionHandlerImpl) UpdateFeedCollection(c *fiber.Ctx) error {
+func (h *feedCollectionHandlerImpl) UpdateFeedCollection(c fiber.Ctx) error {
 	var updateFeedCollection dto.UpdateFeedCollectionRequest
 
 	if err := validateAndParse(c, &updateFeedCollection); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.feedCollectionService.Update(c.UserContext(), updateFeedCollection, username)
+	err = h.feedCollectionService.Update(c.Context(), updateFeedCollection, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -149,7 +149,7 @@ func (h *feedCollectionHandlerImpl) UpdateFeedCollection(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /feed-collection [get]
-func (h *feedCollectionHandlerImpl) ListFeedCollection(c *fiber.Ctx) error {
+func (h *feedCollectionHandlerImpl) ListFeedCollection(c fiber.Ctx) error {
 
 	// Get query parameters
 	sPage := c.Query("page")
@@ -185,13 +185,13 @@ func (h *feedCollectionHandlerImpl) ListFeedCollection(c *fiber.Ctx) error {
 
 // resolveClientIdForFeedCollectionWrite uses JWT client id when present; otherwise requires
 // super admin with clientId in body (UI "มุมมองลูกค้า" selection).
-func resolveClientIdForFeedCollectionWrite(c *fiber.Ctx, bodyClientId *int) (int, error) {
-	clientIdPtr := utils.GetClientId(c.UserContext())
+func resolveClientIdForFeedCollectionWrite(c fiber.Ctx, bodyClientId *int) (int, error) {
+	clientIdPtr := utils.GetClientId(c.Context())
 	if clientIdPtr != nil {
 		return *clientIdPtr, nil
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	isSuperAdmin, err := utils.IsSuperAdmin(c.Context())
 	if err != nil {
 		return 0, http.NewError(c, errors.ErrGeneric.Code, err)
 	}

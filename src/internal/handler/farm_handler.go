@@ -7,15 +7,15 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type FarmHandler interface {
-	AddFarm(c *fiber.Ctx) error
-	GetFarm(c *fiber.Ctx) error
-	GetFarmList(c *fiber.Ctx) error
-	GetFarmHierarchy(c *fiber.Ctx) error
-	UpdateFarm(c *fiber.Ctx) error
+	AddFarm(c fiber.Ctx) error
+	GetFarm(c fiber.Ctx) error
+	GetFarmList(c fiber.Ctx) error
+	GetFarmHierarchy(c fiber.Ctx) error
+	UpdateFarm(c fiber.Ctx) error
 }
 
 type farmHandlerImpl struct {
@@ -42,7 +42,7 @@ func NewFarmHandler(farmService service.FarmService) FarmHandler {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm [post]
-func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
+func (h *farmHandlerImpl) AddFarm(c fiber.Ctx) error {
 	var createFarmRequest dto.CreateFarmRequest
 
 	if err := validateAndParse(c, &createFarmRequest); err != nil {
@@ -56,7 +56,7 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 		return err
 	}
 
-	newFarm, err := h.farmService.Create(c.UserContext(), createFarmRequest, createFarmRequest.ClientId)
+	newFarm, err := h.farmService.Create(c.Context(), createFarmRequest, createFarmRequest.ClientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -77,14 +77,14 @@ func (h *farmHandlerImpl) AddFarm(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm/{id} [get]
-func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
+func (h *farmHandlerImpl) GetFarm(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "id", "Invalid farm ID")
 	if err != nil {
 		return err
 	}
 
-	clientIdPtr, canAccess := utils.GetClientIdForAccess(c.UserContext())
+	clientIdPtr, canAccess := utils.GetClientIdForAccess(c.Context())
 	if !canAccess {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
 	}
@@ -110,7 +110,7 @@ func (h *farmHandlerImpl) GetFarm(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm [get]
-func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
+func (h *farmHandlerImpl) GetFarmList(c fiber.Ctx) error {
 
 	clientId, err := resolveListClientId(c)
 	if err != nil {
@@ -138,7 +138,7 @@ func (h *farmHandlerImpl) GetFarmList(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm/hierarchy [get]
-func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
+func (h *farmHandlerImpl) GetFarmHierarchy(c fiber.Ctx) error {
 
 	clientId, err := resolveListClientId(c)
 	if err != nil {
@@ -168,7 +168,7 @@ func (h *farmHandlerImpl) GetFarmHierarchy(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /farm/{id} [put]
-func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
+func (h *farmHandlerImpl) UpdateFarm(c fiber.Ctx) error {
 	id, err := parseParamInt(c, "id", "Invalid farm ID")
 	if err != nil {
 		return err
@@ -184,7 +184,7 @@ func (h *farmHandlerImpl) UpdateFarm(c *fiber.Ctx) error {
 	}
 
 	updateReq := dto.UpdateFarmRequest{Id: id, Name: body.Name}
-	if err = h.farmService.Update(c.UserContext(), updateReq); err != nil {
+	if err = h.farmService.Update(c.Context(), updateReq); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 

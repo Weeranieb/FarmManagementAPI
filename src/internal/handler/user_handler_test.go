@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -47,8 +47,8 @@ func TestHandlerSuite(t *testing.T) {
 
 // Helper middleware to set context values for testing
 func setLocalsMiddleware(locals map[string]any) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.UserContext()
+	return func(c fiber.Ctx) error {
+		ctx := c.Context()
 		if ctx == nil {
 			ctx = context.Background()
 		}
@@ -67,7 +67,7 @@ func setLocalsMiddleware(locals map[string]any) fiber.Handler {
 			ctx = context.WithValue(ctx, constants.UserLevelKey, userLevel)
 		}
 
-		c.SetUserContext(ctx)
+		c.SetContext(ctx)
 		return c.Next()
 	}
 }

@@ -6,15 +6,15 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type FarmGroupHandler interface {
-	AddFarmGroup(c *fiber.Ctx) error
-	GetFarmGroup(c *fiber.Ctx) error
-	UpdateFarmGroup(c *fiber.Ctx) error
-	ListFarmGroup(c *fiber.Ctx) error
-	GetFarmGroupDropdown(c *fiber.Ctx) error
+	AddFarmGroup(c fiber.Ctx) error
+	GetFarmGroup(c fiber.Ctx) error
+	UpdateFarmGroup(c fiber.Ctx) error
+	ListFarmGroup(c fiber.Ctx) error
+	GetFarmGroupDropdown(c fiber.Ctx) error
 }
 
 type farmGroupHandlerImpl struct {
@@ -27,7 +27,7 @@ func NewFarmGroupHandler(farmGroupService service.FarmGroupService) FarmGroupHan
 	}
 }
 
-func (h *farmGroupHandlerImpl) AddFarmGroup(c *fiber.Ctx) error {
+func (h *farmGroupHandlerImpl) AddFarmGroup(c fiber.Ctx) error {
 	var request dto.CreateFarmGroupRequest
 
 	if err := validateAndParse(c, &request); err != nil {
@@ -41,7 +41,7 @@ func (h *farmGroupHandlerImpl) AddFarmGroup(c *fiber.Ctx) error {
 		return err
 	}
 
-	result, err := h.farmGroupService.Create(c.UserContext(), request)
+	result, err := h.farmGroupService.Create(c.Context(), request)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -49,7 +49,7 @@ func (h *farmGroupHandlerImpl) AddFarmGroup(c *fiber.Ctx) error {
 	return http.Success(c, result)
 }
 
-func (h *farmGroupHandlerImpl) GetFarmGroup(c *fiber.Ctx) error {
+func (h *farmGroupHandlerImpl) GetFarmGroup(c fiber.Ctx) error {
 	id, err := parseParamInt(c, "id", "Invalid farm group ID")
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (h *farmGroupHandlerImpl) GetFarmGroup(c *fiber.Ctx) error {
 	return http.Success(c, result)
 }
 
-func (h *farmGroupHandlerImpl) UpdateFarmGroup(c *fiber.Ctx) error {
+func (h *farmGroupHandlerImpl) UpdateFarmGroup(c fiber.Ctx) error {
 	var request dto.UpdateFarmGroupRequest
 
 	if err := validateAndParse(c, &request); err != nil {
@@ -87,14 +87,14 @@ func (h *farmGroupHandlerImpl) UpdateFarmGroup(c *fiber.Ctx) error {
 		return err
 	}
 
-	if err := h.farmGroupService.Update(c.UserContext(), request); err != nil {
+	if err := h.farmGroupService.Update(c.Context(), request); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
 	return http.SuccessWithoutData(c)
 }
 
-func (h *farmGroupHandlerImpl) ListFarmGroup(c *fiber.Ctx) error {
+func (h *farmGroupHandlerImpl) ListFarmGroup(c fiber.Ctx) error {
 	clientId, err := resolveListClientId(c)
 	if err != nil {
 		return err
@@ -108,7 +108,7 @@ func (h *farmGroupHandlerImpl) ListFarmGroup(c *fiber.Ctx) error {
 	return http.Success(c, list)
 }
 
-func (h *farmGroupHandlerImpl) GetFarmGroupDropdown(c *fiber.Ctx) error {
+func (h *farmGroupHandlerImpl) GetFarmGroupDropdown(c fiber.Ctx) error {
 	clientId, err := resolveListClientId(c)
 	if err != nil {
 		return err

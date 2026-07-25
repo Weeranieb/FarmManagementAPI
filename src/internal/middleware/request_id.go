@@ -1,10 +1,8 @@
 package middleware
 
 import (
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
-
-	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/logging"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/requestid"
 )
 
 // RequestID seeds a per-request ID on every inbound request. The ID is:
@@ -13,11 +11,10 @@ import (
 //     (useful for client-side correlation),
 //   - otherwise freshly generated as a UUID-v4-style string,
 //   - echoed back to the client via the X-Request-ID response header,
-//   - stashed on c.Locals(logging.RequestIDKey) for the logger and
-//     error envelope to pick up.
+//   - stashed in the request context for the logger and error envelope to pick
+//     up via logging.RequestIDFrom (backed by requestid.FromContext in v3).
 func RequestID() fiber.Handler {
 	return requestid.New(requestid.Config{
-		Header:     fiber.HeaderXRequestID,
-		ContextKey: logging.RequestIDKey,
+		Header: fiber.HeaderXRequestID,
 	})
 }

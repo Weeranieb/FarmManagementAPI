@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	appmiddleware "github.com/weeranieb/boonmafarm-backend/src/internal/middleware"
 )
@@ -19,8 +19,8 @@ func newTestApp() *fiber.App {
 }
 
 // userContextFromRequest sets UserContext from the request context so req.WithContext() is honored
-func userContextFromRequest(c *fiber.Ctx) error {
-	c.SetUserContext(c.Context())
+func userContextFromRequest(c fiber.Ctx) error {
+	c.SetContext(c.Context())
 	return c.Next()
 }
 

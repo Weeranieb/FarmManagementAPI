@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/metrics"
@@ -17,7 +17,7 @@ func TestMetrics_RouteTemplateNotRawPath(t *testing.T) {
 	metrics.Reset()
 	app := fiber.New()
 	app.Use(metrics.Middleware())
-	app.Get("/api/v1/pond/:id", func(c *fiber.Ctx) error {
+	app.Get("/api/v1/pond/:id", func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
