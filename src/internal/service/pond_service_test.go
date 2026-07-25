@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1381,6 +1382,55 @@ func (s *PondServiceTestSuite) TestListCycles() {
 	// legacy closed: no feed cost, stored net unchanged
 	assert.Nil(s.T(), out[2].FeedCost, "legacy closed cycle has no feed snapshot")
 	assert.InDelta(s.T(), 1000, out[2].NetResult, 0.001)
+}
+
+// A sell activity row stores no amount/price/weight of its own — ListActivities
+// must fill those from the summed sell_details, and report the sale's additional
+// costs separately instead of folding them into the gross revenue.
+func (s *PondServiceTestSuite) TestListActivities_SellEnrichedFromSellDetails() {
+	pondId := 7
+	date := time.Date(2026, 7, 25, 0, 0, 0, 0, time.UTC)
+	s.pondRepo.On("GetByID", pondId).Return(&model.Pond{Id: pondId, FarmId: 1, Name: "P7"}, nil)
+	s.activityRepo.On("ListByPondID", mock.Anything, pondId).Return([]repository.ActivityListRow{
+		{
+			Id: 501, Mode: constants.ActivityModeSell, ActivityDate: date, FishType: "kaphong",
+			MerchantName: lo.ToPtr("Hry"),
+		},
+		{
+			Id: 502, Mode: constants.ActivityModeFill, ActivityDate: date, FishType: "kaphong",
+			Amount: 2000, FishWeight: decimal.RequireFromString("0.05"),
+			PricePerUnit: decimal.RequireFromString("100"),
+		},
+	}, nil)
+	s.activityRepo.On("SumSellDetailsByActivityIDs", mock.Anything, []int{501}).
+		Return([]repository.SellTotalRow{{
+			SellId:         501,
+			Total:          decimal.RequireFromString("1050000"),
+			TotalWeight:    decimal.RequireFromString("7000"),
+			TotalFishCount: 2200,
+		}}, nil)
+	s.activityRepo.On("SumAdditionalCostsByActivityIDs", mock.Anything, []int{501, 502}).
+		Return([]repository.AdditionalCostTotalRow{
+			{ActivityId: 501, Total: decimal.RequireFromString("15000")},
+		}, nil)
+
+	out, err := s.pondService.ListActivities(fillPondCtx(), pondId)
+
+	require.NoError(s.T(), err)
+	require.Len(s.T(), out, 2)
+	// sell: every figure comes off the detail lines
+	assert.Equal(s.T(), 2200, out[0].Amount, "head count summed from sell_details")
+	assert.InDelta(s.T(), 1050000, out[0].Total, 0.001, "total stays gross revenue")
+	require.NotNil(s.T(), out[0].TotalWeight)
+	assert.InDelta(s.T(), 7000, *out[0].TotalWeight, 0.001)
+	assert.InDelta(s.T(), 150, out[0].PricePerUnit, 0.001, "avg ฿/kg = total ÷ weight")
+	require.NotNil(s.T(), out[0].AdditionalCost)
+	assert.InDelta(s.T(), 15000, *out[0].AdditionalCost, 0.001)
+	// fill: unchanged — no additional costs recorded, so the field is omitted
+	assert.Equal(s.T(), 2000, out[1].Amount)
+	assert.InDelta(s.T(), 10000, out[1].Total, 0.001)
+	assert.Nil(s.T(), out[1].TotalWeight)
+	assert.Nil(s.T(), out[1].AdditionalCost)
 }
 
 // TestListCycles_PondNotFound returns a not-found error when the pond is missing.

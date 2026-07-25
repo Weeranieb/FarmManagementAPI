@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"slices"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -9,8 +10,9 @@ import (
 )
 
 type sellActivityTotal struct {
-	total  float64
-	weight float64
+	total     float64
+	weight    float64
+	fishCount int
 }
 
 type activityIDMode struct {
@@ -44,13 +46,21 @@ func loadActivityCostTotals(
 		for _, t := range totals {
 			total, _ := t.Total.Float64()
 			weight, _ := t.TotalWeight.Float64()
-			sellTotals[t.SellId] = sellActivityTotal{total: total, weight: weight}
+			sellTotals[t.SellId] = sellActivityTotal{
+				total:     total,
+				weight:    weight,
+				fishCount: t.TotalFishCount,
+			}
 		}
 	}
 
+	// Additional costs are summed for every mode. Fill/move fold them into the
+	// activity total (see fillMoveActivityTotal); a sell keeps its total at gross
+	// revenue and reports the cost separately, so the two never double-count.
+	costIds := slices.Concat(sellIds, fillMoveIds)
 	additionalCostTotals := map[int]float64{}
-	if len(fillMoveIds) > 0 {
-		totals, err := repo.SumAdditionalCostsByActivityIDs(ctx, fillMoveIds)
+	if len(costIds) > 0 {
+		totals, err := repo.SumAdditionalCostsByActivityIDs(ctx, costIds)
 		if err != nil {
 			return nil, nil, errors.ErrGeneric.Wrap(err)
 		}

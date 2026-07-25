@@ -39,6 +39,10 @@ type SellTotalRow struct {
 	// itself only stores an aggregate fish count, so weight must come from
 	// the detail lines.
 	TotalWeight decimal.Decimal `gorm:"column:total_weight"`
+	// TotalFishCount is the summed sell_details.fish_count — a sell activity
+	// row leaves `amount` unset (every head count lives on the detail lines),
+	// so this is the only source for "how many fish were sold".
+	TotalFishCount int `gorm:"column:total_fish_count"`
 }
 
 // ActivityFeedRow is the flat join projection returned by ListRecentByClientID.
@@ -194,7 +198,7 @@ func (r *activityRepository) SumSellDetailsByActivityIDs(ctx context.Context, ac
 	}
 	var rows []SellTotalRow
 	err := r.db.WithContext(ctx).Raw(`
-SELECT sd.sell_id AS sell_id, SUM(sd.weight * sd.price_per_unit) AS total, SUM(sd.weight) AS total_weight
+SELECT sd.sell_id AS sell_id, SUM(sd.weight * sd.price_per_unit) AS total, SUM(sd.weight) AS total_weight, COALESCE(SUM(sd.fish_count), 0) AS total_fish_count
 FROM sell_details sd
 WHERE sd.sell_id IN ? AND sd.deleted_at IS NULL
 GROUP BY sd.sell_id`, activityIds).Scan(&rows).Error
