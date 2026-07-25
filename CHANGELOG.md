@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.9](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.8...v0.2.9) (2026-07-24)
+
+
+### Bug Fixes
+
+* **daily-log:** show pellet per-day price per กก., not per ถุง ([#44](https://github.com/Weeranieb/FarmManagementAPI/issues/44)) ([6233a53](https://github.com/Weeranieb/FarmManagementAPI/commit/6233a5308e0295dd89a05e53a4c78df9a5ca1b33))
+
 ## [0.2.8](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.7...v0.2.8) (2026-07-23)
 
 
