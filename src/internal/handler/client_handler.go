@@ -8,15 +8,15 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type ClientHandler interface {
-	AddClient(c *fiber.Ctx) error
-	GetClient(c *fiber.Ctx) error
-	GetClientList(c *fiber.Ctx) error
-	GetClientSummaries(c *fiber.Ctx) error
-	UpdateClient(c *fiber.Ctx) error
+	AddClient(c fiber.Ctx) error
+	GetClient(c fiber.Ctx) error
+	GetClientList(c fiber.Ctx) error
+	GetClientSummaries(c fiber.Ctx) error
+	UpdateClient(c fiber.Ctx) error
 }
 
 type clientHandlerImpl struct {
@@ -44,19 +44,19 @@ func NewClientHandler(clientService service.ClientService) ClientHandler {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client [post]
-func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
+func (h *clientHandlerImpl) AddClient(c fiber.Ctx) error {
 	var createClientRequest dto.CreateClientRequest
 
 	if err := validateAndParse(c, &createClientRequest); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	newClient, err := h.clientService.Create(c.UserContext(), createClientRequest, username)
+	newClient, err := h.clientService.Create(c.Context(), createClientRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -80,7 +80,7 @@ func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client/{id} [get]
-func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
+func (h *clientHandlerImpl) GetClient(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "id", "Invalid client ID")
 	if err != nil {
@@ -113,7 +113,7 @@ func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client/list [get]
-func (h *clientHandlerImpl) GetClientList(c *fiber.Ctx) error {
+func (h *clientHandlerImpl) GetClientList(c fiber.Ctx) error {
 
 	if err := requireSuperAdmin(c); err != nil {
 		return err
@@ -140,7 +140,7 @@ func (h *clientHandlerImpl) GetClientList(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client/summaries [get]
-func (h *clientHandlerImpl) GetClientSummaries(c *fiber.Ctx) error {
+func (h *clientHandlerImpl) GetClientSummaries(c fiber.Ctx) error {
 
 	if err := requireSuperAdmin(c); err != nil {
 		return err
@@ -170,7 +170,7 @@ func (h *clientHandlerImpl) GetClientSummaries(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client [put]
-func (h *clientHandlerImpl) UpdateClient(c *fiber.Ctx) error {
+func (h *clientHandlerImpl) UpdateClient(c fiber.Ctx) error {
 	var updateClient dto.UpdateClientRequest
 
 	if err := validateAndParse(c, &updateClient); err != nil {
@@ -182,12 +182,12 @@ func (h *clientHandlerImpl) UpdateClient(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.clientService.Update(c.UserContext(), updateClient, username)
+	err = h.clientService.Update(c.Context(), updateClient, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

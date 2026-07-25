@@ -25,16 +25,12 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/metrics"
 )
-
-// RequestIDKey is the fiber.Ctx Locals key under which the per-request ID is stored.
-// UseHTTP / middleware.RequestID seed it; FromCtx and the error envelope read it.
-const RequestIDKey = "request_id"
 
 // Init configures the default slog logger.
 //
@@ -66,15 +62,14 @@ func Init(env string, level string) *slog.Logger {
 // and serverless bootstraps share one observability stack.
 func UseHTTP(app *fiber.App) {
 	app.Use(requestid.New(requestid.Config{
-		Header:     fiber.HeaderXRequestID,
-		ContextKey: RequestIDKey,
+		Header: fiber.HeaderXRequestID,
 	}))
 	app.Use(TraceParent())
 	app.Use(metrics.Middleware())
 	app.Use(AccessLog())
 	app.Use(recover.New(recover.Config{
 		EnableStackTrace: true,
-		StackTraceHandler: func(c *fiber.Ctx, e any) {
+		StackTraceHandler: func(c fiber.Ctx, e any) {
 			metrics.IncPanic()
 			FromCtx(c).Error("panic recovered",
 				"panic", e,
@@ -88,7 +83,7 @@ func UseHTTP(app *fiber.App) {
 // method, path, user_id, client_id). Callers should use this in handlers /
 // services so every log line carries the request context for grep correlation.
 // path is c.Path() only — never the raw query string.
-func FromCtx(c *fiber.Ctx) *slog.Logger {
+func FromCtx(c fiber.Ctx) *slog.Logger {
 	if c == nil {
 		return slog.Default()
 	}
@@ -105,7 +100,7 @@ func FromCtx(c *fiber.Ctx) *slog.Logger {
 		attrs = append(attrs, "trace_id", tid)
 	}
 
-	uctx := c.UserContext()
+	uctx := c.Context()
 	if uctx == nil {
 		uctx = context.Background()
 	}
@@ -121,14 +116,13 @@ func FromCtx(c *fiber.Ctx) *slog.Logger {
 
 // RequestIDFrom returns the request ID stashed by the request_id middleware,
 // or "" if none is set yet (e.g. before middleware runs).
-func RequestIDFrom(c *fiber.Ctx) string {
+func RequestIDFrom(c fiber.Ctx) string {
 	if c == nil {
 		return ""
 	}
-	if v, ok := c.Locals(RequestIDKey).(string); ok {
-		return v
-	}
-	return ""
+	// Fiber v3's requestid middleware stashes the ID under its own private
+	// context key; FromContext is the supported way to read it back.
+	return requestid.FromContext(c)
 }
 
 func parseLevel(s string) slog.Level {

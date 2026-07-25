@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func (r *Router) setupPondRoutes(group fiber.Router) {

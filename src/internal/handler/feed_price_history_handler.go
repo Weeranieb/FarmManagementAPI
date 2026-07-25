@@ -9,15 +9,15 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type FeedPriceHistoryHandler interface {
-	AddFeedPriceHistory(c *fiber.Ctx) error
-	GetFeedPriceHistory(c *fiber.Ctx) error
-	UpdateFeedPriceHistory(c *fiber.Ctx) error
-	DeleteFeedPriceHistory(c *fiber.Ctx) error
-	GetAllFeedPriceHistory(c *fiber.Ctx) error
+	AddFeedPriceHistory(c fiber.Ctx) error
+	GetFeedPriceHistory(c fiber.Ctx) error
+	UpdateFeedPriceHistory(c fiber.Ctx) error
+	DeleteFeedPriceHistory(c fiber.Ctx) error
+	GetAllFeedPriceHistory(c fiber.Ctx) error
 }
 
 type feedPriceHistoryHandlerImpl struct {
@@ -32,19 +32,19 @@ func NewFeedPriceHistoryHandler(feedPriceHistoryService service.FeedPriceHistory
 	}
 }
 
-func (h *feedPriceHistoryHandlerImpl) AddFeedPriceHistory(c *fiber.Ctx) error {
+func (h *feedPriceHistoryHandlerImpl) AddFeedPriceHistory(c fiber.Ctx) error {
 	var createFeedPriceHistoryRequest dto.CreateFeedPriceHistoryRequest
 
 	if err := validateAndParse(c, &createFeedPriceHistoryRequest); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	result, err := h.feedPriceHistoryService.Create(c.UserContext(), createFeedPriceHistoryRequest, username)
+	result, err := h.feedPriceHistoryService.Create(c.Context(), createFeedPriceHistoryRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -52,7 +52,7 @@ func (h *feedPriceHistoryHandlerImpl) AddFeedPriceHistory(c *fiber.Ctx) error {
 	return http.Success(c, result)
 }
 
-func (h *feedPriceHistoryHandlerImpl) GetFeedPriceHistory(c *fiber.Ctx) error {
+func (h *feedPriceHistoryHandlerImpl) GetFeedPriceHistory(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "id", "Invalid feed price history ID")
 	if err != nil {
@@ -67,19 +67,19 @@ func (h *feedPriceHistoryHandlerImpl) GetFeedPriceHistory(c *fiber.Ctx) error {
 	return http.Success(c, result)
 }
 
-func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c *fiber.Ctx) error {
+func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c fiber.Ctx) error {
 	var updateFeedPriceHistory dto.UpdateFeedPriceHistoryRequest
 
 	if err := validateAndParse(c, &updateFeedPriceHistory); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.feedPriceHistoryService.Update(c.UserContext(), updateFeedPriceHistory, username)
+	err = h.feedPriceHistoryService.Update(c.Context(), updateFeedPriceHistory, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -87,20 +87,20 @@ func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c *fiber.Ctx) error
 	return http.SuccessWithoutData(c)
 }
 
-func (h *feedPriceHistoryHandlerImpl) DeleteFeedPriceHistory(c *fiber.Ctx) error {
+func (h *feedPriceHistoryHandlerImpl) DeleteFeedPriceHistory(c fiber.Ctx) error {
 	id, err := parseParamInt(c, "id", "Invalid feed price history ID")
 	if err != nil {
 		return err
 	}
 
-	if err := h.feedPriceHistoryService.Delete(c.UserContext(), id); err != nil {
+	if err := h.feedPriceHistoryService.Delete(c.Context(), id); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
 	return http.SuccessWithoutData(c)
 }
 
-func (h *feedPriceHistoryHandlerImpl) GetAllFeedPriceHistory(c *fiber.Ctx) error {
+func (h *feedPriceHistoryHandlerImpl) GetAllFeedPriceHistory(c fiber.Ctx) error {
 
 	feedCollectionIdStr := c.Query("feedCollectionId")
 	feedCollectionId, err := strconv.Atoi(feedCollectionIdStr)

@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/metrics"
 )
 
@@ -17,7 +17,7 @@ import (
 //
 // Lines are level Info for 1xx-3xx, Warn for 4xx, and Error for 5xx.
 func AccessLog() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
 
@@ -50,7 +50,7 @@ func AccessLog() fiber.Handler {
 			attrs = append(attrs, "user_agent", ua)
 		}
 
-		FromCtx(c).Log(c.UserContext(), level, "http_request", attrs...)
+		FromCtx(c).Log(c.Context(), level, "http_request", attrs...)
 		return err
 	}
 }

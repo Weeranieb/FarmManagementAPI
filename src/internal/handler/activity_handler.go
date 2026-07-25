@@ -3,14 +3,14 @@ package handler
 import (
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 )
 
 type ActivityHandler interface {
-	GetActivityFeed(c *fiber.Ctx) error
+	GetActivityFeed(c fiber.Ctx) error
 }
 
 type activityHandlerImpl struct {
@@ -39,7 +39,7 @@ func NewActivityHandler(activityService service.ActivityService) ActivityHandler
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /activity [get]
-func (h *activityHandlerImpl) GetActivityFeed(c *fiber.Ctx) error {
+func (h *activityHandlerImpl) GetActivityFeed(c fiber.Ctx) error {
 
 	limit := 0
 	if raw := c.Query("limit"); raw != "" {
@@ -50,7 +50,7 @@ func (h *activityHandlerImpl) GetActivityFeed(c *fiber.Ctx) error {
 		limit = parsed
 	}
 
-	feed, err := h.activityService.ListFeed(c.UserContext(), limit)
+	feed, err := h.activityService.ListFeed(c.Context(), limit)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

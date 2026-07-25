@@ -9,28 +9,28 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type PondHandler interface {
-	AddPonds(c *fiber.Ctx) error
-	GetPond(c *fiber.Ctx) error
-	GetPondList(c *fiber.Ctx) error
-	GetPondActivities(c *fiber.Ctx) error
-	GetPondCycles(c *fiber.Ctx) error
-	UpdatePond(c *fiber.Ctx) error
-	DeletePond(c *fiber.Ctx) error
-	FillPond(c *fiber.Ctx) error
-	MovePond(c *fiber.Ctx) error
-	SellPond(c *fiber.Ctx) error
-	FillPondPreview(c *fiber.Ctx) error
-	MovePondPreview(c *fiber.Ctx) error
-	SellPondPreview(c *fiber.Ctx) error
-	FillPondCalc(c *fiber.Ctx) error
-	MovePondCalc(c *fiber.Ctx) error
-	SellPondCalc(c *fiber.Ctx) error
-	DownloadTemplate(c *fiber.Ctx) error
-	BulkImportFarmPond(c *fiber.Ctx) error
+	AddPonds(c fiber.Ctx) error
+	GetPond(c fiber.Ctx) error
+	GetPondList(c fiber.Ctx) error
+	GetPondActivities(c fiber.Ctx) error
+	GetPondCycles(c fiber.Ctx) error
+	UpdatePond(c fiber.Ctx) error
+	DeletePond(c fiber.Ctx) error
+	FillPond(c fiber.Ctx) error
+	MovePond(c fiber.Ctx) error
+	SellPond(c fiber.Ctx) error
+	FillPondPreview(c fiber.Ctx) error
+	MovePondPreview(c fiber.Ctx) error
+	SellPondPreview(c fiber.Ctx) error
+	FillPondCalc(c fiber.Ctx) error
+	MovePondCalc(c fiber.Ctx) error
+	SellPondCalc(c fiber.Ctx) error
+	DownloadTemplate(c fiber.Ctx) error
+	BulkImportFarmPond(c fiber.Ctx) error
 }
 
 type pondHandlerImpl struct {
@@ -58,7 +58,7 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond [post]
-func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) AddPonds(c fiber.Ctx) error {
 	var createPondsRequest dto.CreatePondsRequest
 
 	if err := validateAndParse(c, &createPondsRequest); err != nil {
@@ -71,7 +71,7 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 		return err
 	}
 
-	if err := h.pondService.CreatePonds(c.UserContext(), createPondsRequest); err != nil {
+	if err := h.pondService.CreatePonds(c.Context(), createPondsRequest); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return http.Success(c, nil)
@@ -89,14 +89,14 @@ func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{id} [get]
-func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) GetPond(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "id", "Invalid pond ID")
 	if err != nil {
 		return err
 	}
 
-	pond, err := h.pondService.Get(c.UserContext(), id)
+	pond, err := h.pondService.Get(c.Context(), id)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -117,14 +117,14 @@ func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/activities [get]
-func (h *pondHandlerImpl) GetPondActivities(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) GetPondActivities(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
 		return err
 	}
 
-	activities, err := h.pondService.ListActivities(c.UserContext(), id)
+	activities, err := h.pondService.ListActivities(c.Context(), id)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -145,14 +145,14 @@ func (h *pondHandlerImpl) GetPondActivities(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/cycles [get]
-func (h *pondHandlerImpl) GetPondCycles(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) GetPondCycles(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
 		return err
 	}
 
-	cycles, err := h.pondService.ListCycles(c.UserContext(), id)
+	cycles, err := h.pondService.ListCycles(c.Context(), id)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -171,7 +171,7 @@ func (h *pondHandlerImpl) GetPondCycles(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond [get]
-func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) GetPondList(c fiber.Ctx) error {
 
 	farmIdStr := c.Query("farmId")
 	farmId, err := strconv.Atoi(farmIdStr)
@@ -179,7 +179,7 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid farm ID")
 	}
 
-	pondList, err := h.pondService.GetList(c.UserContext(), farmId)
+	pondList, err := h.pondService.GetList(c.Context(), farmId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -201,7 +201,7 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{id} [put]
-func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) UpdatePond(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "id", "Invalid pond ID")
 	if err != nil {
@@ -214,7 +214,7 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 	}
 
 	req := dto.UpdatePondRequest{Id: id, FarmId: body.FarmId, Name: body.Name, Status: body.Status, Area: body.Area}
-	err = h.pondService.Update(c.UserContext(), req)
+	err = h.pondService.Update(c.Context(), req)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -235,13 +235,13 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{id} [delete]
-func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) DeletePond(c fiber.Ctx) error {
 	id, err := parseParamInt(c, "id", "Invalid pond ID")
 	if err != nil {
 		return err
 	}
 
-	err = h.pondService.Delete(c.UserContext(), id)
+	err = h.pondService.Delete(c.Context(), id)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -265,7 +265,7 @@ func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/fill [post]
-func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) FillPond(c fiber.Ctx) error {
 
 	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
@@ -277,12 +277,12 @@ func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	response, err := h.pondService.FillPond(c.UserContext(), pondId, request, username)
+	response, err := h.pondService.FillPond(c.Context(), pondId, request, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -304,7 +304,7 @@ func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/move [post]
-func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) MovePond(c fiber.Ctx) error {
 
 	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
@@ -316,12 +316,12 @@ func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	response, err := h.pondService.MovePond(c.UserContext(), pondId, request, username)
+	response, err := h.pondService.MovePond(c.Context(), pondId, request, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -343,7 +343,7 @@ func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/sell [post]
-func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) SellPond(c fiber.Ctx) error {
 
 	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
@@ -355,12 +355,12 @@ func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	response, err := h.pondService.SellPond(c.UserContext(), pondId, request, username)
+	response, err := h.pondService.SellPond(c.Context(), pondId, request, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -382,7 +382,7 @@ func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/fill/preview [post]
-func (h *pondHandlerImpl) FillPondPreview(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) FillPondPreview(c fiber.Ctx) error {
 
 	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
@@ -394,7 +394,7 @@ func (h *pondHandlerImpl) FillPondPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	response, err := h.pondService.PreviewFillPond(c.UserContext(), pondId, request)
+	response, err := h.pondService.PreviewFillPond(c.Context(), pondId, request)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -416,7 +416,7 @@ func (h *pondHandlerImpl) FillPondPreview(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/move/preview [post]
-func (h *pondHandlerImpl) MovePondPreview(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) MovePondPreview(c fiber.Ctx) error {
 
 	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
@@ -428,7 +428,7 @@ func (h *pondHandlerImpl) MovePondPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	response, err := h.pondService.PreviewMovePond(c.UserContext(), pondId, request)
+	response, err := h.pondService.PreviewMovePond(c.Context(), pondId, request)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -450,7 +450,7 @@ func (h *pondHandlerImpl) MovePondPreview(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/sell/preview [post]
-func (h *pondHandlerImpl) SellPondPreview(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) SellPondPreview(c fiber.Ctx) error {
 
 	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
@@ -462,7 +462,7 @@ func (h *pondHandlerImpl) SellPondPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	response, err := h.pondService.PreviewSellPond(c.UserContext(), pondId, request)
+	response, err := h.pondService.PreviewSellPond(c.Context(), pondId, request)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -482,13 +482,13 @@ func (h *pondHandlerImpl) SellPondPreview(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Router       /pond/fill/calc [post]
-func (h *pondHandlerImpl) FillPondCalc(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) FillPondCalc(c fiber.Ctx) error {
 
 	var request dto.PondFillCalcRequest
 	if err := validateAndParse(c, &request); err != nil {
 		return err
 	}
-	return http.Success(c, h.pondService.CalcFillPond(c.UserContext(), request))
+	return http.Success(c, h.pondService.CalcFillPond(c.Context(), request))
 }
 
 // POST /pond/move/calc
@@ -504,13 +504,13 @@ func (h *pondHandlerImpl) FillPondCalc(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Router       /pond/move/calc [post]
-func (h *pondHandlerImpl) MovePondCalc(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) MovePondCalc(c fiber.Ctx) error {
 
 	var request dto.PondMoveCalcRequest
 	if err := validateAndParse(c, &request); err != nil {
 		return err
 	}
-	return http.Success(c, h.pondService.CalcMovePond(c.UserContext(), request))
+	return http.Success(c, h.pondService.CalcMovePond(c.Context(), request))
 }
 
 // POST /pond/sell/calc
@@ -526,13 +526,13 @@ func (h *pondHandlerImpl) MovePondCalc(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Router       /pond/sell/calc [post]
-func (h *pondHandlerImpl) SellPondCalc(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) SellPondCalc(c fiber.Ctx) error {
 
 	var request dto.PondSellCalcRequest
 	if err := validateAndParse(c, &request); err != nil {
 		return err
 	}
-	return http.Success(c, h.pondService.CalcSellPond(c.UserContext(), request))
+	return http.Success(c, h.pondService.CalcSellPond(c.Context(), request))
 }
 
 // GET /pond/template
@@ -546,7 +546,7 @@ func (h *pondHandlerImpl) SellPondCalc(c *fiber.Ctx) error {
 // @Success      200  {file}    file
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/template [get]
-func (h *pondHandlerImpl) DownloadTemplate(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) DownloadTemplate(c fiber.Ctx) error {
 
 	const templatePath = "./src/assets/templates/pond_template.xlsx"
 	const downloadName = "pond_template.xlsx"
@@ -576,7 +576,7 @@ func (h *pondHandlerImpl) DownloadTemplate(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/bulk-import/{clientId} [post]
-func (h *pondHandlerImpl) BulkImportFarmPond(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) BulkImportFarmPond(c fiber.Ctx) error {
 
 	clientId, err := parseParamInt(c, "clientId", "Invalid client ID")
 	if err != nil {
@@ -598,7 +598,7 @@ func (h *pondHandlerImpl) BulkImportFarmPond(c *fiber.Ctx) error {
 		return err
 	}
 
-	resp, err := h.pondService.BulkImportFarmPond(c.UserContext(), clientId, request)
+	resp, err := h.pondService.BulkImportFarmPond(c.Context(), clientId, request)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

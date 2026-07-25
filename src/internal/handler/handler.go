@@ -3,7 +3,7 @@ package handler
 import (
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
@@ -68,8 +68,8 @@ func NewHandler(params HandlerParams) *Handler {
 // details: bad JSON → 400 with the parser error as `details`; struct validation
 // failure → 422 with a `fields` array listing each offending field's tag and
 // human-readable cause.
-func validateAndParse(c *fiber.Ctx, target any) error {
-	if err := c.BodyParser(target); err != nil {
+func validateAndParse(c fiber.Ctx, target any) error {
+	if err := c.Bind().Body(target); err != nil {
 		return http.NewError(c, errors.ErrInvalidRequestBody.Code, errors.ErrInvalidRequestBody.Wrap(err))
 	}
 
@@ -80,7 +80,7 @@ func validateAndParse(c *fiber.Ctx, target any) error {
 	return nil
 }
 
-func parseParamInt(c *fiber.Ctx, name, errMsg string) (int, error) {
+func parseParamInt(c fiber.Ctx, name, errMsg string) (int, error) {
 	id, err := strconv.Atoi(c.Params(name))
 	if err != nil {
 		return 0, http.Error(c, errors.ErrValidationFailed.Code, errMsg)
@@ -88,8 +88,8 @@ func parseParamInt(c *fiber.Ctx, name, errMsg string) (int, error) {
 	return id, nil
 }
 
-func requireSuperAdmin(c *fiber.Ctx) error {
-	ok, err := utils.IsSuperAdmin(c.UserContext())
+func requireSuperAdmin(c fiber.Ctx) error {
+	ok, err := utils.IsSuperAdmin(c.Context())
 	if err != nil || !ok {
 		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
@@ -100,13 +100,13 @@ func requireSuperAdmin(c *fiber.Ctx) error {
 // JWT client id when present, otherwise a super admin must pass clientId in the
 // body (and must have access to it). Shared by the feed-collection and merchant
 // create handlers.
-func resolveWriteClientId(c *fiber.Ctx, bodyClientId *int) (int, error) {
-	clientIdPtr := utils.GetClientId(c.UserContext())
+func resolveWriteClientId(c fiber.Ctx, bodyClientId *int) (int, error) {
+	clientIdPtr := utils.GetClientId(c.Context())
 	if clientIdPtr != nil {
 		return *clientIdPtr, nil
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	isSuperAdmin, err := utils.IsSuperAdmin(c.Context())
 	if err != nil {
 		return 0, http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -123,16 +123,16 @@ func resolveWriteClientId(c *fiber.Ctx, bodyClientId *int) (int, error) {
 	return *bodyClientId, nil
 }
 
-func requireClientAdmin(c *fiber.Ctx) error {
-	ok, err := utils.IsClientAdminOrAbove(c.UserContext())
+func requireClientAdmin(c fiber.Ctx) error {
+	ok, err := utils.IsClientAdminOrAbove(c.Context())
 	if err != nil || !ok {
 		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
 	return nil
 }
 
-func requireClientAccess(c *fiber.Ctx, targetClientId int) error {
-	ok, err := utils.CanAccessClient(c.UserContext(), targetClientId)
+func requireClientAccess(c fiber.Ctx, targetClientId int) error {
+	ok, err := utils.CanAccessClient(c.Context(), targetClientId)
 	if err != nil || !ok {
 		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
 	}
@@ -141,8 +141,8 @@ func requireClientAccess(c *fiber.Ctx, targetClientId int) error {
 
 // resolveListClientId returns an optional client filter for list/dropdown endpoints.
 // Super admin: optional ?clientId= (0 = no filter). Others: JWT client id.
-func resolveListClientId(c *fiber.Ctx) (int, error) {
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+func resolveListClientId(c fiber.Ctx) (int, error) {
+	isSuperAdmin, err := utils.IsSuperAdmin(c.Context())
 	if err != nil {
 		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -156,7 +156,7 @@ func resolveListClientId(c *fiber.Ctx) (int, error) {
 		}
 		return 0, nil
 	}
-	clientIdPtr := utils.GetClientId(c.UserContext())
+	clientIdPtr := utils.GetClientId(c.Context())
 	if clientIdPtr == nil {
 		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
 	}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/logging"
 )
@@ -55,7 +55,7 @@ type ResponseModel struct {
 // from anywhere in the error chain, maps the code to a real HTTP status,
 // surfaces field-level validation details when present, and logs the full
 // chain server-side with the request ID for correlation.
-func NewError(c *fiber.Ctx, defaultCode int, err error) error {
+func NewError(c fiber.Ctx, defaultCode int, err error) error {
 	code, message, wrapped := unwrap(err, defaultCode)
 	body := buildErrorBody(c, code, message, wrapped)
 	status := errors.HTTPStatusFor(code)
@@ -68,7 +68,7 @@ func NewError(c *fiber.Ctx, defaultCode int, err error) error {
 }
 
 // Success sends a successful response with optional data.
-func Success(c *fiber.Ctx, data any) error {
+func Success(c fiber.Ctx, data any) error {
 	return c.Status(fiber.StatusOK).JSON(ResponseModel{
 		Result: true,
 		Data:   data,
@@ -76,7 +76,7 @@ func Success(c *fiber.Ctx, data any) error {
 }
 
 // SuccessWithoutData sends a successful response without data.
-func SuccessWithoutData(c *fiber.Ctx) error {
+func SuccessWithoutData(c fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(ResponseModel{
 		Result: true,
 	})
@@ -86,7 +86,7 @@ func SuccessWithoutData(c *fiber.Ctx) error {
 // numeric code (int) or a string code for back-compat with existing handlers.
 // Uses the same HTTP-status / logging path as NewError so the wire status
 // reflects the real outcome.
-func Error(c *fiber.Ctx, code any, message string) error {
+func Error(c fiber.Ctx, code any, message string) error {
 	numericCode, codeStr := normalizeCode(code)
 	status := errors.HTTPStatusFor(numericCode)
 
@@ -113,7 +113,7 @@ func unwrap(err error, defaultCode int) (code int, message string, wrapped error
 	return defaultCode, err.Error(), nil
 }
 
-func buildErrorBody(c *fiber.Ctx, code int, message string, wrapped error) ErrorResponseModel {
+func buildErrorBody(c fiber.Ctx, code int, message string, wrapped error) ErrorResponseModel {
 	body := ErrorResponseModel{
 		Code:      fmt.Sprintf("%d", code),
 		Message:   message,
@@ -150,12 +150,12 @@ func normalizeCode(code any) (int, string) {
 	}
 }
 
-func logErr(c *fiber.Ctx, status, code int, err error) {
+func logErr(c fiber.Ctx, status, code int, err error) {
 	level := slog.LevelWarn
 	if status >= 500 {
 		level = slog.LevelError
 	}
-	logging.FromCtx(c).Log(c.UserContext(), level, "http_error",
+	logging.FromCtx(c).Log(c.Context(), level, "http_error",
 		"status", status,
 		"code", code,
 		"err", err.Error(),

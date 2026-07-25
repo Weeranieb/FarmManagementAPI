@@ -9,18 +9,18 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type UserHandler interface {
-	AddUser(c *fiber.Ctx) error
-	GetUser(c *fiber.Ctx) error
-	UpdateUser(c *fiber.Ctx) error
-	AdminUpdateUser(c *fiber.Ctx) error
-	AdminResetPassword(c *fiber.Ctx) error
-	ChangePassword(c *fiber.Ctx) error
-	DeleteUser(c *fiber.Ctx) error
-	GetUserList(c *fiber.Ctx) error
+	AddUser(c fiber.Ctx) error
+	GetUser(c fiber.Ctx) error
+	UpdateUser(c fiber.Ctx) error
+	AdminUpdateUser(c fiber.Ctx) error
+	AdminResetPassword(c fiber.Ctx) error
+	ChangePassword(c fiber.Ctx) error
+	DeleteUser(c fiber.Ctx) error
+	GetUserList(c fiber.Ctx) error
 }
 
 type userHandlerImpl struct {
@@ -47,24 +47,24 @@ func NewUserHandler(userService service.UserService) UserHandler {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user [post]
-func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
+func (h *userHandlerImpl) AddUser(c fiber.Ctx) error {
 	var addUser dto.CreateUserRequest
 
 	if err := validateAndParse(c, &addUser); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
-	clientId := utils.GetClientId(c.UserContext())
+	clientId := utils.GetClientId(c.Context())
 
 	if err := requireSuperAdmin(c); err != nil {
 		return err
 	}
 
-	newUser, err := h.userService.Create(c.UserContext(), addUser, username, clientId)
+	newUser, err := h.userService.Create(c.Context(), addUser, username, clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -86,9 +86,9 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user [get]
-func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
+func (h *userHandlerImpl) GetUser(c fiber.Ctx) error {
 
-	id, err := utils.GetUserId(c.UserContext())
+	id, err := utils.GetUserId(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
 	}
@@ -115,24 +115,24 @@ func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user [put]
-func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
+func (h *userHandlerImpl) UpdateUser(c fiber.Ctx) error {
 	var updateUser dto.UpdateUserRequest
 
 	if err := validateAndParse(c, &updateUser); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
 	}
 
-	userId, err := utils.GetUserId(c.UserContext())
+	userId, err := utils.GetUserId(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	updated, err := h.userService.Update(c.UserContext(), userId, updateUser, username)
+	updated, err := h.userService.Update(c.Context(), userId, updateUser, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -156,7 +156,7 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/{id} [put]
-func (h *userHandlerImpl) AdminUpdateUser(c *fiber.Ctx) error {
+func (h *userHandlerImpl) AdminUpdateUser(c fiber.Ctx) error {
 	var body dto.AdminUpdateUserRequest
 
 	if err := requireSuperAdmin(c); err != nil {
@@ -172,12 +172,12 @@ func (h *userHandlerImpl) AdminUpdateUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	actor, err := utils.GetUsername(c.UserContext())
+	actor, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	if err := h.userService.AdminUpdate(c.UserContext(), userId, body, actor); err != nil {
+	if err := h.userService.AdminUpdate(c.Context(), userId, body, actor); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
@@ -200,7 +200,7 @@ func (h *userHandlerImpl) AdminUpdateUser(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/{id}/password [put]
-func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
+func (h *userHandlerImpl) AdminResetPassword(c fiber.Ctx) error {
 	var body dto.AdminResetPasswordRequest
 
 	if err := requireSuperAdmin(c); err != nil {
@@ -216,12 +216,12 @@ func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
 		return err
 	}
 
-	actor, err := utils.GetUsername(c.UserContext())
+	actor, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	if err := h.userService.AdminResetPassword(c.UserContext(), userId, body, actor); err != nil {
+	if err := h.userService.AdminResetPassword(c.Context(), userId, body, actor); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
@@ -243,10 +243,10 @@ func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
 // @Failure      401  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/password [put]
-func (h *userHandlerImpl) ChangePassword(c *fiber.Ctx) error {
+func (h *userHandlerImpl) ChangePassword(c fiber.Ctx) error {
 	var body dto.ChangePasswordRequest
 
-	userId, err := utils.GetUserId(c.UserContext())
+	userId, err := utils.GetUserId(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -255,12 +255,12 @@ func (h *userHandlerImpl) ChangePassword(c *fiber.Ctx) error {
 		return err
 	}
 
-	actor, err := utils.GetUsername(c.UserContext())
+	actor, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	if err := h.userService.ChangePassword(c.UserContext(), userId, body, actor); err != nil {
+	if err := h.userService.ChangePassword(c.Context(), userId, body, actor); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
@@ -282,7 +282,7 @@ func (h *userHandlerImpl) ChangePassword(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/{id} [delete]
-func (h *userHandlerImpl) DeleteUser(c *fiber.Ctx) error {
+func (h *userHandlerImpl) DeleteUser(c fiber.Ctx) error {
 
 	if err := requireSuperAdmin(c); err != nil {
 		return err
@@ -293,12 +293,12 @@ func (h *userHandlerImpl) DeleteUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	actor, err := utils.GetUsername(c.UserContext())
+	actor, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	if err := h.userService.Delete(c.UserContext(), userId, actor); err != nil {
+	if err := h.userService.Delete(c.Context(), userId, actor); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
@@ -321,9 +321,9 @@ func (h *userHandlerImpl) DeleteUser(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/list [get]
-func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
+func (h *userHandlerImpl) GetUserList(c fiber.Ctx) error {
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	isSuperAdmin, err := utils.IsSuperAdmin(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -346,10 +346,10 @@ func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
 
 	// Non-super-admins are forcibly scoped to their own client, ignoring any query param.
 	if !isSuperAdmin {
-		filters.ClientId = utils.GetClientId(c.UserContext())
+		filters.ClientId = utils.GetClientId(c.Context())
 	}
 
-	users, err := h.userService.GetUserList(c.UserContext(), filters)
+	users, err := h.userService.GetUserList(c.Context(), filters)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

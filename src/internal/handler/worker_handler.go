@@ -9,14 +9,14 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type WorkerHandler interface {
-	AddWorker(c *fiber.Ctx) error
-	GetWorker(c *fiber.Ctx) error
-	UpdateWorker(c *fiber.Ctx) error
-	ListWorker(c *fiber.Ctx) error
+	AddWorker(c fiber.Ctx) error
+	GetWorker(c fiber.Ctx) error
+	UpdateWorker(c fiber.Ctx) error
+	ListWorker(c fiber.Ctx) error
 }
 
 type workerHandlerImpl struct {
@@ -31,7 +31,7 @@ func NewWorkerHandler(workerService service.WorkerService, farmGroupService serv
 	}
 }
 
-func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
+func (h *workerHandlerImpl) AddWorker(c fiber.Ctx) error {
 	var createWorkerRequest dto.CreateWorkerRequest
 
 	if err := validateAndParse(c, &createWorkerRequest); err != nil {
@@ -42,7 +42,7 @@ func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -52,7 +52,7 @@ func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
 		return err
 	}
 
-	newWorker, err := h.workerService.Create(c.UserContext(), createWorkerRequest, username, clientId)
+	newWorker, err := h.workerService.Create(c.Context(), createWorkerRequest, username, clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -60,7 +60,7 @@ func (h *workerHandlerImpl) AddWorker(c *fiber.Ctx) error {
 	return http.Success(c, newWorker)
 }
 
-func (h *workerHandlerImpl) GetWorker(c *fiber.Ctx) error {
+func (h *workerHandlerImpl) GetWorker(c fiber.Ctx) error {
 	id, err := parseParamInt(c, "id", "Invalid worker ID")
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (h *workerHandlerImpl) GetWorker(c *fiber.Ctx) error {
 	return http.Success(c, worker)
 }
 
-func (h *workerHandlerImpl) UpdateWorker(c *fiber.Ctx) error {
+func (h *workerHandlerImpl) UpdateWorker(c fiber.Ctx) error {
 	var updateWorker dto.UpdateWorkerRequest
 
 	if err := validateAndParse(c, &updateWorker); err != nil {
@@ -98,12 +98,12 @@ func (h *workerHandlerImpl) UpdateWorker(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.workerService.Update(c.UserContext(), updateWorker, username)
+	err = h.workerService.Update(c.Context(), updateWorker, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -111,7 +111,7 @@ func (h *workerHandlerImpl) UpdateWorker(c *fiber.Ctx) error {
 	return http.SuccessWithoutData(c)
 }
 
-func (h *workerHandlerImpl) ListWorker(c *fiber.Ctx) error {
+func (h *workerHandlerImpl) ListWorker(c fiber.Ctx) error {
 	sPage := c.Query("page")
 	sPageSize := c.Query("pageSize")
 	orderBy := c.Query("orderBy")
@@ -142,13 +142,13 @@ func (h *workerHandlerImpl) ListWorker(c *fiber.Ctx) error {
 
 // resolveClientId derives the clientId: from the JWT token for regular users,
 // or from the farmGroupId for super admins who may not have clientId in their token.
-func (h *workerHandlerImpl) resolveClientId(c *fiber.Ctx, farmGroupId int) (int, error) {
-	clientIdPtr := utils.GetClientId(c.UserContext())
+func (h *workerHandlerImpl) resolveClientId(c fiber.Ctx, farmGroupId int) (int, error) {
+	clientIdPtr := utils.GetClientId(c.Context())
 	if clientIdPtr != nil {
 		return *clientIdPtr, nil
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	isSuperAdmin, err := utils.IsSuperAdmin(c.Context())
 	if err != nil || !isSuperAdmin {
 		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
 	}

@@ -1,14 +1,14 @@
 package handler
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/metrics"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/version"
 	"gorm.io/gorm"
 )
 
 // Live is process liveness — cheap, no dependency checks.
-func Live(c *fiber.Ctx) error {
+func Live(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status":  "ok",
 		"version": version.Version,
@@ -17,7 +17,7 @@ func Live(c *fiber.Ctx) error {
 
 // Ready checks DB reachability. Returns 503 when the dependency is down.
 func Ready(db *gorm.DB) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		if db == nil {
 			metrics.IncDBPingFailure()
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{

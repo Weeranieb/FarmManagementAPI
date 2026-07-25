@@ -3,7 +3,7 @@ package router
 import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/middleware"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func (r *Router) setupClientRoutes(group fiber.Router) {
