@@ -14,9 +14,9 @@ type MockMerchantService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, request, username
-func (_m *MockMerchantService) Create(ctx context.Context, request dto.CreateMerchantRequest, username string) (*dto.MerchantResponse, error) {
-	ret := _m.Called(ctx, request, username)
+// Create provides a mock function with given fields: ctx, request, username, clientId
+func (_m *MockMerchantService) Create(ctx context.Context, request dto.CreateMerchantRequest, username string, clientId int) (*dto.MerchantResponse, error) {
+	ret := _m.Called(ctx, request, username, clientId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -24,19 +24,19 @@ func (_m *MockMerchantService) Create(ctx context.Context, request dto.CreateMer
 
 	var r0 *dto.MerchantResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateMerchantRequest, string) (*dto.MerchantResponse, error)); ok {
-		return rf(ctx, request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateMerchantRequest, string, int) (*dto.MerchantResponse, error)); ok {
+		return rf(ctx, request, username, clientId)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateMerchantRequest, string) *dto.MerchantResponse); ok {
-		r0 = rf(ctx, request, username)
+	if rf, ok := ret.Get(0).(func(context.Context, dto.CreateMerchantRequest, string, int) *dto.MerchantResponse); ok {
+		r0 = rf(ctx, request, username, clientId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*dto.MerchantResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, dto.CreateMerchantRequest, string) error); ok {
-		r1 = rf(ctx, request, username)
+	if rf, ok := ret.Get(1).(func(context.Context, dto.CreateMerchantRequest, string, int) error); ok {
+		r1 = rf(ctx, request, username, clientId)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -92,9 +92,9 @@ func (_m *MockMerchantService) Get(id int) (*dto.MerchantResponse, error) {
 	return r0, r1
 }
 
-// GetList provides a mock function with no fields
-func (_m *MockMerchantService) GetList() ([]*dto.MerchantResponse, error) {
-	ret := _m.Called()
+// GetList provides a mock function with given fields: clientId
+func (_m *MockMerchantService) GetList(clientId int) ([]*dto.MerchantResponse, error) {
+	ret := _m.Called(clientId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetList")
@@ -102,19 +102,19 @@ func (_m *MockMerchantService) GetList() ([]*dto.MerchantResponse, error) {
 
 	var r0 []*dto.MerchantResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func() ([]*dto.MerchantResponse, error)); ok {
-		return rf()
+	if rf, ok := ret.Get(0).(func(int) ([]*dto.MerchantResponse, error)); ok {
+		return rf(clientId)
 	}
-	if rf, ok := ret.Get(0).(func() []*dto.MerchantResponse); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(int) []*dto.MerchantResponse); ok {
+		r0 = rf(clientId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*dto.MerchantResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(clientId)
 	} else {
 		r1 = ret.Error(1)
 	}

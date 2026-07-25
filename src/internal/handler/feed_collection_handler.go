@@ -55,7 +55,7 @@ func (h *feedCollectionHandlerImpl) AddFeedCollection(c *fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	clientId, err := resolveClientIdForFeedCollectionWrite(c, createFeedCollectionRequest.ClientId)
+	clientId, err := resolveWriteClientId(c, createFeedCollectionRequest.ClientId)
 	if err != nil {
 		return err
 	}
@@ -181,29 +181,4 @@ func (h *feedCollectionHandlerImpl) ListFeedCollection(c *fiber.Ctx) error {
 	}
 
 	return http.Success(c, feedCollectionList)
-}
-
-// resolveClientIdForFeedCollectionWrite uses JWT client id when present; otherwise requires
-// super admin with clientId in body (UI "มุมมองลูกค้า" selection).
-func resolveClientIdForFeedCollectionWrite(c *fiber.Ctx, bodyClientId *int) (int, error) {
-	clientIdPtr := utils.GetClientId(c.UserContext())
-	if clientIdPtr != nil {
-		return *clientIdPtr, nil
-	}
-
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil {
-		return 0, http.NewError(c, errors.ErrGeneric.Code, err)
-	}
-	if !isSuperAdmin {
-		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
-	}
-	if bodyClientId == nil || *bodyClientId <= 0 {
-		return 0, http.Error(c, errors.ErrValidationFailed.Code, "clientId is required when your account has no client in token (select a client in the header)")
-	}
-
-	if err := requireClientAccess(c, *bodyClientId); err != nil {
-		return 0, err
-	}
-	return *bodyClientId, nil
 }

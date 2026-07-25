@@ -3188,6 +3188,10 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
+                "clientId": {
+                    "description": "ClientId is used only by super admins (no client in token) to target a\nclient. Normal users' client is taken from the JWT and this is ignored.",
+                    "type": "integer"
+                },
                 "contactNumber": {
                     "type": "string"
                 },
