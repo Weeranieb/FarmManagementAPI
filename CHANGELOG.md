@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.10](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.9...v0.2.10) (2026-07-25)
+
+
+### Bug Fixes
+
+* daily log pellet per kg display ([#46](https://github.com/Weeranieb/FarmManagementAPI/issues/46)) ([626c650](https://github.com/Weeranieb/FarmManagementAPI/commit/626c6505fb844f7df8dba1dbd53f896617e58e4f))
+
 ## [0.2.9](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.8...v0.2.9) (2026-07-24)
 
 
