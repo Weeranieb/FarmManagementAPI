@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.11](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.10...v0.2.11) (2026-07-25)
+
+
+### Features
+
+* **pond:** report a sale's head count, weight and costs in pond activities ([#49](https://github.com/Weeranieb/FarmManagementAPI/issues/49)) ([77925ec](https://github.com/Weeranieb/FarmManagementAPI/commit/77925ecf1327d59356a8867db00d487f36f77218))
+
 ## [0.2.10](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.9...v0.2.10) (2026-07-25)
 
 
