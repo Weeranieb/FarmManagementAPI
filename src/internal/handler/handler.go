@@ -96,6 +96,33 @@ func requireSuperAdmin(c fiber.Ctx) error {
 	return nil
 }
 
+// resolveWriteClientId returns the client id for a client-scoped create: the
+// JWT client id when present, otherwise a super admin must pass clientId in the
+// body (and must have access to it). Shared by the feed-collection and merchant
+// create handlers.
+func resolveWriteClientId(c fiber.Ctx, bodyClientId *int) (int, error) {
+	clientIdPtr := utils.GetClientId(c.Context())
+	if clientIdPtr != nil {
+		return *clientIdPtr, nil
+	}
+
+	isSuperAdmin, err := utils.IsSuperAdmin(c.Context())
+	if err != nil {
+		return 0, http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	if !isSuperAdmin {
+		return 0, http.Error(c, errors.ErrAuthTokenInvalid.Code, "client id not found")
+	}
+	if bodyClientId == nil || *bodyClientId <= 0 {
+		return 0, http.Error(c, errors.ErrValidationFailed.Code, "clientId is required when your account has no client in token (select a client in the header)")
+	}
+
+	if err := requireClientAccess(c, *bodyClientId); err != nil {
+		return 0, err
+	}
+	return *bodyClientId, nil
+}
+
 func requireClientAdmin(c fiber.Ctx) error {
 	ok, err := utils.IsClientAdminOrAbove(c.Context())
 	if err != nil || !ok {

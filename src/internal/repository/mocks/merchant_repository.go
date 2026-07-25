@@ -50,29 +50,29 @@ func (_m *MockMerchantRepository) Delete(ctx context.Context, id int) error {
 	return r0
 }
 
-// GetByContactNumberAndName provides a mock function with given fields: contactNumber, name
-func (_m *MockMerchantRepository) GetByContactNumberAndName(contactNumber string, name string) (*model.Merchant, error) {
-	ret := _m.Called(contactNumber, name)
+// GetByClientIdAndContactNumber provides a mock function with given fields: clientId, contactNumber
+func (_m *MockMerchantRepository) GetByClientIdAndContactNumber(clientId int, contactNumber string) (*model.Merchant, error) {
+	ret := _m.Called(clientId, contactNumber)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetByContactNumberAndName")
+		panic("no return value specified for GetByClientIdAndContactNumber")
 	}
 
 	var r0 *model.Merchant
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, string) (*model.Merchant, error)); ok {
-		return rf(contactNumber, name)
+	if rf, ok := ret.Get(0).(func(int, string) (*model.Merchant, error)); ok {
+		return rf(clientId, contactNumber)
 	}
-	if rf, ok := ret.Get(0).(func(string, string) *model.Merchant); ok {
-		r0 = rf(contactNumber, name)
+	if rf, ok := ret.Get(0).(func(int, string) *model.Merchant); ok {
+		r0 = rf(clientId, contactNumber)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.Merchant)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = rf(contactNumber, name)
+	if rf, ok := ret.Get(1).(func(int, string) error); ok {
+		r1 = rf(clientId, contactNumber)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -110,9 +110,9 @@ func (_m *MockMerchantRepository) GetByID(id int) (*model.Merchant, error) {
 	return r0, r1
 }
 
-// List provides a mock function with no fields
-func (_m *MockMerchantRepository) List() ([]*model.Merchant, error) {
-	ret := _m.Called()
+// List provides a mock function with given fields: clientId
+func (_m *MockMerchantRepository) List(clientId int) ([]*model.Merchant, error) {
+	ret := _m.Called(clientId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -120,19 +120,19 @@ func (_m *MockMerchantRepository) List() ([]*model.Merchant, error) {
 
 	var r0 []*model.Merchant
 	var r1 error
-	if rf, ok := ret.Get(0).(func() ([]*model.Merchant, error)); ok {
-		return rf()
+	if rf, ok := ret.Get(0).(func(int) ([]*model.Merchant, error)); ok {
+		return rf(clientId)
 	}
-	if rf, ok := ret.Get(0).(func() []*model.Merchant); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(int) []*model.Merchant); ok {
+		r0 = rf(clientId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*model.Merchant)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(clientId)
 	} else {
 		r1 = ret.Error(1)
 	}

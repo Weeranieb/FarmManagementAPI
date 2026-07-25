@@ -13,10 +13,12 @@ import (
 type MerchantRepository interface {
 	Create(ctx context.Context, merchant *model.Merchant) error
 	GetByID(id int) (*model.Merchant, error)
-	GetByContactNumberAndName(contactNumber, name string) (*model.Merchant, error)
+	GetByClientIdAndContactNumber(clientId int, contactNumber string) (*model.Merchant, error)
 	Update(ctx context.Context, merchant *model.Merchant) error
 	Delete(ctx context.Context, id int) error
-	List() ([]*model.Merchant, error)
+	// List returns merchants for the given client; clientId <= 0 lists all
+	// (super admin with no client filter).
+	List(clientId int) ([]*model.Merchant, error)
 }
 
 type merchantRepository struct {
@@ -43,9 +45,9 @@ func (r *merchantRepository) GetByID(id int) (*model.Merchant, error) {
 	return &merchant, nil
 }
 
-func (r *merchantRepository) GetByContactNumberAndName(contactNumber, name string) (*model.Merchant, error) {
+func (r *merchantRepository) GetByClientIdAndContactNumber(clientId int, contactNumber string) (*model.Merchant, error) {
 	var merchant model.Merchant
-	err := r.db.Where("contact_number = ? AND name = ? AND deleted_at IS NULL", contactNumber, name).First(&merchant).Error
+	err := r.db.Where("client_id = ? AND contact_number = ? AND deleted_at IS NULL", clientId, contactNumber).First(&merchant).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -63,8 +65,12 @@ func (r *merchantRepository) Delete(ctx context.Context, id int) error {
 	return r.db.WithContext(ctx).Delete(&model.Merchant{}, id).Error
 }
 
-func (r *merchantRepository) List() ([]*model.Merchant, error) {
+func (r *merchantRepository) List(clientId int) ([]*model.Merchant, error) {
 	var merchants []*model.Merchant
-	err := r.db.Where("deleted_at IS NULL").Find(&merchants).Error
+	q := r.db.Where("deleted_at IS NULL")
+	if clientId > 0 {
+		q = q.Where("client_id = ?", clientId)
+	}
+	err := q.Order("id desc").Find(&merchants).Error
 	return merchants, err
 }

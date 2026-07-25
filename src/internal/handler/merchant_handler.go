@@ -49,7 +49,9 @@ func (h *merchantHandlerImpl) AddMerchant(c fiber.Ctx) error {
 		return err
 	}
 
-	if err := requireSuperAdmin(c); err != nil {
+	// Client admins manage their own merchant list from the mobile app; the
+	// catalogue is client-scoped operational data, not super-admin master data.
+	if err := requireClientAdmin(c); err != nil {
 		return err
 	}
 
@@ -58,7 +60,12 @@ func (h *merchantHandlerImpl) AddMerchant(c fiber.Ctx) error {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	newMerchant, err := h.merchantService.Create(c.Context(), createMerchantRequest, username)
+	clientId, err := resolveWriteClientId(c, createMerchantRequest.ClientId)
+	if err != nil {
+		return err
+	}
+
+	newMerchant, err := h.merchantService.Create(c.Context(), createMerchantRequest, username, clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -107,7 +114,14 @@ func (h *merchantHandlerImpl) GetMerchant(c fiber.Ctx) error {
 // @Router       /merchant [get]
 func (h *merchantHandlerImpl) GetMerchantList(c fiber.Ctx) error {
 
-	merchantList, err := h.merchantService.GetList()
+	// Client-scoped: normal users get their JWT client; super admins get all
+	// (clientId 0) or a specific client via ?clientId=.
+	clientId, err := resolveListClientId(c)
+	if err != nil {
+		return err
+	}
+
+	merchantList, err := h.merchantService.GetList(clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -136,7 +150,7 @@ func (h *merchantHandlerImpl) UpdateMerchant(c fiber.Ctx) error {
 		return err
 	}
 
-	if err := requireSuperAdmin(c); err != nil {
+	if err := requireClientAdmin(c); err != nil {
 		return err
 	}
 
@@ -170,7 +184,7 @@ func (h *merchantHandlerImpl) UpdateMerchant(c fiber.Ctx) error {
 // @Router       /merchant/{id} [delete]
 func (h *merchantHandlerImpl) DeleteMerchant(c fiber.Ctx) error {
 
-	if err := requireSuperAdmin(c); err != nil {
+	if err := requireClientAdmin(c); err != nil {
 		return err
 	}
 
