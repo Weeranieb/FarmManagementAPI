@@ -2555,7 +2555,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Create a new user with the provided details. Only super admin can create users.",
+                "description": "Create a new user. Requires client-admin or above; a client admin's new user always lands in the caller's own client. Cannot create a SuperAdmin.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2586,6 +2586,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -2732,7 +2738,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Update any user. Super-admin only. Cannot promote to SuperAdmin or modify an existing SuperAdmin.",
+                "description": "Update a user. Requires client-admin or above; a client admin is limited to users in its own client and cannot reassign clientId. Cannot promote to SuperAdmin or modify an existing SuperAdmin.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2797,7 +2803,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Soft-delete a user. Super-admin only. Cannot delete self or another super admin.",
+                "description": "Soft-delete a user. Requires client-admin or above; a client admin is limited to users in its own client. Cannot delete self or a super admin.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2855,7 +2861,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Reset another user's password. Super-admin only. Cannot reset a SuperAdmin.",
+                "description": "Reset another user's password. Requires client-admin or above; a client admin is limited to users in its own client. Cannot reset a SuperAdmin.",
                 "consumes": [
                     "application/json"
                 ],

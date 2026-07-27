@@ -163,9 +163,37 @@ func (s *userService) Update(ctx context.Context, userId int, request dto.Update
 	return s.toUserResponse(existingUser), nil
 }
 
-// AdminUpdate is the super-admin-only path. It can change every field
-// on a user except that it refuses to promote anyone to SuperAdmin
-// or demote an existing SuperAdmin (those are out-of-band operations).
+// assertCanManageUser gates the admin-facing user mutations. The handler only
+// knows the caller's level; which client the *target* belongs to is only
+// knowable here, so this is where cross-client access is stopped.
+//
+//	· super-admin records are never reachable through these endpoints
+//	· a client admin may only act on users inside its own client
+func (s *userService) assertCanManageUser(ctx context.Context, target *model.User) error {
+	if target.UserLevel == constants.UserLevelSuperAdmin {
+		return errors.ErrUserCannotModifySuperAdmin
+	}
+	if target.ClientId == nil {
+		// Nothing to scope against, so only a super admin may act on it.
+		if isSuper, _ := utils.IsSuperAdmin(ctx); !isSuper {
+			return errors.ErrAuthPermissionDenied
+		}
+		return nil
+	}
+	ok, err := utils.CanAccessClient(ctx, *target.ClientId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return errors.ErrAuthPermissionDenied
+	}
+	return nil
+}
+
+// AdminUpdate is the admin path (client admin and above). It can change every
+// field on a user except that it refuses to promote anyone to SuperAdmin or
+// demote an existing SuperAdmin (those are out-of-band operations), and it
+// keeps a client admin inside its own client.
 func (s *userService) AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error {
 	existingUser, err := s.userRepo.GetByID(userId)
 	if err != nil {
@@ -175,13 +203,23 @@ func (s *userService) AdminUpdate(ctx context.Context, userId int, request dto.A
 		return errors.ErrUserNotFound
 	}
 
-	// Never touch super-admin records via this endpoint.
-	if existingUser.UserLevel == constants.UserLevelSuperAdmin {
-		return errors.ErrUserCannotModifySuperAdmin
+	// Never touch super-admin records, and never reach outside the caller's
+	// client.
+	if err := s.assertCanManageUser(ctx, existingUser); err != nil {
+		return err
 	}
 	// Never promote to super-admin via this endpoint.
 	if request.UserLevel != nil && *request.UserLevel == constants.UserLevelSuperAdmin {
 		return errors.ErrUserCannotAssignSuperAdmin
+	}
+	// Moving a user between clients is a super-admin operation. Refusing beats
+	// ignoring the field: a client admin sending it is trying to leave its own
+	// scope, and a silent no-op would look like it worked.
+	if request.ClientId != nil {
+		isSuper, _ := utils.IsSuperAdmin(ctx)
+		if !isSuper {
+			return errors.ErrAuthPermissionDenied
+		}
 	}
 
 	if request.Username != "" && request.Username != existingUser.Username {
@@ -229,7 +267,8 @@ func (s *userService) AdminUpdate(ctx context.Context, userId int, request dto.A
 }
 
 // AdminResetPassword overwrites a user's password. Callers must already be
-// verified super-admin. Refuses to reset a super admin's password.
+// verified client-admin or above; this refuses a super admin's password and any
+// target outside the caller's client.
 func (s *userService) AdminResetPassword(ctx context.Context, userId int, request dto.AdminResetPasswordRequest, userIdentity string) error {
 	existingUser, err := s.userRepo.GetByID(userId)
 	if err != nil {
@@ -239,8 +278,8 @@ func (s *userService) AdminResetPassword(ctx context.Context, userId int, reques
 		return errors.ErrUserNotFound
 	}
 
-	if existingUser.UserLevel == constants.UserLevelSuperAdmin {
-		return errors.ErrUserCannotModifySuperAdmin
+	if err := s.assertCanManageUser(ctx, existingUser); err != nil {
+		return err
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
@@ -282,8 +321,9 @@ func (s *userService) ChangePassword(ctx context.Context, userId int, request dt
 	return nil
 }
 
-// Delete soft-deletes a user. Callers must already be verified super-admin.
-// Refuses to delete the acting user or another super admin.
+// Delete soft-deletes a user. Callers must already be verified client-admin or
+// above. Refuses the acting user, a super admin, and anyone outside the
+// caller's client.
 func (s *userService) Delete(ctx context.Context, userId int, userIdentity string) error {
 	existingUser, err := s.userRepo.GetByID(userId)
 	if err != nil {
@@ -297,8 +337,8 @@ func (s *userService) Delete(ctx context.Context, userId int, userIdentity strin
 	if err == nil && actingUserId == existingUser.Id {
 		return errors.ErrUserCannotDeleteSelf
 	}
-	if existingUser.UserLevel == constants.UserLevelSuperAdmin {
-		return errors.ErrUserCannotModifySuperAdmin
+	if err := s.assertCanManageUser(ctx, existingUser); err != nil {
+		return err
 	}
 
 	if err := s.userRepo.Delete(ctx, existingUser.Id); err != nil {
