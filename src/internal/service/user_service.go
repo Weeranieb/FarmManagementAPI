@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -82,14 +84,15 @@ func (s *userService) Create(ctx context.Context, request dto.CreateUserRequest,
 	}
 
 	newUser := &model.User{
-		Username:      request.Username,
-		Email:         request.Email,
-		Password:      string(hashedPassword),
-		FirstName:     request.FirstName,
-		LastName:      request.LastName,
-		UserLevel:     request.UserLevel,
-		ContactNumber: request.ContactNumber,
-		ClientId:      targetClientId,
+		Username:          request.Username,
+		Email:             request.Email,
+		Password:          string(hashedPassword),
+		PasswordUpdatedAt: lo.ToPtr(time.Now()),
+		FirstName:         request.FirstName,
+		LastName:          request.LastName,
+		UserLevel:         request.UserLevel,
+		ContactNumber:     request.ContactNumber,
+		ClientId:          targetClientId,
 	}
 
 	// create user (CreatedBy/UpdatedBy set via BaseModel hook from ctx)
@@ -248,6 +251,7 @@ func (s *userService) AdminResetPassword(ctx context.Context, userId int, reques
 		return errors.ErrGeneric.Wrap(err)
 	}
 	existingUser.Password = string(hashedPassword)
+	existingUser.PasswordUpdatedAt = lo.ToPtr(time.Now())
 
 	if err := s.userRepo.Update(ctx, existingUser); err != nil {
 		return errors.ErrGeneric.Wrap(err)
@@ -275,6 +279,7 @@ func (s *userService) ChangePassword(ctx context.Context, userId int, request dt
 		return errors.ErrGeneric.Wrap(err)
 	}
 	existingUser.Password = string(hashedPassword)
+	existingUser.PasswordUpdatedAt = lo.ToPtr(time.Now())
 
 	if err := s.userRepo.Update(ctx, existingUser); err != nil {
 		return errors.ErrGeneric.Wrap(err)
@@ -327,17 +332,18 @@ func (s *userService) GetUserList(ctx context.Context, filters dto.UserListQuery
 
 func (s *userService) toUserResponse(user *model.User) *dto.UserResponse {
 	return &dto.UserResponse{
-		Id:            user.Id,
-		ClientId:      user.ClientId,
-		Username:      user.Username,
-		Email:         user.Email,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		UserLevel:     user.UserLevel,
-		ContactNumber: user.ContactNumber,
-		CreatedAt:     user.CreatedAt,
-		CreatedBy:     user.CreatedBy,
-		UpdatedAt:     user.UpdatedAt,
-		UpdatedBy:     user.UpdatedBy,
+		Id:                user.Id,
+		ClientId:          user.ClientId,
+		Username:          user.Username,
+		Email:             user.Email,
+		FirstName:         user.FirstName,
+		LastName:          user.LastName,
+		UserLevel:         user.UserLevel,
+		ContactNumber:     user.ContactNumber,
+		PasswordUpdatedAt: user.PasswordUpdatedAt,
+		CreatedAt:         user.CreatedAt,
+		CreatedBy:         user.CreatedBy,
+		UpdatedAt:         user.UpdatedAt,
+		UpdatedBy:         user.UpdatedBy,
 	}
 }
