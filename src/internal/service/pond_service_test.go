@@ -281,14 +281,32 @@ func (s *PondServiceTestSuite) TestGet_Success() {
 	}
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(pa, nil)
 
-	// WHEN — Get is called
-	result, err := s.pondService.Get(context.Background(), pondId)
+	// WHEN — Get is called (super-admin context passes the ownership check)
+	result, err := s.pondService.Get(fillPondCtx(), pondId)
 
 	// THEN — result returned with same id
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
 	assert.Equal(s.T(), pondId, result.Id)
 	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestGet_ForeignClientDenied() {
+	// GIVEN — the pond belongs to client 2
+	pondId := 7
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, pondId).Return(
+		&repository.PondWithFarmAndActivePond{
+			Pond:     &model.Pond{Id: pondId, FarmId: 9, Name: "Theirs", Status: "active"},
+			ClientId: 2,
+		}, nil)
+
+	// WHEN — a client-1 user asks for it by id
+	result, err := s.pondService.Get(fillPondCtxNoAccess(), pondId)
+
+	// THEN — denied. The response would otherwise carry the cycle's cost and
+	// profit for another client's pond.
+	assert.ErrorIs(s.T(), err, errors.ErrAuthPermissionDenied)
+	assert.Nil(s.T(), result)
 }
 
 func (s *PondServiceTestSuite) TestGet_NotFound() {
@@ -328,14 +346,30 @@ func (s *PondServiceTestSuite) TestGetList_Success() {
 		{Pond: &model.Pond{Id: 2, FarmId: farmId, Name: "Pond 2", Status: "active"}, ClientId: 1, ActivePond: nil},
 	}
 	s.pondRepo.On("ListByFarmIdWithActivePond", mock.Anything, farmId).Return(list, nil)
+	// The ownership pre-check resolves the farm's owning client.
+	s.farmRepo.On("GetByID", farmId).Return(&model.Farm{Id: farmId, ClientId: 1, Name: "Farm"}, nil)
 
 	// WHEN — GetList is called
-	result, err := s.pondService.GetList(context.Background(), farmId)
+	result, err := s.pondService.GetList(fillPondCtx(), farmId)
 
 	// THEN — two ponds returned
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), result, 2)
 	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestGetList_ForeignFarmDenied() {
+	// GIVEN — farm 9 belongs to client 2
+	s.farmRepo.On("GetByID", 9).Return(&model.Farm{Id: 9, ClientId: 2, Name: "Theirs"}, nil)
+
+	// WHEN — a client-1 user passes ?farmId=9
+	result, err := s.pondService.GetList(fillPondCtxNoAccess(), 9)
+
+	// THEN — denied before any pond is read, so farm ids can't be walked to
+	// enumerate another client's ponds and their financials.
+	assert.ErrorIs(s.T(), err, errors.ErrAuthPermissionDenied)
+	assert.Nil(s.T(), result)
+	s.pondRepo.AssertNotCalled(s.T(), "ListByFarmIdWithActivePond", mock.Anything, 9)
 }
 
 func (s *PondServiceTestSuite) TestUpdate_Success() {
@@ -345,12 +379,14 @@ func (s *PondServiceTestSuite) TestUpdate_Success() {
 	s.pondRepo.On("GetByID", 1).Return(existing, nil)
 	s.pondRepo.On("GetByFarmIdAndName", 1, "New Name").Return(nil, nil)
 	s.pondRepo.On("Update", mock.Anything, mock.AnythingOfType("*model.Pond")).Return(nil)
+	// The ownership pre-check reuses farmRepo.GetByID(1) registered here for the
+	// in-transaction status sync.
 	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{
 		{Id: 1, FarmId: 1, Name: "New Name", Status: constants.FarmStatusActive},
 	}, constants.FarmStatusMaintenance)
 
-	// WHEN — Update is called
-	err := s.pondService.Update(context.Background(), req)
+	// WHEN — Update is called (super-admin context)
+	err := s.pondService.Update(fillPondCtx(), req)
 
 	// THEN — no error
 	assert.NoError(s.T(), err)
@@ -364,12 +400,56 @@ func (s *PondServiceTestSuite) TestUpdate_PondNotFound() {
 	s.pondRepo.On("GetByID", 999).Return(nil, nil)
 
 	// WHEN — Update is called
-	err := s.pondService.Update(context.Background(), req)
+	err := s.pondService.Update(fillPondCtx(), req)
 
 	// THEN — ErrPondNotFound; Update not called
 	assert.Error(s.T(), err)
 	assert.ErrorIs(s.T(), err, errors.ErrPondNotFound)
 	s.pondRepo.AssertExpectations(s.T())
+	s.pondRepo.AssertNotCalled(s.T(), "Update")
+}
+
+func (s *PondServiceTestSuite) TestUpdate_ClientAdminWrongClientDenied() {
+	// GIVEN — client admin for client 1 editing a pond whose farm is in client 2
+	existing := &model.Pond{Id: 7, FarmId: 5, Name: "Foreign", Status: "active"}
+	s.pondRepo.On("GetByID", 7).Return(existing, nil)
+	s.farmRepo.On("GetByID", 5).Return(&model.Farm{Id: 5, ClientId: 2, Name: "F"}, nil)
+
+	// WHEN — Update is called with a client-1 admin context
+	err := s.pondService.Update(fillPondCtxNoAccess(), dto.UpdatePondRequest{Id: 7, Name: "Renamed"})
+
+	// THEN — permission denied; nothing looked up or written
+	assert.ErrorIs(s.T(), err, errors.ErrAuthPermissionDenied)
+	s.pondRepo.AssertNotCalled(s.T(), "GetByFarmIdAndName")
+	s.pondRepo.AssertNotCalled(s.T(), "Update")
+}
+
+func (s *PondServiceTestSuite) TestUpdate_ReparentToForeignFarmDenied() {
+	// GIVEN — client-1 admin moving their own pond into a farm owned by client 2
+	existing := &model.Pond{Id: 1, FarmId: 1, Name: "Pond", Status: "active"}
+	s.pondRepo.On("GetByID", 1).Return(existing, nil)
+	s.farmRepo.On("GetByID", 1).Return(&model.Farm{Id: 1, ClientId: 1, Name: "Mine"}, nil)
+	s.farmRepo.On("GetByID", 9).Return(&model.Farm{Id: 9, ClientId: 2, Name: "Theirs"}, nil)
+
+	// WHEN — Update targets the foreign farm
+	err := s.pondService.Update(fillPondCtxNoAccess(), dto.UpdatePondRequest{Id: 1, FarmId: 9})
+
+	// THEN — permission denied; pond not written
+	assert.ErrorIs(s.T(), err, errors.ErrAuthPermissionDenied)
+	s.pondRepo.AssertNotCalled(s.T(), "Update")
+}
+
+func (s *PondServiceTestSuite) TestUpdate_FarmNotFound() {
+	// GIVEN — pond exists but its farm row is gone
+	existing := &model.Pond{Id: 1, FarmId: 42, Name: "Orphan", Status: "active"}
+	s.pondRepo.On("GetByID", 1).Return(existing, nil)
+	s.farmRepo.On("GetByID", 42).Return(nil, nil)
+
+	// WHEN — Update is called
+	err := s.pondService.Update(fillPondCtx(), dto.UpdatePondRequest{Id: 1, Name: "X"})
+
+	// THEN — ErrFarmNotFound; pond not written
+	assert.ErrorIs(s.T(), err, errors.ErrFarmNotFound)
 	s.pondRepo.AssertNotCalled(s.T(), "Update")
 }
 
@@ -379,10 +459,11 @@ func (s *PondServiceTestSuite) TestUpdate_DuplicateName() {
 	otherPond := &model.Pond{Id: 2, FarmId: 1, Name: "New Name", Status: "active"}
 	req := dto.UpdatePondRequest{Id: 1, Name: "New Name"}
 	s.pondRepo.On("GetByID", 1).Return(existing, nil)
+	s.farmRepo.On("GetByID", 1).Return(&model.Farm{Id: 1, ClientId: 1, Name: "F"}, nil)
 	s.pondRepo.On("GetByFarmIdAndName", 1, "New Name").Return(otherPond, nil)
 
 	// WHEN — Update is called
-	err := s.pondService.Update(context.Background(), req)
+	err := s.pondService.Update(fillPondCtx(), req)
 
 	// THEN — ErrPondAlreadyExists; Update not called
 	assert.Error(s.T(), err)
@@ -396,14 +477,68 @@ func (s *PondServiceTestSuite) TestUpdate_RepoError() {
 	existing := &model.Pond{Id: 1, FarmId: 1, Name: "Pond", Status: "active"}
 	req := dto.UpdatePondRequest{Id: 1, Status: "maintenance"}
 	s.pondRepo.On("GetByID", 1).Return(existing, nil)
+	s.farmRepo.On("GetByID", 1).Return(&model.Farm{Id: 1, ClientId: 1, Name: "F"}, nil)
 	s.pondRepo.On("Update", mock.Anything, mock.AnythingOfType("*model.Pond")).Return(assert.AnError)
 
 	// WHEN — Update is called
-	err := s.pondService.Update(context.Background(), req)
+	err := s.pondService.Update(fillPondCtx(), req)
 
 	// THEN — error propagated
 	assert.Error(s.T(), err)
 	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestDelete_Success() {
+	// GIVEN — existing pond in a farm the caller can access
+	s.pondRepo.On("GetByID", 1).Return(&model.Pond{Id: 1, FarmId: 1, Name: "Pond", Status: "maintenance"}, nil)
+	s.pondRepo.On("Delete", mock.Anything, 1).Return(nil)
+	// Ownership pre-check reuses the farmRepo.GetByID(1) registered here.
+	s.expectFarmStatusSyncAfterMutation(1, []*model.Pond{}, constants.FarmStatusMaintenance)
+
+	// WHEN — Delete is called (super-admin context)
+	err := s.pondService.Delete(fillPondCtx(), 1)
+
+	// THEN — no error; pond deleted
+	assert.NoError(s.T(), err)
+	s.pondRepo.AssertExpectations(s.T())
+}
+
+func (s *PondServiceTestSuite) TestDelete_PondNotFound() {
+	// GIVEN — pond id does not exist
+	s.pondRepo.On("GetByID", 999).Return(nil, nil)
+
+	// WHEN — Delete is called
+	err := s.pondService.Delete(fillPondCtx(), 999)
+
+	// THEN — ErrPondNotFound; nothing deleted
+	assert.ErrorIs(s.T(), err, errors.ErrPondNotFound)
+	s.pondRepo.AssertNotCalled(s.T(), "Delete")
+}
+
+func (s *PondServiceTestSuite) TestDelete_ClientAdminWrongClientDenied() {
+	// GIVEN — client admin for client 1 deleting a pond whose farm is in client 2
+	s.pondRepo.On("GetByID", 7).Return(&model.Pond{Id: 7, FarmId: 5, Name: "Foreign", Status: "active"}, nil)
+	s.farmRepo.On("GetByID", 5).Return(&model.Farm{Id: 5, ClientId: 2, Name: "F"}, nil)
+
+	// WHEN — Delete is called with a client-1 admin context
+	err := s.pondService.Delete(fillPondCtxNoAccess(), 7)
+
+	// THEN — permission denied; nothing deleted
+	assert.ErrorIs(s.T(), err, errors.ErrAuthPermissionDenied)
+	s.pondRepo.AssertNotCalled(s.T(), "Delete")
+}
+
+func (s *PondServiceTestSuite) TestDelete_FarmNotFound() {
+	// GIVEN — pond exists but its farm row is gone
+	s.pondRepo.On("GetByID", 1).Return(&model.Pond{Id: 1, FarmId: 42, Name: "Orphan", Status: "active"}, nil)
+	s.farmRepo.On("GetByID", 42).Return(nil, nil)
+
+	// WHEN — Delete is called
+	err := s.pondService.Delete(fillPondCtx(), 1)
+
+	// THEN — ErrFarmNotFound; nothing deleted
+	assert.ErrorIs(s.T(), err, errors.ErrFarmNotFound)
+	s.pondRepo.AssertNotCalled(s.T(), "Delete")
 }
 
 func (s *PondServiceTestSuite) TestFillPond_PondNotFound() {
@@ -1391,6 +1526,8 @@ func (s *PondServiceTestSuite) TestListActivities_SellEnrichedFromSellDetails() 
 	pondId := 7
 	date := time.Date(2026, 7, 25, 0, 0, 0, 0, time.UTC)
 	s.pondRepo.On("GetByID", pondId).Return(&model.Pond{Id: pondId, FarmId: 1, Name: "P7"}, nil)
+	// The ownership pre-check resolves the pond's farm to its owning client.
+	s.farmRepo.On("GetByID", 1).Return(&model.Farm{Id: 1, ClientId: 1, Name: "Farm"}, nil)
 	s.activityRepo.On("ListByPondID", mock.Anything, pondId).Return([]repository.ActivityListRow{
 		{
 			Id: 501, Mode: constants.ActivityModeSell, ActivityDate: date, FishType: "kaphong",
@@ -1768,4 +1905,19 @@ func (s *PondServiceTestSuite) TestBulkImportFarmPond_RollbackOnPondCreateFailur
 	require.Error(s.T(), err)
 	assert.Nil(s.T(), resp)
 	s.pondRepo.AssertNotCalled(s.T(), "ListByFarmId", mock.Anything)
+}
+
+func (s *PondServiceTestSuite) TestListActivities_ForeignClientDenied() {
+	// GIVEN — pond 7 sits in farm 9, owned by client 2
+	s.pondRepo.On("GetByID", 7).Return(&model.Pond{Id: 7, FarmId: 9, Name: "Theirs"}, nil)
+	s.farmRepo.On("GetByID", 9).Return(&model.Farm{Id: 9, ClientId: 2, Name: "Theirs"}, nil)
+
+	// WHEN — a client-1 user asks for its activity list
+	out, err := s.pondService.ListActivities(fillPondCtxNoAccess(), 7)
+
+	// THEN — denied before any activity is read. This list is the pond's whole
+	// trading history: head counts, sale prices, costs.
+	assert.ErrorIs(s.T(), err, errors.ErrAuthPermissionDenied)
+	assert.Nil(s.T(), out)
+	s.activityRepo.AssertNotCalled(s.T(), "ListByPondID", mock.Anything, 7)
 }
