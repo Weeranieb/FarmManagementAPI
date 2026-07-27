@@ -28,20 +28,54 @@ type ActivityFeedItem struct {
 	CreatedBy string `json:"createdBy"`
 	// CreatedByName is the author's display name (first name), falling back
 	// to the username when the user record no longer exists.
-	CreatedByName string  `json:"createdByName"`
-	PondName      string  `json:"pondName"`
+	CreatedByName string `json:"createdByName"`
+	// PondId is the source pond's ponds.id — lets a client open the pond a feed
+	// row came from (GET /pond/:pondId/… all key off this id, not the
+	// active_ponds.id the activity row itself references).
+	PondId   int    `json:"pondId"`
+	PondName string `json:"pondName"`
 	// FarmName is the farm the source pond belongs to — shown as a secondary
 	// label so a feed row is identifiable when pond names repeat across farms.
-	FarmName   string  `json:"farmName"`
-	ToPondName *string `json:"toPondName,omitempty"` // move only — destination pond
-	FishType      string  `json:"fishType"`
-	Amount        int     `json:"amount"`
-	FishWeight    float64 `json:"fishWeight"`
-	FishUnit      string  `json:"fishUnit"`
-	PricePerUnit  float64 `json:"pricePerUnit"`
-	Total         float64 `json:"total"`
+	FarmName string `json:"farmName"`
+	// ToPondId / ToPondName are the move destination — set for moves only.
+	ToPondId   *int    `json:"toPondId,omitempty"`
+	ToPondName *string `json:"toPondName,omitempty"`
+	// FishType is empty for a sell: species is recorded per size-grade on the
+	// detail lines, so a sale has no single species to report.
+	FishType string `json:"fishType"`
+	// Amount is the head count. For a sell it comes from Σ sell_details.fish_count
+	// (the activity row's own column is unset) — see ActivityFeedItem's doc.
+	Amount     int     `json:"amount"`
+	FishWeight float64 `json:"fishWeight"` // kg per fish; 0 for a sell
+	FishUnit   string  `json:"fishUnit"`
+	// PricePerUnit is ฿ per kg as entered; for a sell it is the derived average
+	// (Σ revenue ÷ Σ weight), so clients never have to divide.
+	PricePerUnit float64 `json:"pricePerUnit"`
+	Total        float64 `json:"total"`
 	// TotalWeight is sell-only: Σ sell_details.weight (kg) — the headline
 	// "ขายปลานิล 312 กก." figure.
 	TotalWeight *float64 `json:"totalWeight,omitempty"`
 	Merchant    *string  `json:"merchant,omitempty"`
+}
+
+// SellDetailLine is one size-grade line of a sale, returned by
+// GET /activity/:activityId/sell-details. A sale's money is priced per grade,
+// so this is the only place the "how many baht per size" question is answerable
+// — the feed row and ActivityFeedItem only carry the summed totals.
+//
+// Ordered smallest grade first. An empty list means the activity has no sell
+// lines: it does not exist, is not a sell, or belongs to another client.
+type SellDetailLine struct {
+	FishSizeGradeId int `json:"fishSizeGradeId"`
+	// SizeName is the grade's display name ("ไซส์ 1", "ใหญ่", …). Empty when the
+	// grade row has since been soft-deleted; clients should fall back to the id.
+	SizeName string `json:"sizeName"`
+	// FishCount is omitted on legacy lines written before the column was
+	// required — absent means "not recorded", not "zero fish".
+	FishCount    *int    `json:"fishCount,omitempty"`
+	Weight       float64 `json:"weight"`       // kg sold in this grade
+	PricePerUnit float64 `json:"pricePerUnit"` // ฿ per kg for this grade
+	// Total is weight × pricePerUnit, computed here so every client reports the
+	// same figure as the summed headline rather than re-deriving it.
+	Total float64 `json:"total"`
 }
