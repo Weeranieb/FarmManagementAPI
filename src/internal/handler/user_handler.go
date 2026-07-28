@@ -36,7 +36,7 @@ func NewUserHandler(userService service.UserService) UserHandler {
 // POST /api/v1/user
 // Add a new user.
 // @Summary      Add a new user
-// @Description  Create a new user with the provided details. Only super admin can create users.
+// @Description  Create a new user. Requires client-admin or above; a client admin's new user always lands in the caller's own client. Cannot create a SuperAdmin.
 // @Tags         user
 // @Accept       json
 // @Produce      json
@@ -45,6 +45,7 @@ func NewUserHandler(userService service.UserService) UserHandler {
 // @Param        body body dto.CreateUserRequest true "User data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user [post]
 func (h *userHandlerImpl) AddUser(c fiber.Ctx) error {
@@ -60,7 +61,10 @@ func (h *userHandlerImpl) AddUser(c fiber.Ctx) error {
 	}
 	clientId := utils.GetClientId(c.Context())
 
-	if err := requireSuperAdmin(c); err != nil {
+	// Client admin or above. A client admin may only mint accounts inside its
+	// own client: the service takes the target client from the caller's token
+	// unless a super admin names one explicitly.
+	if err := requireClientAdmin(c); err != nil {
 		return err
 	}
 
@@ -141,9 +145,9 @@ func (h *userHandlerImpl) UpdateUser(c fiber.Ctx) error {
 }
 
 // PUT /api/v1/user/:id
-// Super-admin update of any user.
+// Admin update of a user (client admin within its own client, or super admin).
 // @Summary      Admin-update a user
-// @Description  Update any user. Super-admin only. Cannot promote to SuperAdmin or modify an existing SuperAdmin.
+// @Description  Update a user. Requires client-admin or above; a client admin is limited to users in its own client and cannot reassign clientId. Cannot promote to SuperAdmin or modify an existing SuperAdmin.
 // @Tags         user
 // @Accept       json
 // @Produce      json
@@ -159,7 +163,9 @@ func (h *userHandlerImpl) UpdateUser(c fiber.Ctx) error {
 func (h *userHandlerImpl) AdminUpdateUser(c fiber.Ctx) error {
 	var body dto.AdminUpdateUserRequest
 
-	if err := requireSuperAdmin(c); err != nil {
+	// Client admin or above. Per-client scoping and the privileged-field rules
+	// (clientId, userLevel) are enforced in userService.AdminUpdate.
+	if err := requireClientAdmin(c); err != nil {
 		return err
 	}
 
@@ -185,9 +191,9 @@ func (h *userHandlerImpl) AdminUpdateUser(c fiber.Ctx) error {
 }
 
 // PUT /api/v1/user/:id/password
-// Super-admin reset of another user's password.
+// Admin reset of another user's password (client admin within its own client, or super admin).
 // @Summary      Admin-reset a user's password
-// @Description  Reset another user's password. Super-admin only. Cannot reset a SuperAdmin.
+// @Description  Reset another user's password. Requires client-admin or above; a client admin is limited to users in its own client. Cannot reset a SuperAdmin.
 // @Tags         user
 // @Accept       json
 // @Produce      json
@@ -203,7 +209,9 @@ func (h *userHandlerImpl) AdminUpdateUser(c fiber.Ctx) error {
 func (h *userHandlerImpl) AdminResetPassword(c fiber.Ctx) error {
 	var body dto.AdminResetPasswordRequest
 
-	if err := requireSuperAdmin(c); err != nil {
+	// Client admin or above. userService.AdminResetPassword verifies the target
+	// belongs to the caller's client before overwriting anything.
+	if err := requireClientAdmin(c); err != nil {
 		return err
 	}
 
@@ -268,9 +276,9 @@ func (h *userHandlerImpl) ChangePassword(c fiber.Ctx) error {
 }
 
 // DELETE /api/v1/user/:id
-// Soft-delete a user. Super-admin only.
+// Soft-delete a user (client admin within its own client, or super admin).
 // @Summary      Delete a user
-// @Description  Soft-delete a user. Super-admin only. Cannot delete self or another super admin.
+// @Description  Soft-delete a user. Requires client-admin or above; a client admin is limited to users in its own client. Cannot delete self or a super admin.
 // @Tags         user
 // @Accept       json
 // @Produce      json
@@ -284,7 +292,9 @@ func (h *userHandlerImpl) ChangePassword(c fiber.Ctx) error {
 // @Router       /user/{id} [delete]
 func (h *userHandlerImpl) DeleteUser(c fiber.Ctx) error {
 
-	if err := requireSuperAdmin(c); err != nil {
+	// Client admin or above. userService.Delete verifies the target belongs to the
+	// caller's client, and still refuses self-deletion and super admins.
+	if err := requireClientAdmin(c); err != nil {
 		return err
 	}
 

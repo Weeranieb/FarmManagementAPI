@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
+	apperrors "github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/repository/mocks"
@@ -223,7 +224,7 @@ func (s *UserServiceTestSuite) TestAdminUpdate_RejectsPromotionToSuperAdmin() {
 	s.userRepo.On("GetByID", userID).Return(&model.User{Id: userID, UserLevel: constants.UserLevelNormal}, nil)
 
 	level := constants.UserLevelSuperAdmin
-	err := s.userService.AdminUpdate(context.Background(), userID, dto.AdminUpdateUserRequest{UserLevel: &level}, "admin")
+	err := s.userService.AdminUpdate(superAdminCtx(), userID, dto.AdminUpdateUserRequest{UserLevel: &level}, "admin")
 	assert.Error(s.T(), err)
 	assert.Contains(s.T(), err.Error(), "super admin")
 }
@@ -232,7 +233,7 @@ func (s *UserServiceTestSuite) TestAdminUpdate_RejectsModifyingSuperAdmin() {
 	userID := 1
 	s.userRepo.On("GetByID", userID).Return(&model.User{Id: userID, UserLevel: constants.UserLevelSuperAdmin}, nil)
 
-	err := s.userService.AdminUpdate(context.Background(), userID, dto.AdminUpdateUserRequest{FirstName: "X"}, "admin")
+	err := s.userService.AdminUpdate(superAdminCtx(), userID, dto.AdminUpdateUserRequest{FirstName: "X"}, "admin")
 	assert.Error(s.T(), err)
 }
 
@@ -248,7 +249,9 @@ func (s *UserServiceTestSuite) TestAdminUpdate_HappyPath() {
 
 	newLevel := constants.UserLevelClientAdmin
 	newCid := 7
-	err := s.userService.AdminUpdate(context.Background(), userID, dto.AdminUpdateUserRequest{
+	// Super-admin context: this reassigns clientId, which a client admin may
+	// not do (see TestAdminUpdate_ClientAdminCannotReassignClient).
+	err := s.userService.AdminUpdate(superAdminCtx(), userID, dto.AdminUpdateUserRequest{
 		FirstName: "New",
 		UserLevel: &newLevel,
 		ClientId:  &newCid,
@@ -263,7 +266,7 @@ func (s *UserServiceTestSuite) TestDelete_RejectsSuperAdmin() {
 	userID := 1
 	s.userRepo.On("GetByID", userID).Return(&model.User{Id: userID, UserLevel: constants.UserLevelSuperAdmin}, nil)
 
-	err := s.userService.Delete(context.Background(), userID, "admin")
+	err := s.userService.Delete(superAdminCtx(), userID, "admin")
 	assert.Error(s.T(), err)
 }
 
@@ -272,7 +275,7 @@ func (s *UserServiceTestSuite) TestDelete_HappyPath() {
 	s.userRepo.On("GetByID", userID).Return(&model.User{Id: userID, UserLevel: constants.UserLevelNormal}, nil)
 	s.userRepo.On("Delete", mock.Anything, userID).Return(nil)
 
-	err := s.userService.Delete(context.Background(), userID, "admin")
+	err := s.userService.Delete(superAdminCtx(), userID, "admin")
 	assert.NoError(s.T(), err)
 }
 
@@ -450,4 +453,116 @@ func (s *UserServiceTestSuite) TestGetUserList_Error() {
 	result, err := s.userService.GetUserList(ctx, filters)
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), result)
+}
+
+// --- client-admin scoping ----------------------------------------------------
+//
+// These mutations used to be super-admin only, so the service never had to ask
+// which client the *target* belonged to. Now that a farm owner can manage its
+// own staff, that question is the whole security boundary.
+
+// clientAdminCtx is a client admin (level 2) of client 1.
+func clientAdminCtx() context.Context {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, constants.UsernameKey, "owner")
+	ctx = context.WithValue(ctx, constants.ClientIDKey, 1)
+	ctx = context.WithValue(ctx, constants.UserLevelKey, constants.UserLevelClientAdmin)
+	return ctx
+}
+
+func (s *UserServiceTestSuite) TestAdminUpdate_ClientAdminOwnClientAllowed() {
+	existing := &model.User{Id: 5, ClientId: lo.ToPtr(1), Username: "worker", UserLevel: constants.UserLevelNormal}
+	s.userRepo.On("GetByID", 5).Return(existing, nil)
+	s.userRepo.On("Update", mock.Anything, existing).Return(nil)
+
+	err := s.userService.AdminUpdate(clientAdminCtx(), 5, dto.AdminUpdateUserRequest{FirstName: "Renamed"}, "owner")
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), "Renamed", existing.FirstName)
+}
+
+func (s *UserServiceTestSuite) TestAdminUpdate_ClientAdminForeignClientDenied() {
+	s.userRepo.On("GetByID", 6).Return(
+		&model.User{Id: 6, ClientId: lo.ToPtr(2), Username: "theirs", UserLevel: constants.UserLevelNormal}, nil)
+
+	err := s.userService.AdminUpdate(clientAdminCtx(), 6, dto.AdminUpdateUserRequest{FirstName: "Hacked"}, "owner")
+	assert.ErrorIs(s.T(), err, apperrors.ErrAuthPermissionDenied)
+	s.userRepo.AssertNotCalled(s.T(), "Update", mock.Anything, mock.Anything)
+}
+
+func (s *UserServiceTestSuite) TestAdminUpdate_ClientAdminCannotReassignClient() {
+	s.userRepo.On("GetByID", 5).Return(
+		&model.User{Id: 5, ClientId: lo.ToPtr(1), Username: "worker", UserLevel: constants.UserLevelNormal}, nil)
+
+	// Moving a user to another client would be a way out of the caller's scope.
+	err := s.userService.AdminUpdate(clientAdminCtx(), 5, dto.AdminUpdateUserRequest{ClientId: lo.ToPtr(2)}, "owner")
+	assert.ErrorIs(s.T(), err, apperrors.ErrAuthPermissionDenied)
+	s.userRepo.AssertNotCalled(s.T(), "Update", mock.Anything, mock.Anything)
+}
+
+func (s *UserServiceTestSuite) TestAdminUpdate_ClientAdminCannotTouchSuperAdmin() {
+	s.userRepo.On("GetByID", 1).Return(
+		&model.User{Id: 1, Username: "sys_admin", UserLevel: constants.UserLevelSuperAdmin}, nil)
+
+	err := s.userService.AdminUpdate(clientAdminCtx(), 1, dto.AdminUpdateUserRequest{FirstName: "X"}, "owner")
+	assert.ErrorIs(s.T(), err, apperrors.ErrUserCannotModifySuperAdmin)
+}
+
+func (s *UserServiceTestSuite) TestAdminResetPassword_ClientAdminForeignClientDenied() {
+	s.userRepo.On("GetByID", 6).Return(
+		&model.User{Id: 6, ClientId: lo.ToPtr(2), Username: "theirs", UserLevel: constants.UserLevelNormal}, nil)
+
+	err := s.userService.AdminResetPassword(clientAdminCtx(), 6,
+		dto.AdminResetPasswordRequest{Password: "Passw0rd123"}, "owner")
+	assert.ErrorIs(s.T(), err, apperrors.ErrAuthPermissionDenied)
+	s.userRepo.AssertNotCalled(s.T(), "Update", mock.Anything, mock.Anything)
+}
+
+func (s *UserServiceTestSuite) TestAdminResetPassword_ClientAdminOwnClientAllowed() {
+	existing := &model.User{Id: 5, ClientId: lo.ToPtr(1), Username: "worker", UserLevel: constants.UserLevelNormal}
+	s.userRepo.On("GetByID", 5).Return(existing, nil)
+	s.userRepo.On("Update", mock.Anything, existing).Return(nil)
+
+	before := existing.Password
+	err := s.userService.AdminResetPassword(clientAdminCtx(), 5,
+		dto.AdminResetPasswordRequest{Password: "Passw0rd123"}, "owner")
+	assert.NoError(s.T(), err)
+	assert.NotEqual(s.T(), before, existing.Password)
+}
+
+func (s *UserServiceTestSuite) TestDelete_ClientAdminForeignClientDenied() {
+	s.userRepo.On("GetByID", 6).Return(
+		&model.User{Id: 6, ClientId: lo.ToPtr(2), Username: "theirs", UserLevel: constants.UserLevelNormal}, nil)
+
+	err := s.userService.Delete(clientAdminCtx(), 6, "owner")
+	assert.ErrorIs(s.T(), err, apperrors.ErrAuthPermissionDenied)
+	s.userRepo.AssertNotCalled(s.T(), "Delete", mock.Anything, mock.Anything)
+}
+
+func (s *UserServiceTestSuite) TestDelete_ClientAdminOwnClientAllowed() {
+	s.userRepo.On("GetByID", 5).Return(
+		&model.User{Id: 5, ClientId: lo.ToPtr(1), Username: "worker", UserLevel: constants.UserLevelNormal}, nil)
+	s.userRepo.On("Delete", mock.Anything, 5).Return(nil)
+
+	err := s.userService.Delete(clientAdminCtx(), 5, "owner")
+	assert.NoError(s.T(), err)
+}
+
+func (s *UserServiceTestSuite) TestCreate_ClientAdminUsesOwnClientAndIgnoresRequestedOne() {
+	req := dto.CreateUserRequest{
+		Username:  "newworker",
+		Password:  "Passw0rd123",
+		FirstName: "New",
+		UserLevel: constants.UserLevelNormal,
+		// A client admin naming another client must not be honoured.
+		ClientId: lo.ToPtr(2),
+	}
+	s.userRepo.On("GetByUsername", req.Username).Return(nil, nil)
+	s.userRepo.On("Create", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil).
+		Run(func(args mock.Arguments) {
+			u := args.Get(1).(*model.User)
+			assert.Equal(s.T(), lo.ToPtr(1), u.ClientId, "must land in the caller's own client")
+		})
+
+	_, err := s.userService.Create(clientAdminCtx(), req, "owner", lo.ToPtr(1))
+	assert.NoError(s.T(), err)
 }
