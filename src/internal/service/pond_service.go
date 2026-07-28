@@ -117,12 +117,12 @@ func (s *pondService) syncFarmStatusFromPonds(ctx context.Context, tx *gorm.DB, 
 	return farmRepo.Update(ctx, farm)
 }
 
-func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest) error {
-	// Verify the farm exists and the caller can access its owning client.
-	// The handler only checks admin-level; per-client scoping lives here so a
-	// client admin can't create ponds in another client's farm by passing a
-	// foreign farmId.
-	farm, err := s.farmRepo.GetByID(request.FarmId)
+// assertCanAccessFarmClient verifies the farm exists and the caller can access
+// the client that owns it. Handlers only check admin-level; per-client scoping
+// lives here so a client admin can't reach another client's farm by passing a
+// foreign farmId (or a pond id belonging to a foreign farm).
+func (s *pondService) assertCanAccessFarmClient(ctx context.Context, farmId int) error {
+	farm, err := s.farmRepo.GetByID(farmId)
 	if err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
@@ -135,6 +135,13 @@ func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRe
 	}
 	if !ok {
 		return errors.ErrAuthPermissionDenied
+	}
+	return nil
+}
+
+func (s *pondService) CreatePonds(ctx context.Context, request dto.CreatePondsRequest) error {
+	if err := s.assertCanAccessFarmClient(ctx, request.FarmId); err != nil {
+		return err
 	}
 
 	newPonds := make([]*model.Pond, 0, len(request.Ponds))
@@ -174,6 +181,20 @@ func (s *pondService) Get(ctx context.Context, id int) (*dto.PondResponse, error
 	if pa == nil {
 		return nil, errors.ErrPondNotFound
 	}
+	// Same ownership rule as ListCycles: reading a pond is open to any user of
+	// the owning client (workers included), but not across clients — the
+	// response carries the cycle's cost and profit.
+	if pa.ClientId == 0 {
+		return nil, errors.ErrFarmNotFound
+	}
+	ok, err := utils.CanAccessClient(ctx, pa.ClientId)
+	if err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return nil, errors.ErrAuthPermissionDenied
+	}
+
 	resp := s.toPondResponseFromPondWithActive(pa)
 	if pa.ActivePond != nil {
 		feedCost, err := s.feedCostCalc.CalcCycleFeedCost(ctx, pa.ActivePond)
@@ -239,6 +260,11 @@ func (s *pondService) ListActivities(ctx context.Context, pondId int) ([]*dto.Ac
 	}
 	if pond == nil {
 		return nil, errors.ErrPondNotFound
+	}
+	// A pond's activity list is its whole trading history — head counts, sale
+	// prices, costs. Scope it to the owning client like every other pond read.
+	if err := s.assertCanAccessFarmClient(ctx, pond.FarmId); err != nil {
+		return nil, err
 	}
 
 	rows, err := s.activityRepo.ListByPondID(ctx, pondId)
@@ -393,6 +419,20 @@ func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest) err
 	}
 	oldFarmId := existing.FarmId
 
+	// Ownership: the caller must be able to access the client owning the pond's
+	// current farm, checked before any duplicate-name lookup so a foreign pond
+	// leaks nothing.
+	if err := s.assertCanAccessFarmClient(ctx, oldFarmId); err != nil {
+		return err
+	}
+	// Reparenting must stay inside the caller's own client, so a pond can't be
+	// pushed into (or pulled out of) another client's farm.
+	if req.FarmId != 0 && req.FarmId != oldFarmId {
+		if err := s.assertCanAccessFarmClient(ctx, req.FarmId); err != nil {
+			return err
+		}
+	}
+
 	// Apply only provided fields (non-zero / non-empty so partial update is safe)
 	if req.FarmId != 0 {
 		existing.FarmId = req.FarmId
@@ -437,6 +477,14 @@ func (s *pondService) Update(ctx context.Context, req dto.UpdatePondRequest) err
 }
 
 func (s *pondService) GetList(ctx context.Context, farmId int) ([]*dto.PondResponse, error) {
+	// farmId arrives straight from the query string, so without this any
+	// authenticated user could enumerate another client's ponds and their
+	// financials by walking farm ids. The handler already rejects a missing or
+	// non-numeric farmId, so there is no unscoped listing to preserve.
+	if err := s.assertCanAccessFarmClient(ctx, farmId); err != nil {
+		return nil, err
+	}
+
 	list, err := s.pondRepo.ListByFarmIdWithActivePond(ctx, farmId)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
@@ -476,6 +524,9 @@ func (s *pondService) Delete(ctx context.Context, id int) error {
 		return errors.ErrPondNotFound
 	}
 	farmId := pond.FarmId
+	if err := s.assertCanAccessFarmClient(ctx, farmId); err != nil {
+		return err
+	}
 	return s.txManager.WithTransaction(ctx, func(tx *gorm.DB) error {
 		pondRepo := s.pondRepo.WithTx(tx)
 		if err := pondRepo.Delete(ctx, id); err != nil {

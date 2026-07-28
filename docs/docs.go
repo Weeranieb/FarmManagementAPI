@@ -25,7 +25,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Newest discrete events (fill/move/sell) across all of the client's ponds, ordered by activity date desc. Daily-log saves are not included. Optional ?limit caps the row count (omit or 0 for the full history).",
+                "description": "Newest discrete events (fill/move/sell) across all of the client's ponds, ordered by activity date desc. Daily-log saves are not included. Optional ?limit caps the row count (omit or 0 for the full history). To page, pass beforeDate + beforeId from the last row of the previous page; the response is a plain array, so a page shorter than ?limit means the end.",
                 "consumes": [
                     "application/json"
                 ],
@@ -42,6 +42,82 @@ const docTemplate = `{
                         "description": "Max rows to return; 0 or omitted = all",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor: activityDate of the last row already seen (YYYY-MM-DD or RFC3339). Requires beforeId.",
+                        "name": "beforeDate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor: id of the last row already seen. Requires beforeDate.",
+                        "name": "beforeId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/activity/{activityId}/sell-details": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Size-grade lines for one sell activity (weight, ฿/kg, head count and line total per grade), smallest grade first. Returns an empty list when the activity is not a sell, does not exist, or belongs to another client.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "activity"
+                ],
+                "summary": "Get a sale's size-grade breakdown",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sell activity id",
+                        "name": "activityId",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {

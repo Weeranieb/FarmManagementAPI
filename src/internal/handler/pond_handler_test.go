@@ -373,10 +373,11 @@ func (s *PondHandlerTestSuite) TestMovePond_ServiceError_ErrPondSourceNotActive(
 	s.pondService.AssertExpectations(s.T())
 }
 
-// updatePondApp returns a Fiber app with PUT /pond/:id and optional username in context.
+// updatePondApp returns a Fiber app with PUT /pond/:id, a super-admin userLevel
+// and optional username in context.
 func (s *PondHandlerTestSuite) updatePondApp(username string) *fiber.App {
 	app := newTestApp()
-	locals := map[string]any{}
+	locals := map[string]any{"userLevel": 3}
 	if username != "" {
 		locals["username"] = username
 	}
@@ -447,10 +448,45 @@ func (s *PondHandlerTestSuite) TestUpdatePond_ServiceError() {
 	s.pondService.AssertExpectations(s.T())
 }
 
-// deletePondApp returns a Fiber app with DELETE /pond/:id and optional username in context.
+func (s *PondHandlerTestSuite) TestUpdatePond_NonClientAdmin_ReturnsPermissionDenied() {
+	// GIVEN — a regular user (userLevel 1) editing pond 1
+	app := newTestApp()
+	app.Use(setLocalsMiddleware(map[string]any{"username": "user", "userLevel": 1}))
+	app.Put("/api/v1/pond/:id", s.pondHandler.UpdatePond)
+	reqBody, _ := json.Marshal(dto.UpdatePondBody{Name: "Renamed"})
+	req := httptest.NewRequest("PUT", "/api/v1/pond/1", bytes.NewBuffer(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	// WHEN — PUT /api/v1/pond/1 is sent
+	resp, err := app.Test(req)
+
+	// THEN — 403 (ErrAuthPermissionDenied); service never called
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusForbidden, resp.StatusCode)
+	s.pondService.AssertNotCalled(s.T(), "Update", mock.Anything, mock.Anything)
+}
+
+func (s *PondHandlerTestSuite) TestDeletePond_NonClientAdmin_ReturnsPermissionDenied() {
+	// GIVEN — a regular user (userLevel 1) deleting pond 1
+	app := newTestApp()
+	app.Use(setLocalsMiddleware(map[string]any{"username": "user", "userLevel": 1}))
+	app.Delete("/api/v1/pond/:id", s.pondHandler.DeletePond)
+	req := httptest.NewRequest("DELETE", "/api/v1/pond/1", nil)
+
+	// WHEN — DELETE /api/v1/pond/1 is sent
+	resp, err := app.Test(req)
+
+	// THEN — 403 (ErrAuthPermissionDenied); service never called
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), fiber.StatusForbidden, resp.StatusCode)
+	s.pondService.AssertNotCalled(s.T(), "Delete", mock.Anything, mock.Anything)
+}
+
+// deletePondApp returns a Fiber app with DELETE /pond/:id, a super-admin
+// userLevel and optional username in context.
 func (s *PondHandlerTestSuite) deletePondApp(username string) *fiber.App {
 	app := newTestApp()
-	locals := map[string]any{}
+	locals := map[string]any{"userLevel": 3}
 	if username != "" {
 		locals["username"] = username
 	}

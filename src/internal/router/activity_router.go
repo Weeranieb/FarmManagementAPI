@@ -9,4 +9,8 @@ func (r *Router) setupActivityRoutes(group fiber.Router) {
 	activity := group.Group("/activity")
 
 	activity.Get("", r.handlers.ActivityHandler.GetActivityFeed)
+
+	// Per-size-grade breakdown of one sale — the feed only carries the summed
+	// total, and a sale's money is priced per grade.
+	activity.Get("/:activityId/sell-details", r.handlers.ActivityHandler.GetActivitySellDetails)
 }

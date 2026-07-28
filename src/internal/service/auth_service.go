@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -59,13 +60,14 @@ func (s *authService) Register(request dto.RegisterRequest) (*dto.UserResponse, 
 	}
 
 	newUser := &model.User{
-		ClientId:      &request.ClientId,
-		Username:      request.Username,
-		Password:      string(hashedPassword),
-		FirstName:     request.FirstName,
-		LastName:      request.LastName,
-		UserLevel:     request.UserLevel,
-		ContactNumber: request.ContactNumber,
+		ClientId:          &request.ClientId,
+		Username:          request.Username,
+		Password:          string(hashedPassword),
+		PasswordUpdatedAt: lo.ToPtr(time.Now()),
+		FirstName:         request.FirstName,
+		LastName:          request.LastName,
+		UserLevel:         request.UserLevel,
+		ContactNumber:     request.ContactNumber,
 		BaseModel: model.BaseModel{
 			CreatedBy: request.Username,
 			UpdatedBy: request.Username,
@@ -141,16 +143,21 @@ func (s *authService) getUserByLoginIdentifier(identifier string) (*model.User, 
 
 func (s *authService) toUserResponse(user *model.User) *dto.UserResponse {
 	return &dto.UserResponse{
-		Id:            user.Id,
-		ClientId:      user.ClientId,
-		Username:      user.Username,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		UserLevel:     user.UserLevel,
-		ContactNumber: user.ContactNumber,
-		CreatedAt:     user.CreatedAt,
-		CreatedBy:     user.CreatedBy,
-		UpdatedAt:     user.UpdatedAt,
-		UpdatedBy:     user.UpdatedBy,
+		Id:       user.Id,
+		ClientId: user.ClientId,
+		Username: user.Username,
+		// Email was missing here while userService.toUserResponse sent it, so a
+		// freshly-logged-in client held a user snapshot with no email until it
+		// re-fetched GET /user. Same DTO, same source row — keep them in step.
+		Email:             user.Email,
+		FirstName:         user.FirstName,
+		LastName:          user.LastName,
+		UserLevel:         user.UserLevel,
+		ContactNumber:     user.ContactNumber,
+		PasswordUpdatedAt: user.PasswordUpdatedAt,
+		CreatedAt:         user.CreatedAt,
+		CreatedBy:         user.CreatedBy,
+		UpdatedAt:         user.UpdatedAt,
+		UpdatedBy:         user.UpdatedBy,
 	}
 }

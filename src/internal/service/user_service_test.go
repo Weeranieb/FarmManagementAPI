@@ -18,6 +18,7 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository"
 	mocks "github.com/weeranieb/boonmafarm-backend/src/internal/repository/mocks"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserServiceTestSuite struct {
@@ -276,6 +277,123 @@ func (s *UserServiceTestSuite) TestDelete_HappyPath() {
 
 	err := s.userService.Delete(superAdminCtx(), userID, "admin")
 	assert.NoError(s.T(), err)
+}
+
+// --- password_updated_at -----------------------------------------------------
+//
+// The column exists so clients can say "you last changed your password on X".
+// It must move on exactly the paths that write users.password and on no others,
+// otherwise the date silently becomes a lie.
+
+// userWithPassword builds a user whose stored hash matches `plain`.
+func userWithPassword(id int, plain string) *model.User {
+	hash, _ := bcrypt.GenerateFromPassword([]byte(plain), bcrypt.MinCost)
+	return &model.User{
+		Id:        id,
+		Username:  "u",
+		UserLevel: constants.UserLevelNormal,
+		Password:  string(hash),
+	}
+}
+
+func (s *UserServiceTestSuite) TestCreate_StampsPasswordUpdatedAt() {
+	req := dto.CreateUserRequest{
+		Username:  "fresh",
+		Password:  "password123",
+		FirstName: "Fresh",
+		UserLevel: constants.UserLevelNormal,
+	}
+	s.userRepo.On("GetByUsername", req.Username).Return(nil, nil)
+	s.userRepo.On("Create", mock.Anything, mock.AnythingOfType("*model.User")).Return(nil)
+
+	before := time.Now()
+	result, err := s.userService.Create(context.Background(), req, "admin", lo.ToPtr(1))
+
+	assert.NoError(s.T(), err)
+	if assert.NotNil(s.T(), result) && assert.NotNil(s.T(), result.PasswordUpdatedAt) {
+		assert.False(s.T(), result.PasswordUpdatedAt.Before(before),
+			"a new account's password was set now, so the stamp must be now")
+	}
+}
+
+func (s *UserServiceTestSuite) TestChangePassword_StampsPasswordUpdatedAt() {
+	userID := 1
+	existing := userWithPassword(userID, "oldpassword")
+	oldHash := existing.Password
+	s.userRepo.On("GetByID", userID).Return(existing, nil)
+	s.userRepo.On("Update", mock.Anything, existing).Return(nil)
+
+	before := time.Now()
+	err := s.userService.ChangePassword(context.Background(), userID, dto.ChangePasswordRequest{
+		CurrentPassword: "oldpassword",
+		NewPassword:     "newpassword123",
+	}, "self")
+
+	assert.NoError(s.T(), err)
+	assert.NotEqual(s.T(), oldHash, existing.Password, "the hash should have been replaced")
+	if assert.NotNil(s.T(), existing.PasswordUpdatedAt) {
+		assert.False(s.T(), existing.PasswordUpdatedAt.Before(before))
+	}
+}
+
+func (s *UserServiceTestSuite) TestChangePassword_WrongCurrent_LeavesStampAlone() {
+	userID := 1
+	existing := userWithPassword(userID, "oldpassword")
+	s.userRepo.On("GetByID", userID).Return(existing, nil)
+	// No Update expectation: a rejected change must not write anything.
+
+	err := s.userService.ChangePassword(context.Background(), userID, dto.ChangePasswordRequest{
+		CurrentPassword: "wrong",
+		NewPassword:     "newpassword123",
+	}, "self")
+
+	assert.Error(s.T(), err)
+	assert.Nil(s.T(), existing.PasswordUpdatedAt, "a failed attempt is not a password change")
+	s.userRepo.AssertNotCalled(s.T(), "Update", mock.Anything, mock.Anything)
+}
+
+func (s *UserServiceTestSuite) TestAdminResetPassword_StampsPasswordUpdatedAt() {
+	userID := 2
+	existing := userWithPassword(userID, "whatever")
+	s.userRepo.On("GetByID", userID).Return(existing, nil)
+	s.userRepo.On("Update", mock.Anything, existing).Return(nil)
+
+	before := time.Now()
+	err := s.userService.AdminResetPassword(context.Background(), userID, dto.AdminResetPasswordRequest{
+		Password: "resetpassword123",
+	}, "admin")
+
+	assert.NoError(s.T(), err)
+	if assert.NotNil(s.T(), existing.PasswordUpdatedAt) {
+		assert.False(s.T(), existing.PasswordUpdatedAt.Before(before))
+	}
+}
+
+func (s *UserServiceTestSuite) TestUpdate_ProfileEdit_DoesNotStampPasswordUpdatedAt() {
+	userID := 1
+	stamped := time.Now().Add(-72 * time.Hour)
+	existing := &model.User{
+		Id:                userID,
+		Username:          "u",
+		UserLevel:         constants.UserLevelNormal,
+		PasswordUpdatedAt: lo.ToPtr(stamped),
+	}
+	s.userRepo.On("GetByID", userID).Return(existing, nil)
+	s.userRepo.On("Update", mock.Anything, existing).Return(nil)
+
+	updated, err := s.userService.Update(context.Background(), userID, dto.UpdateUserRequest{
+		FirstName:     "Renamed",
+		ContactNumber: "0899999999",
+	}, "self")
+
+	assert.NoError(s.T(), err)
+	// This is the whole reason the column exists: updated_at would have moved
+	// here, and reusing it would have claimed a password change that never
+	// happened.
+	assert.Equal(s.T(), stamped, *existing.PasswordUpdatedAt)
+	if assert.NotNil(s.T(), updated) && assert.NotNil(s.T(), updated.PasswordUpdatedAt) {
+		assert.Equal(s.T(), stamped, *updated.PasswordUpdatedAt)
+	}
 }
 
 func (s *UserServiceTestSuite) TestGetUserList_Success() {
