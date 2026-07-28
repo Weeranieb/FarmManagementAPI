@@ -359,7 +359,7 @@ func (s *UserServiceTestSuite) TestAdminResetPassword_StampsPasswordUpdatedAt() 
 	s.userRepo.On("Update", mock.Anything, existing).Return(nil)
 
 	before := time.Now()
-	err := s.userService.AdminResetPassword(context.Background(), userID, dto.AdminResetPasswordRequest{
+	err := s.userService.AdminResetPassword(superAdminCtx(), userID, dto.AdminResetPasswordRequest{
 		Password: "resetpassword123",
 	}, "admin")
 
