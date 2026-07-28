@@ -57,16 +57,21 @@ type UserListQuery struct {
 }
 
 type UserResponse struct {
-	Id            int       `json:"id"`
-	ClientId      *int      `json:"clientId"`
-	Username      string    `json:"username"`
-	Email         *string   `json:"email"`
-	FirstName     string    `json:"firstName"`
-	LastName      *string   `json:"lastName"`
-	UserLevel     int       `json:"userLevel"`
-	ContactNumber string    `json:"contactNumber"`
-	CreatedAt     time.Time `json:"createdAt"`
-	CreatedBy     string    `json:"createdBy"`
-	UpdatedAt     time.Time `json:"updatedAt"`
-	UpdatedBy     string    `json:"updatedBy"`
+	Id            int     `json:"id"`
+	ClientId      *int    `json:"clientId"`
+	Username      string  `json:"username"`
+	Email         *string `json:"email"`
+	FirstName     string  `json:"firstName"`
+	LastName      *string `json:"lastName"`
+	UserLevel     int     `json:"userLevel"`
+	ContactNumber string  `json:"contactNumber"`
+	// PasswordUpdatedAt is when the current password was set. Null for accounts
+	// whose password predates the tracking column — clients must render that as
+	// "unknown", not as a date. Distinct from UpdatedAt, which moves on any
+	// profile edit.
+	PasswordUpdatedAt *time.Time `json:"passwordUpdatedAt"`
+	CreatedAt         time.Time  `json:"createdAt"`
+	CreatedBy         string     `json:"createdBy"`
+	UpdatedAt         time.Time  `json:"updatedAt"`
+	UpdatedBy         string     `json:"updatedBy"`
 }
