@@ -9,6 +9,20 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.12](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.11...v0.2.12) (2026-07-28)
+
+
+### Features
+
+* **activity:** page the feed with a (date, id) cursor ([#54](https://github.com/Weeranieb/FarmManagementAPI/issues/54)) ([04fb0f9](https://github.com/Weeranieb/FarmManagementAPI/commit/04fb0f935fbfa71822ec74f925550ae58685ef74))
+* **user:** let a client admin manage its own staff ([#55](https://github.com/Weeranieb/FarmManagementAPI/issues/55)) ([800271b](https://github.com/Weeranieb/FarmManagementAPI/commit/800271b075294f7d09e8cdad4d7ecaf1b83ee699))
+* **user:** track when a password was last changed ([#51](https://github.com/Weeranieb/FarmManagementAPI/issues/51)) ([d4f81a6](https://github.com/Weeranieb/FarmManagementAPI/commit/d4f81a6c7c381d79db1d5fb829322f9da7875924))
+
+
+### Bug Fixes
+
+* **pond:** scope every pond endpoint to the caller's client ([#52](https://github.com/Weeranieb/FarmManagementAPI/issues/52)) ([1198d3d](https://github.com/Weeranieb/FarmManagementAPI/commit/1198d3ddeb9fbdb1aa2a603735dc35c0029472c1))
+
 ## [0.2.11](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.10...v0.2.11) (2026-07-25)
 
 
