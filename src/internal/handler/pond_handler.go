@@ -78,14 +78,16 @@ func (h *pondHandlerImpl) AddPonds(c fiber.Ctx) error {
 }
 
 // Get a pond by ID.
+// Readable by any user of the owning client; denied across clients.
 // @Summary      Get a pond by ID
-// @Description  Retrieve a pond by its ID
+// @Description  Retrieve a pond by its ID. Scoped to the caller's client.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
 // @Param        id path int true "Pond ID"
 // @Success      200  {object}  http.ResponseModel{data=dto.PondResponse}
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{id} [get]
@@ -107,13 +109,14 @@ func (h *pondHandlerImpl) GetPond(c fiber.Ctx) error {
 // GET /pond/:pondId/activities
 // List the activity history (fill/move/sell) for a pond, newest first.
 // @Summary      List pond activity history
-// @Description  Return the chronological fill/move/sell activity timeline for a pond, ordered by activity_date desc.
+// @Description  Return the chronological fill/move/sell activity timeline for a pond, ordered by activity_date desc. Scoped to the caller's client.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
 // @Param        pondId path int true "Pond ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/activities [get]
@@ -162,13 +165,14 @@ func (h *pondHandlerImpl) GetPondCycles(c fiber.Ctx) error {
 
 // Get a list of ponds by farm ID.
 // @Summary      Get a list of ponds by farm ID
-// @Description  Retrieve a list of ponds belonging to a specific farm
+// @Description  Retrieve a list of ponds belonging to a specific farm. Scoped to the caller's client.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
 // @Param        farmId query int true "Farm ID"
 // @Success      200  {object}  http.ResponseModel{data=[]dto.PondResponse}
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond [get]
 func (h *pondHandlerImpl) GetPondList(c fiber.Ctx) error {
@@ -188,8 +192,9 @@ func (h *pondHandlerImpl) GetPondList(c fiber.Ctx) error {
 }
 
 // Update a pond.
+// Allowed for super admin (any pond) or client admin (ponds in their own client only).
 // @Summary      Update a pond
-// @Description  Update an existing pond. Id in path; body contains optional farmId, name, status.
+// @Description  Update an existing pond. Id in path; body contains optional farmId, name, status. Requires client-admin role or above.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
@@ -199,12 +204,19 @@ func (h *pondHandlerImpl) GetPondList(c fiber.Ctx) error {
 // @Param        body body dto.UpdatePondBody true "Updated pond data (farmId, name, status optional)"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{id} [put]
 func (h *pondHandlerImpl) UpdatePond(c fiber.Ctx) error {
 
 	id, err := parseParamInt(c, "id", "Invalid pond ID")
 	if err != nil {
+		return err
+	}
+
+	// Must be client admin or super admin. Per-client scoping is enforced in
+	// pondService.Update (which loads the pond's farm to find its clientId).
+	if err := requireClientAdmin(c); err != nil {
 		return err
 	}
 
@@ -223,8 +235,9 @@ func (h *pondHandlerImpl) UpdatePond(c fiber.Ctx) error {
 }
 
 // Delete a pond.
+// Allowed for super admin (any pond) or client admin (ponds in their own client only).
 // @Summary      Delete a pond
-// @Description  Delete a pond by its ID
+// @Description  Delete a pond by its ID. Requires client-admin role or above.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
@@ -233,11 +246,18 @@ func (h *pondHandlerImpl) UpdatePond(c fiber.Ctx) error {
 // @Param        id path int true "Pond ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{id} [delete]
 func (h *pondHandlerImpl) DeletePond(c fiber.Ctx) error {
 	id, err := parseParamInt(c, "id", "Invalid pond ID")
 	if err != nil {
+		return err
+	}
+
+	// Must be client admin or super admin. Per-client scoping is enforced in
+	// pondService.Delete (which loads the pond's farm to find its clientId).
+	if err := requireClientAdmin(c); err != nil {
 		return err
 	}
 
