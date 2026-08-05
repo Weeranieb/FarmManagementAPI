@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.13](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.12...v0.2.13) (2026-08-05)
+
+
+### Features
+
+* price & cost pellet feed per bag (ถุง), drop price_per_kg ([#57](https://github.com/Weeranieb/FarmManagementAPI/issues/57)) ([d85c8e7](https://github.com/Weeranieb/FarmManagementAPI/commit/d85c8e72b0c43082e25cb3db1cc5209ddc74c18c))
+
 ## [0.2.12](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.11...v0.2.12) (2026-07-28)
 
 
