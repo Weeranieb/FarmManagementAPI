@@ -40,15 +40,9 @@ func (s *feedPriceHistoryService) Create(ctx context.Context, request dto.Create
 		return nil, errors.ErrFeedPriceHistoryAlreadyExists
 	}
 
-	var pricePerKg decimal.NullDecimal
-	if request.PricePerKg != nil {
-		pricePerKg = decimal.NullDecimal{Decimal: decimal.NewFromFloat(*request.PricePerKg), Valid: true}
-	}
-
 	newFeedPriceHistory := &model.FeedPriceHistory{
 		FeedCollectionId: request.FeedCollectionId,
 		Price:            decimal.NewFromFloat(request.Price),
-		PricePerKg:       pricePerKg,
 		PriceUpdatedDate: request.PriceUpdatedDate,
 	}
 
@@ -88,9 +82,6 @@ func (s *feedPriceHistoryService) Update(ctx context.Context, request dto.Update
 	}
 	if request.Price != 0 {
 		existingFeedPriceHistory.Price = decimal.NewFromFloat(request.Price)
-	}
-	if request.PricePerKg != nil {
-		existingFeedPriceHistory.PricePerKg = decimal.NullDecimal{Decimal: decimal.NewFromFloat(*request.PricePerKg), Valid: true}
 	}
 	if !request.PriceUpdatedDate.IsZero() {
 		existingFeedPriceHistory.PriceUpdatedDate = request.PriceUpdatedDate
@@ -133,7 +124,7 @@ func (s *feedPriceHistoryService) GetAll(feedCollectionId int) ([]*dto.FeedPrice
 }
 
 func (s *feedPriceHistoryService) toFeedPriceHistoryResponse(fph *model.FeedPriceHistory) *dto.FeedPriceHistoryResponse {
-	resp := &dto.FeedPriceHistoryResponse{
+	return &dto.FeedPriceHistoryResponse{
 		Id:               fph.Id,
 		FeedCollectionId: fph.FeedCollectionId,
 		Price:            fph.Price.InexactFloat64(),
@@ -143,9 +134,4 @@ func (s *feedPriceHistoryService) toFeedPriceHistoryResponse(fph *model.FeedPric
 		UpdatedAt:        fph.UpdatedAt,
 		UpdatedBy:        fph.UpdatedBy,
 	}
-	if fph.PricePerKg.Valid {
-		v := fph.PricePerKg.Decimal.InexactFloat64()
-		resp.PricePerKg = &v
-	}
-	return resp
 }

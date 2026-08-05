@@ -171,8 +171,6 @@ definitions:
     properties:
       price:
         type: number
-      pricePerKg:
-        type: number
       priceUpdatedDate:
         type: string
     required:
@@ -1610,7 +1608,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve a list of ponds belonging to a specific farm
+      description: Retrieve a list of ponds belonging to a specific farm. Scoped to
+        the caller's client.
       parameters:
       - description: Farm ID
         in: query
@@ -1633,6 +1632,10 @@ paths:
               type: object
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
         "500":
@@ -1683,7 +1686,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Delete a pond by its ID
+      description: Delete a pond by its ID. Requires client-admin role or above.
       parameters:
       - description: Pond ID
         in: path
@@ -1701,6 +1704,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
         "500":
           description: Internal Server Error
           schema:
@@ -1714,7 +1721,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve a pond by its ID
+      description: Retrieve a pond by its ID. Scoped to the caller's client.
       parameters:
       - description: Pond ID
         in: path
@@ -1737,6 +1744,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
         "404":
           description: Not Found
           schema:
@@ -1752,7 +1763,7 @@ paths:
       consumes:
       - application/json
       description: Update an existing pond. Id in path; body contains optional farmId,
-        name, status.
+        name, status. Requires client-admin role or above.
       parameters:
       - description: Pond ID
         in: path
@@ -1776,6 +1787,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
         "500":
           description: Internal Server Error
           schema:
@@ -1791,7 +1806,7 @@ paths:
       consumes:
       - application/json
       description: Return the chronological fill/move/sell activity timeline for a
-        pond, ordered by activity_date desc.
+        pond, ordered by activity_date desc. Scoped to the caller's client.
       parameters:
       - description: Pond ID
         in: path
@@ -1807,6 +1822,10 @@ paths:
             $ref: '#/definitions/http.ResponseModel'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponseModel'
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/http.ErrorResponseModel'
         "404":

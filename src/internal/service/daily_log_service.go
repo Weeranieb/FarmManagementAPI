@@ -105,14 +105,9 @@ func (s *dailyLogService) ensureFarmTemplateImportAccess(ctx context.Context, fa
 
 // resolvePrices returns, per date, the price actually in effect that day (the
 // latest PriceUpdatedDate on or before the date) — or nil when the date
-// predates every recorded price. The value is the per-unit price that matches
-// how the feed is logged, so the client's quantity × price is correct without
-// any further conversion:
-//   - fresh is logged in ลัง (crates) and priced per ลัง → Price
-//   - pellet is logged in กก. but priced per ถุง → PricePerKg (the per-กก.
-//     snapshot). A row without a PricePerKg snapshot resolves to nil, mirroring
-//     feed_cost_calculator.go, which only counts pellet cost when PricePerKg is
-//     present.
+// predates every recorded price. Both feed types are logged and priced per pack
+// (fresh in ลัง, pellet in ถุง), so the client's quantity × Price is correct
+// without any further conversion.
 //
 // Unlike resolveFeedPrice (used for whole-cycle feed-cost accounting, which
 // falls back to the nearest available price so a pre-history day still
@@ -129,7 +124,6 @@ func (s *dailyLogService) resolvePrices(fc *model.FeedCollection, dates []time.T
 		return history[i].PriceUpdatedDate.Before(history[j].PriceUpdatedDate)
 	})
 
-	perKg := fc.FeedType == constants.FeedTypePellet
 	result := make(map[time.Time]*decimal.Decimal, len(dates))
 	for _, d := range dates {
 		var found *decimal.Decimal
@@ -137,17 +131,8 @@ func (s *dailyLogService) resolvePrices(fc *model.FeedCollection, dates []time.T
 			if history[i].PriceUpdatedDate.After(d) {
 				continue
 			}
-			if perKg {
-				// No per-กก. snapshot → leave the cell blank rather than
-				// misreport the per-ถุง headline price as a per-กก. rate.
-				if history[i].PricePerKg.Valid {
-					p := history[i].PricePerKg.Decimal
-					found = &p
-				}
-			} else {
-				p := history[i].Price
-				found = &p
-			}
+			p := history[i].Price
+			found = &p
 			break
 		}
 		result[d] = found

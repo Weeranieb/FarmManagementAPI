@@ -1379,7 +1379,7 @@ const docTemplate = `{
         },
         "/pond": {
             "get": {
-                "description": "Retrieve a list of ponds belonging to a specific farm",
+                "description": "Retrieve a list of ponds belonging to a specific farm. Scoped to the caller's client.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1423,6 +1423,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -1753,7 +1759,7 @@ const docTemplate = `{
         },
         "/pond/{id}": {
             "get": {
-                "description": "Retrieve a pond by its ID",
+                "description": "Retrieve a pond by its ID. Scoped to the caller's client.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1798,6 +1804,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -1821,7 +1833,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Update an existing pond. Id in path; body contains optional farmId, name, status.",
+                "description": "Update an existing pond. Id in path; body contains optional farmId, name, status. Requires client-admin role or above.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1863,6 +1875,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -1880,7 +1898,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Delete a pond by its ID",
+                "description": "Delete a pond by its ID. Requires client-admin role or above.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1913,6 +1931,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -1924,7 +1948,7 @@ const docTemplate = `{
         },
         "/pond/{pondId}/activities": {
             "get": {
-                "description": "Return the chronological fill/move/sell activity timeline for a pond, ordered by activity_date desc.",
+                "description": "Return the chronological fill/move/sell activity timeline for a pond, ordered by activity_date desc. Scoped to the caller's client.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1953,6 +1977,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -3254,9 +3284,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "price": {
-                    "type": "number"
-                },
-                "pricePerKg": {
                     "type": "number"
                 },
                 "priceUpdatedDate": {
