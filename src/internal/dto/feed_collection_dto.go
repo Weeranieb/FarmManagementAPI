@@ -15,7 +15,6 @@ type CreateFeedCollectionRequest struct {
 
 type CreateFeedPriceHistoryItemRequest struct {
 	Price            float64   `json:"price" validate:"required"`
-	PricePerKg       *float64  `json:"pricePerKg,omitempty"`
 	PriceUpdatedDate time.Time `json:"priceUpdatedDate" validate:"required"`
 }
 

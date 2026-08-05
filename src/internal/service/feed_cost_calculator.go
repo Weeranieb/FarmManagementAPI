@@ -140,13 +140,13 @@ func (c *feedCostCalculator) CalcCycleFeedCostBatch(ctx context.Context, activeP
 				warnMissingCollection(log.ActivePondId, "fresh")
 			}
 		}
-		// Pellet is fed by weight (กก.) but priced per ถุง — cost uses the
-		// per-กก. snapshot (price_per_kg), not the per-ถุง headline price.
+		// Pellet is fed and priced per ถุง — cost = bags × price-per-ถุง, mirroring
+		// how fresh is handled above.
 		pellet := log.PelletMorning.Add(log.PelletEvening)
 		if !pellet.IsZero() {
 			if fcId, ok := pelletByAp[log.ActivePondId]; ok {
-				if e := resolveFeedPrice(histByFc[fcId], log.FeedDate); e != nil && e.PricePerKg.Valid {
-					cost = cost.Add(pellet.Mul(e.PricePerKg.Decimal))
+				if e := resolveFeedPrice(histByFc[fcId], log.FeedDate); e != nil {
+					cost = cost.Add(pellet.Mul(e.Price))
 				} else {
 					warnMissingPrice(log.ActivePondId, fcId)
 				}
@@ -184,8 +184,7 @@ func groupPriceHistoryAscending(histories []*model.FeedPriceHistory) map[int][]*
 
 // resolveFeedPrice returns the price-history entry in effect for a log dated
 // `date`, given that collection's history sorted ascending by PriceUpdatedDate.
-// The caller picks the field it needs (Price per ถุง/ลัง, or PricePerKg for
-// weight-fed pellet). Resolution order:
+// Both feed types are priced per pack (Price per ถุง/ลัง). Resolution order:
 //  1. the latest entry whose PriceUpdatedDate is on or before `date` (in effect
 //     that day); otherwise
 //  2. the earliest recorded entry (nearest available in the future) as a

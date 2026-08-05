@@ -208,11 +208,10 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_Success_WithPrices() {
 	assert.True(s.T(), out.Entries[0].FreshUnitPrice.Equal(price10))
 }
 
-// Pellet is logged in กก. but priced per ถุง, so GetMonth must expose the
-// per-กก. snapshot (PricePerKg), not the per-ถุง headline Price — otherwise the
-// client's quantity(kg) × price over-states pellet cost by kilo-per-bag. Fresh
-// (logged and priced per ลัง) keeps using Price.
-func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceIsPerKg() {
+// Pellet is now logged and priced per ถุง, so GetMonth exposes the per-ถุง
+// headline Price directly — same as fresh (per ลัง). The client's quantity(ถุง)
+// × price is the correct cost with no further conversion.
+func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceIsPerBag() {
 	ctx := dailyLogCtxSuperAdmin()
 	activePondId := 10
 	freshID, pelletID := 11, 12
@@ -236,14 +235,13 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceIsPerKg() {
 	s.feedCollectionRepo.On("GetByID", pelletID).Return(&model.FeedCollection{Id: pelletID, Name: "P", Unit: "ถุง", FeedType: constants.FeedTypePellet}, nil)
 
 	freshPerCrate := decimal.RequireFromString("250")
-	pelletPerBag := decimal.RequireFromString("500") // per ถุง (headline) — must NOT be exposed
-	pelletPerKg := decimal.RequireFromString("25")   // per กก. snapshot (500 / 20)
+	pelletPerBag := decimal.RequireFromString("500") // per ถุง — exposed directly
 	updated := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
 	s.priceHistoryRepo.On("ListByFeedCollectionId", freshID).Return([]*model.FeedPriceHistory{
 		{FeedCollectionId: freshID, Price: freshPerCrate, PriceUpdatedDate: updated},
 	}, nil)
 	s.priceHistoryRepo.On("ListByFeedCollectionId", pelletID).Return([]*model.FeedPriceHistory{
-		{FeedCollectionId: pelletID, Price: pelletPerBag, PricePerKg: decimal.NewNullDecimal(pelletPerKg), PriceUpdatedDate: updated},
+		{FeedCollectionId: pelletID, Price: pelletPerBag, PriceUpdatedDate: updated},
 	}, nil)
 
 	out, err := s.svc.GetMonth(ctx, 1, "2024-03")
@@ -252,12 +250,14 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceIsPerKg() {
 	require.NotNil(s.T(), out.Entries[0].FreshUnitPrice)
 	require.NotNil(s.T(), out.Entries[0].PelletUnitPrice)
 	assert.True(s.T(), out.Entries[0].FreshUnitPrice.Equal(freshPerCrate), "fresh unit price is per ลัง (Price)")
-	assert.True(s.T(), out.Entries[0].PelletUnitPrice.Equal(pelletPerKg), "pellet unit price is per กก. (PricePerKg), not per ถุง")
+	assert.True(s.T(), out.Entries[0].PelletUnitPrice.Equal(pelletPerBag), "pellet unit price is per ถุง (Price)")
 }
 
-// A pellet price row without a PricePerKg snapshot must resolve to a blank cell
-// rather than the per-ถุง headline Price, matching feed_cost_calculator.go.
-func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceBlankWhenNoPerKgSnapshot() {
+// A pellet log dated before any recorded price resolves to a blank cell (nil),
+// same as fresh — resolvePrices reports no price for a day that predates the
+// history rather than falling back to a future price (that fallback is only for
+// whole-cycle cost accounting).
+func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceBlankWhenPredatesHistory() {
 	ctx := dailyLogCtxSuperAdmin()
 	activePondId := 10
 	freshID, pelletID := 11, 12
@@ -274,14 +274,15 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceBlankWhenNoPerKgS
 	s.feedCollectionRepo.On("GetByID", freshID).Return(&model.FeedCollection{Id: freshID, Name: "F", Unit: "ลัง", FeedType: constants.FeedTypeFresh}, nil)
 	s.feedCollectionRepo.On("GetByID", pelletID).Return(&model.FeedCollection{Id: pelletID, Name: "P", Unit: "ถุง", FeedType: constants.FeedTypePellet}, nil)
 	s.priceHistoryRepo.On("ListByFeedCollectionId", freshID).Return([]*model.FeedPriceHistory{}, nil)
+	// The only price is dated after the log day, so that day predates the history.
 	s.priceHistoryRepo.On("ListByFeedCollectionId", pelletID).Return([]*model.FeedPriceHistory{
-		{FeedCollectionId: pelletID, Price: decimal.RequireFromString("500"), PriceUpdatedDate: time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)},
+		{FeedCollectionId: pelletID, Price: decimal.RequireFromString("500"), PriceUpdatedDate: time.Date(2024, 3, 10, 0, 0, 0, 0, time.UTC)},
 	}, nil)
 
 	out, err := s.svc.GetMonth(ctx, 1, "2024-03")
 	assert.NoError(s.T(), err)
 	require.Len(s.T(), out.Entries, 1)
-	assert.Nil(s.T(), out.Entries[0].PelletUnitPrice, "pellet with no PricePerKg snapshot resolves to blank, not the per-ถุง Price")
+	assert.Nil(s.T(), out.Entries[0].PelletUnitPrice, "pellet log before any price resolves to blank")
 }
 
 func (s *DailyLogServiceTestSuite) TestGetMonth_DayUsesThailandCalendarWhenUTCDateDiffers() {

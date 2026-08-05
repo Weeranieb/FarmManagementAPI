@@ -43,11 +43,8 @@ func TestCalcCycleFeedCost_WithFallback(t *testing.T) {
 	histories := []*model.FeedPriceHistory{
 		// Fresh: priced per ลัง (Price drives cost).
 		{FeedCollectionId: freshFc, Price: decimal.NewFromInt(5), PriceUpdatedDate: day(2026, 3, 1)},
-		// Pellet: fed by weight, so cost uses the per-กก. snapshot (PricePerKg);
-		// Price is the per-ถุง headline and is not used for cost.
-		{FeedCollectionId: pelletFc, Price: decimal.NewFromInt(40),
-			PricePerKg:       decimal.NullDecimal{Decimal: decimal.NewFromInt(2), Valid: true},
-			PriceUpdatedDate: day(2026, 3, 1)},
+		// Pellet: fed and priced per ถุง — Price drives cost, same as fresh.
+		{FeedCollectionId: pelletFc, Price: decimal.NewFromInt(2), PriceUpdatedDate: day(2026, 3, 1)},
 	}
 
 	dailyLogRepo.On("ListByActivePondIds", mock.Anything, mock.Anything).Return(logs, nil)

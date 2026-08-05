@@ -103,14 +103,9 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 	if len(request.FeedPriceHistories) > 0 {
 		priceHistories := make([]*model.FeedPriceHistory, 0, len(request.FeedPriceHistories))
 		for _, priceHistoryReq := range request.FeedPriceHistories {
-			var pricePerKg decimal.NullDecimal
-			if priceHistoryReq.PricePerKg != nil {
-				pricePerKg = decimal.NullDecimal{Decimal: decimal.NewFromFloat(*priceHistoryReq.PricePerKg), Valid: true}
-			}
 			priceHistory := &model.FeedPriceHistory{
 				FeedCollectionId: newFeedCollection.Id,
 				Price:            decimal.NewFromFloat(priceHistoryReq.Price),
-				PricePerKg:       pricePerKg,
 				PriceUpdatedDate: priceHistoryReq.PriceUpdatedDate,
 			}
 			priceHistories = append(priceHistories, priceHistory)
@@ -128,9 +123,6 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 				"feedCollectionId": ph.FeedCollectionId,
 				"price":            ph.Price.InexactFloat64(),
 				"priceUpdatedDate": ph.PriceUpdatedDate,
-			}
-			if ph.PricePerKg.Valid {
-				entry["pricePerKg"] = ph.PricePerKg.Decimal.InexactFloat64()
 			}
 			feedPriceHistories = append(feedPriceHistories, entry)
 		}
