@@ -1,0 +1,116 @@
+# Boonma Farm — production stack for the DigitalOcean droplet (SGP1, 1 vCPU / 1 GB).
+#
+#   db    — self-hosted PostgreSQL 15, bound to LOOPBACK ONLY (SSH-tunnel access)
+#   app   — the Go/Fiber API, pulled from GHCR (never built on the droplet)
+#   caddy — reverse proxy + automatic Let's Encrypt TLS for api.boonmafarm.com
+#
+# All three restart unless explicitly stopped. `app` is the only service CI ever
+# touches on deploy, so `db` never goes down for an app release.
+#
+# Usage (from this directory, with a populated .env alongside it):
+#   docker compose up -d            # first boot: brings up db + caddy + app
+#   docker compose pull app && docker compose up -d app   # a normal deploy
+#
+# .env supplies COMPOSE_FILE=docker-compose.prod.yml so plain `docker compose`
+# finds this file without -f. See .env.prod.example.
+
+name: boonmafarm
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      # Superuser — maintenance / break-glass ONLY. The app never uses this role.
+      POSTGRES_DB: ${POSTGRES_DB:-boonmafarm}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      # Consumed by ./postgres/initdb/01-roles-and-grants.sh on FIRST boot to
+      # create the three least-privilege login roles.
+      APP_DB_USER: ${APP_DB_USER:-app_user}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}
+      READONLY_DB_USER: ${READONLY_DB_USER:-readonly_user}
+      READONLY_DB_PASSWORD: ${READONLY_DB_PASSWORD:?READONLY_DB_PASSWORD is required}
+      SYS_ADMIN_DB_USER: ${SYS_ADMIN_DB_USER:-sys_admin}
+      SYS_ADMIN_DB_PASSWORD: ${SYS_ADMIN_DB_PASSWORD:?SYS_ADMIN_DB_PASSWORD is required}
+    # SECURITY: publish ONLY on the loopback interface. Port 5432 is never
+    # reachable from the public internet — connect via an SSH tunnel (see DEPLOY.md).
+    ports:
+      - "127.0.0.1:5432:5432"
+    command:
+      # Force SCRAM for all stored passwords (never md5/trust). Defaults are fine
+      # for the rest at this traffic — add tuning only if a real bottleneck shows up.
+      - "postgres"
+      - "-c"
+      - "password_encryption=scram-sha-256"
+    volumes:
+      # Persistent data — bind mount as requested. Gitignored (see deploy/.gitignore).
+      - ./pgdata:/var/lib/postgresql/data
+      # Runs ONCE on an empty data dir: creates roles + wires default privileges.
+      - ./postgres/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-boonmafarm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  # ── API ────────────────────────────────────────────────────────────────────
+  app:
+    # Pinned in .env (APP_IMAGE). Normally ghcr.io/weeranieb/farmmanagementapi:latest;
+    # set to a :sha-xxxxxxxx tag to roll back.
+    image: ${APP_IMAGE:?APP_IMAGE is required, e.g. ghcr.io/weeranieb/farmmanagementapi:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # MUST be 0.0.0.0 inside the container, or Caddy can't reach it (the app
+      # defaults to localhost, which would bind loopback only).
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      # Reach Postgres over the internal docker network as the DML-only app role.
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: ${POSTGRES_DB:-boonmafarm}
+      DATABASE_USER: ${APP_DB_USER:-app_user}
+      DATABASE_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}
+      DATABASE_SSL_MODE: disable          # internal network only; never leaves the host
+      APP_ENVIRONMENT: production
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL:-info}
+      AUTHENTICATION_JWT_SECRET: ${AUTHENTICATION_JWT_SECRET:?AUTHENTICATION_JWT_SECRET is required}
+      AUTHENTICATION_JWT_EXPIRY: ${AUTHENTICATION_JWT_EXPIRY:-24h}
+      # Locked to the prod frontend origin — no wildcard. See DEPLOY.md.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?e.g. https://app.boonmafarm.com}
+      TZ: Asia/Bangkok
+    # No published ports: only Caddy reaches it, over the internal network.
+    networks: [internal]
+
+  # ── Reverse proxy + TLS ────────────────────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:-api.boonmafarm.com}
+      ACME_EMAIL: ${ACME_EMAIL:?email for Let's Encrypt expiry notices}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Persist issued certs + ACME account across restarts (avoids rate limits).
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

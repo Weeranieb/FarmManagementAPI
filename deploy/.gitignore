@@ -1,0 +1,11 @@
+# Live secrets — never commit. Keep only the example.
+.env
+.env.*
+!.env.prod.example
+
+# Postgres data (bind mount) and local backups.
+pgdata/
+backups/
+
+# Logs
+*.log

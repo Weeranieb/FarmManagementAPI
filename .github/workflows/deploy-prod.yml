@@ -1,0 +1,87 @@
+name: Deploy Prod (API)
+
+# Build the image in CI, push to GHCR, then SSH into the droplet and restart
+# ONLY the `app` service. `db` and `caddy` are never touched, so a deploy causes
+# no database downtime. Schema changes are a SEPARATE, gated step — see
+# migrate-prod.yml (never bundled into a deploy).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write        # push to GHCR
+
+jobs:
+  build-and-push:
+    name: Build & push image
+    runs-on: ubuntu-latest
+    outputs:
+      image_lc: ${{ steps.meta.outputs.image_lc }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute lowercase image name
+        id: meta
+        run: |
+          # GHCR requires a lowercase path (owner/repo can contain capitals).
+          echo "image_lc=$(echo 'ghcr.io/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64          # standard DO droplet
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_lc }}:latest
+            ${{ steps.meta.outputs.image_lc }}:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to droplet
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: prod        # add required reviewers here to gate deploys
+    steps:
+      - name: Pull & restart app over SSH
+        env:
+          SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          SSH_KEY:  ${{ secrets.PROD_SSH_KEY }}
+          SSH_PORT: ${{ secrets.PROD_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          PORT="${SSH_PORT:-22}"
+          ssh-keyscan -p "$PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # The droplet's .env pins APP_IMAGE=...:latest, so `pull app` fetches the
+          # image this run just pushed. Only `app` is recreated.
+          ssh -i ~/.ssh/id_deploy -p "$PORT" "$SSH_USER@$SSH_HOST" bash -euo pipefail <<'REMOTE'
+            cd /opt/boonmafarm/deploy
+            docker compose pull app
+            docker compose up -d app
+            docker image prune -f
+            docker compose ps app
+          REMOTE
