@@ -3,18 +3,22 @@
 package app
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/di"
 	apphandler "github.com/weeranieb/boonmafarm-backend/src/internal/handler"
+	appmiddleware "github.com/weeranieb/boonmafarm-backend/src/internal/middleware"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/router"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/logging"
 
 	_ "github.com/weeranieb/boonmafarm-backend/docs"
+
+	"gorm.io/gorm"
 )
 
 var (
@@ -46,32 +50,37 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		r.RequestURI = r.URL.String()
 	}
-	log.Printf("[Farm API] %s %s", r.Method, r.URL.Path)
 	once.Do(func() {
-		log.Println("[Farm API] serverless cold start – building app")
 		fiberApp := buildApp()
 		hndlr = adaptor.FiberApp(fiberApp)
-		log.Println("[Farm API] app ready")
+		slog.Info("app ready")
 	})
 	hndlr.ServeHTTP(w, r)
 }
 
 func buildApp() *fiber.App {
 	conf := loadFn()
+	logging.Init(conf.App.Environment, conf.App.LogLevel)
+	slog.Info("serverless cold start")
+
 	container := di.NewContainer(conf)
 
 	fiberApp := fiber.New(fiber.Config{
 		ReadBufferSize: 60 * 1024,
 		BodyLimit:      10 * 1024 * 1024,
+		ErrorHandler:   appmiddleware.ErrorHandler,
 	})
+	logging.UseHTTP(fiberApp)
 
 	var handlers *apphandler.Handler
-	if err := container.Invoke(func(h *apphandler.Handler) {
+	var db *gorm.DB
+	if err := container.Invoke(func(h *apphandler.Handler, d *gorm.DB) {
 		handlers = h
+		db = d
 	}); err != nil {
 		panic("DI: " + err.Error())
 	}
 
-	router.SetupRoutes(fiberApp, conf, handlers)
+	router.SetupRoutes(fiberApp, conf, handlers, db)
 	return fiberApp
 }

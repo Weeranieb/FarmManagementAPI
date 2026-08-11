@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/config"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -15,6 +16,12 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+// bcryptCost is the work factor for password hashing. 12 exceeds the library
+// default (10) to meet the production security baseline. Raising it affects only
+// newly created/updated hashes — existing hashes still verify, because bcrypt
+// embeds the cost in each hash.
+const bcryptCost = 12
 
 //go:generate go run github.com/vektra/mockery/v2@latest --name=AuthService --output=./mocks --outpkg=service --filename=auth_service.go --structname=MockAuthService --with-expecter=false
 type AuthService interface {
@@ -53,19 +60,20 @@ func (s *authService) Register(request dto.RegisterRequest) (*dto.UserResponse, 
 	}
 
 	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcryptCost)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
 	newUser := &model.User{
-		ClientId:      &request.ClientId,
-		Username:      request.Username,
-		Password:      string(hashedPassword),
-		FirstName:     request.FirstName,
-		LastName:      request.LastName,
-		UserLevel:     request.UserLevel,
-		ContactNumber: request.ContactNumber,
+		ClientId:          &request.ClientId,
+		Username:          request.Username,
+		Password:          string(hashedPassword),
+		PasswordUpdatedAt: lo.ToPtr(time.Now()),
+		FirstName:         request.FirstName,
+		LastName:          request.LastName,
+		UserLevel:         request.UserLevel,
+		ContactNumber:     request.ContactNumber,
 		BaseModel: model.BaseModel{
 			CreatedBy: request.Username,
 			UpdatedBy: request.Username,
@@ -141,16 +149,21 @@ func (s *authService) getUserByLoginIdentifier(identifier string) (*model.User, 
 
 func (s *authService) toUserResponse(user *model.User) *dto.UserResponse {
 	return &dto.UserResponse{
-		Id:            user.Id,
-		ClientId:      user.ClientId,
-		Username:      user.Username,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		UserLevel:     user.UserLevel,
-		ContactNumber: user.ContactNumber,
-		CreatedAt:     user.CreatedAt,
-		CreatedBy:     user.CreatedBy,
-		UpdatedAt:     user.UpdatedAt,
-		UpdatedBy:     user.UpdatedBy,
+		Id:       user.Id,
+		ClientId: user.ClientId,
+		Username: user.Username,
+		// Email was missing here while userService.toUserResponse sent it, so a
+		// freshly-logged-in client held a user snapshot with no email until it
+		// re-fetched GET /user. Same DTO, same source row — keep them in step.
+		Email:             user.Email,
+		FirstName:         user.FirstName,
+		LastName:          user.LastName,
+		UserLevel:         user.UserLevel,
+		ContactNumber:     user.ContactNumber,
+		PasswordUpdatedAt: user.PasswordUpdatedAt,
+		CreatedAt:         user.CreatedAt,
+		CreatedBy:         user.CreatedBy,
+		UpdatedAt:         user.UpdatedAt,
+		UpdatedBy:         user.UpdatedBy,
 	}
 }

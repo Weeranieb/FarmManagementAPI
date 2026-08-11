@@ -3,13 +3,24 @@ package handler
 import (
 	"context"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
+	appmiddleware "github.com/weeranieb/boonmafarm-backend/src/internal/middleware"
 )
 
+// newTestApp returns a Fiber app wired with the production ErrorHandler.
+// Without it, Fiber's default handler would clobber responses written by
+// http.Error / http.NewError (which now return the ErrResponseWritten
+// sentinel to short-circuit the caller chain).
+func newTestApp() *fiber.App {
+	return fiber.New(fiber.Config{
+		ErrorHandler: appmiddleware.ErrorHandler,
+	})
+}
+
 // userContextFromRequest sets UserContext from the request context so req.WithContext() is honored
-func userContextFromRequest(c *fiber.Ctx) error {
-	c.SetUserContext(c.Context())
+func userContextFromRequest(c fiber.Ctx) error {
+	c.SetContext(c.Context())
 	return c.Next()
 }
 

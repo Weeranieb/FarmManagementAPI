@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
@@ -10,22 +9,28 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=PondHandler --output=./mocks --outpkg=handler --filename=pond_handler.go --structname=MockPondHandler --with-expecter=false
 type PondHandler interface {
-	AddPonds(c *fiber.Ctx) error
-	GetPond(c *fiber.Ctx) error
-	GetPondList(c *fiber.Ctx) error
-	UpdatePond(c *fiber.Ctx) error
-	DeletePond(c *fiber.Ctx) error
-	FillPond(c *fiber.Ctx) error
-	MovePond(c *fiber.Ctx) error
-	SellPond(c *fiber.Ctx) error
-	FillPondPreview(c *fiber.Ctx) error
-	MovePondPreview(c *fiber.Ctx) error
-	SellPondPreview(c *fiber.Ctx) error
+	AddPonds(c fiber.Ctx) error
+	GetPond(c fiber.Ctx) error
+	GetPondList(c fiber.Ctx) error
+	GetPondActivities(c fiber.Ctx) error
+	GetPondCycles(c fiber.Ctx) error
+	UpdatePond(c fiber.Ctx) error
+	DeletePond(c fiber.Ctx) error
+	FillPond(c fiber.Ctx) error
+	MovePond(c fiber.Ctx) error
+	SellPond(c fiber.Ctx) error
+	FillPondPreview(c fiber.Ctx) error
+	MovePondPreview(c fiber.Ctx) error
+	SellPondPreview(c fiber.Ctx) error
+	FillPondCalc(c fiber.Ctx) error
+	MovePondCalc(c fiber.Ctx) error
+	SellPondCalc(c fiber.Ctx) error
+	DownloadTemplate(c fiber.Ctx) error
+	BulkImportFarmPond(c fiber.Ctx) error
 }
 
 type pondHandlerImpl struct {
@@ -38,10 +43,10 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 	}
 }
 
-// POST /pond
 // Create multiple ponds for a farm (farmId, names array). New ponds are created with status maintenance.
+// Allowed for super admin (any farm) or client admin (farms in their own client only).
 // @Summary      Create multiple ponds
-// @Description  Create multiple ponds for a farm. Request: farmId, array of names. New ponds have status maintenance.
+// @Description  Create multiple ponds for a farm. Request: farmId, array of names. New ponds have status maintenance. Requires client-admin role or above.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
@@ -50,60 +55,50 @@ func NewPondHandler(pondService service.PondService) PondHandler {
 // @Param        body body dto.CreatePondsRequest true "farmId, names[]"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond [post]
-func (h *pondHandlerImpl) AddPonds(c *fiber.Ctx) error {
+func (h *pondHandlerImpl) AddPonds(c fiber.Ctx) error {
 	var createPondsRequest dto.CreatePondsRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &createPondsRequest); err != nil {
 		return err
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	// Must be client admin or super admin. Per-client scoping is enforced
+	// in pondService.CreatePonds (which loads the farm to find its clientId).
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
-	if err := h.pondService.CreatePonds(c.UserContext(), createPondsRequest); err != nil {
+	if err := h.pondService.CreatePonds(c.Context(), createPondsRequest); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return http.Success(c, nil)
 }
 
-// GET /pond/:id
 // Get a pond by ID.
+// Readable by any user of the owning client; denied across clients.
 // @Summary      Get a pond by ID
-// @Description  Retrieve a pond by its ID
+// @Description  Retrieve a pond by its ID. Scoped to the caller's client.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
 // @Param        id path int true "Pond ID"
-// @Success      200  {object}  http.ResponseModel
+// @Success      200  {object}  http.ResponseModel{data=dto.PondResponse}
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{id} [get]
-func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *pondHandlerImpl) GetPond(c fiber.Ctx) error {
 
-	// Get id from param
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseParamInt(c, "id", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
-	pond, err := h.pondService.Get(c.UserContext(), id)
+	pond, err := h.pondService.Get(c.Context(), id)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -111,33 +106,84 @@ func (h *pondHandlerImpl) GetPond(c *fiber.Ctx) error {
 	return http.Success(c, pond)
 }
 
-// GET /pond
+// GET /pond/:pondId/activities
+// List the activity history (fill/move/sell) for a pond, newest first.
+// @Summary      List pond activity history
+// @Description  Return the chronological fill/move/sell activity timeline for a pond, ordered by activity_date desc. Scoped to the caller's client.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Param        pondId path int true "Pond ID"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
+// @Failure      404  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/activities [get]
+func (h *pondHandlerImpl) GetPondActivities(c fiber.Ctx) error {
+
+	id, err := parseParamInt(c, "pondId", "Invalid pond ID")
+	if err != nil {
+		return err
+	}
+
+	activities, err := h.pondService.ListActivities(c.Context(), id)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, activities)
+}
+
+// List a pond's production cycles with per-cycle P&L.
+// @Summary      List pond production cycles
+// @Description  Return every production cycle (active + closed) for a pond, newest first, each with its P&L (totalCost, totalRevenue, feedCost, netResult). Feed cost for the active cycle is derived live; closed cycles use the value frozen at close.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Param        pondId path int true "Pond ID"
+// @Success      200  {object}  http.ResponseModel{data=[]dto.PondCycleResponse}
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
+// @Failure      404  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/{pondId}/cycles [get]
+func (h *pondHandlerImpl) GetPondCycles(c fiber.Ctx) error {
+
+	id, err := parseParamInt(c, "pondId", "Invalid pond ID")
+	if err != nil {
+		return err
+	}
+
+	cycles, err := h.pondService.ListCycles(c.Context(), id)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, cycles)
+}
+
 // Get a list of ponds by farm ID.
 // @Summary      Get a list of ponds by farm ID
-// @Description  Retrieve a list of ponds belonging to a specific farm
+// @Description  Retrieve a list of ponds belonging to a specific farm. Scoped to the caller's client.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
 // @Param        farmId query int true "Farm ID"
-// @Success      200  {object}  http.ResponseModel
+// @Success      200  {object}  http.ResponseModel{data=[]dto.PondResponse}
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond [get]
-func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *pondHandlerImpl) GetPondList(c fiber.Ctx) error {
 
-	// Get farmId from query
 	farmIdStr := c.Query("farmId")
 	farmId, err := strconv.Atoi(farmIdStr)
 	if err != nil {
 		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid farm ID")
 	}
 
-	pondList, err := h.pondService.GetList(c.UserContext(), farmId)
+	pondList, err := h.pondService.GetList(c.Context(), farmId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -145,10 +191,10 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 	return http.Success(c, pondList)
 }
 
-// PUT /pond/:id
 // Update a pond.
+// Allowed for super admin (any pond) or client admin (ponds in their own client only).
 // @Summary      Update a pond
-// @Description  Update an existing pond. Id in path; body contains optional farmId, name, status.
+// @Description  Update an existing pond. Id in path; body contains optional farmId, name, status. Requires client-admin role or above.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
@@ -158,18 +204,20 @@ func (h *pondHandlerImpl) GetPondList(c *fiber.Ctx) error {
 // @Param        body body dto.UpdatePondBody true "Updated pond data (farmId, name, status optional)"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{id} [put]
-func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *pondHandlerImpl) UpdatePond(c fiber.Ctx) error {
 
-	id, err := strconv.Atoi(c.Params("id"))
+	id, err := parseParamInt(c, "id", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
+	}
+
+	// Must be client admin or super admin. Per-client scoping is enforced in
+	// pondService.Update (which loads the pond's farm to find its clientId).
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
 	var body dto.UpdatePondBody
@@ -177,12 +225,8 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 		return err
 	}
 
-	if _, err := utils.GetUsername(c.UserContext()); err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
-	}
-
-	req := dto.UpdatePondRequest{Id: id, FarmId: body.FarmId, Name: body.Name, Status: body.Status}
-	err = h.pondService.Update(c.UserContext(), req)
+	req := dto.UpdatePondRequest{Id: id, FarmId: body.FarmId, Name: body.Name, Status: body.Status, Area: body.Area}
+	err = h.pondService.Update(c.Context(), req)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -190,10 +234,10 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 	return http.SuccessWithoutData(c)
 }
 
-// DELETE /pond/:id
 // Delete a pond.
+// Allowed for super admin (any pond) or client admin (ponds in their own client only).
 // @Summary      Delete a pond
-// @Description  Delete a pond by its ID
+// @Description  Delete a pond by its ID. Requires client-admin role or above.
 // @Tags         pond
 // @Accept       json
 // @Produce      json
@@ -202,27 +246,22 @@ func (h *pondHandlerImpl) UpdatePond(c *fiber.Ctx) error {
 // @Param        id path int true "Pond ID"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{id} [delete]
-func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	// Get id from param
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+func (h *pondHandlerImpl) DeletePond(c fiber.Ctx) error {
+	id, err := parseParamInt(c, "id", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
-	if _, err := utils.GetUsername(c.UserContext()); err != nil {
-		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	// Must be client admin or super admin. Per-client scoping is enforced in
+	// pondService.Delete (which loads the pond's farm to find its clientId).
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
-	err = h.pondService.Delete(c.UserContext(), id)
+	err = h.pondService.Delete(c.Context(), id)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -230,7 +269,6 @@ func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
 	return http.SuccessWithoutData(c)
 }
 
-// POST /pond/:pondId/fill
 // Add fish to a pond (fill). Creates an active_pond if the pond is in maintenance.
 // @Summary      Fill pond with fish
 // @Description  Record a fill activity for a pond. If the pond has no active cycle, creates one. Request: fishType, amount, activityDate; optional fishWeight, fishUnit, pricePerUnit.
@@ -247,16 +285,11 @@ func (h *pondHandlerImpl) DeletePond(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/fill [post]
-func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *pondHandlerImpl) FillPond(c fiber.Ctx) error {
 
-	pondId, err := strconv.Atoi(c.Params("pondId"))
+	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
 	var request dto.PondFillRequest
@@ -264,19 +297,18 @@ func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	response, err := h.pondService.FillPond(c.UserContext(), pondId, request, username)
+	response, err := h.pondService.FillPond(c.Context(), pondId, request, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return http.Success(c, response)
 }
 
-// POST /pond/:pondId/move
 // Move fish from this pond (source) to another. Path = source pondId; body includes toPondId.
 // @Summary      Move fish to another pond
 // @Description  Transfer fish from this pond to another. If destination is in maintenance, backend creates active_pond for it.
@@ -292,16 +324,11 @@ func (h *pondHandlerImpl) FillPond(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/move [post]
-func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *pondHandlerImpl) MovePond(c fiber.Ctx) error {
 
-	pondId, err := strconv.Atoi(c.Params("pondId"))
+	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
 	var request dto.PondMoveRequest
@@ -309,19 +336,18 @@ func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	response, err := h.pondService.MovePond(c.UserContext(), pondId, request, username)
+	response, err := h.pondService.MovePond(c.Context(), pondId, request, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return http.Success(c, response)
 }
 
-// POST /pond/:pondId/sell
 // Record a sell transaction from a pond. Optionally close the active cycle.
 // @Summary      Sell fish from pond
 // @Description  Record a sell activity. If markToClose is true, close the active cycle and set pond to maintenance.
@@ -337,16 +363,11 @@ func (h *pondHandlerImpl) MovePond(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/sell [post]
-func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *pondHandlerImpl) SellPond(c fiber.Ctx) error {
 
-	pondId, err := strconv.Atoi(c.Params("pondId"))
+	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
 	var request dto.PondSellRequest
@@ -354,12 +375,12 @@ func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	response, err := h.pondService.SellPond(c.UserContext(), pondId, request, username)
+	response, err := h.pondService.SellPond(c.Context(), pondId, request, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -381,16 +402,11 @@ func (h *pondHandlerImpl) SellPond(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/fill/preview [post]
-func (h *pondHandlerImpl) FillPondPreview(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *pondHandlerImpl) FillPondPreview(c fiber.Ctx) error {
 
-	pondId, err := strconv.Atoi(c.Params("pondId"))
+	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
 	var request dto.PondFillRequest
@@ -398,7 +414,7 @@ func (h *pondHandlerImpl) FillPondPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	response, err := h.pondService.PreviewFillPond(c.UserContext(), pondId, request)
+	response, err := h.pondService.PreviewFillPond(c.Context(), pondId, request)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -420,16 +436,11 @@ func (h *pondHandlerImpl) FillPondPreview(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/move/preview [post]
-func (h *pondHandlerImpl) MovePondPreview(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *pondHandlerImpl) MovePondPreview(c fiber.Ctx) error {
 
-	pondId, err := strconv.Atoi(c.Params("pondId"))
+	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
 	var request dto.PondMoveRequest
@@ -437,7 +448,7 @@ func (h *pondHandlerImpl) MovePondPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	response, err := h.pondService.PreviewMovePond(c.UserContext(), pondId, request)
+	response, err := h.pondService.PreviewMovePond(c.Context(), pondId, request)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -459,16 +470,11 @@ func (h *pondHandlerImpl) MovePondPreview(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /pond/{pondId}/sell/preview [post]
-func (h *pondHandlerImpl) SellPondPreview(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *pondHandlerImpl) SellPondPreview(c fiber.Ctx) error {
 
-	pondId, err := strconv.Atoi(c.Params("pondId"))
+	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
 	var request dto.PondSellRequest
@@ -476,9 +482,145 @@ func (h *pondHandlerImpl) SellPondPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	response, err := h.pondService.PreviewSellPond(c.UserContext(), pondId, request)
+	response, err := h.pondService.PreviewSellPond(c.Context(), pondId, request)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 	return http.Success(c, response)
+}
+
+// POST /pond/fill/calc
+// Live totals for the fill form (no persistence, no DB). Pure math.
+// @Summary      Calculate fill totals
+// @Description  Compute live cost/weight totals for the fill (add stock) form. Pure math, no validation against pond state. Used for live form updates as the user types.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body body dto.PondFillCalcRequest true "amount, fishWeight, pricePerUnit, additionalCosts"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Router       /pond/fill/calc [post]
+func (h *pondHandlerImpl) FillPondCalc(c fiber.Ctx) error {
+
+	var request dto.PondFillCalcRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+	return http.Success(c, h.pondService.CalcFillPond(c.Context(), request))
+}
+
+// POST /pond/move/calc
+// Live totals for the move form (no persistence, no DB). Pure math.
+// @Summary      Calculate move totals
+// @Description  Compute live cost/weight totals for the move (transfer) form. Pure math, no validation against pond state.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body body dto.PondMoveCalcRequest true "amount, fishWeight, pricePerUnit, additionalCosts"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Router       /pond/move/calc [post]
+func (h *pondHandlerImpl) MovePondCalc(c fiber.Ctx) error {
+
+	var request dto.PondMoveCalcRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+	return http.Success(c, h.pondService.CalcMovePond(c.Context(), request))
+}
+
+// POST /pond/sell/calc
+// Live totals for the sell form (no persistence, no DB). Pure math.
+// @Summary      Calculate sell totals
+// @Description  Compute live revenue/weight totals for the sell form. Pure math, no fish-size-grade validation.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body body dto.PondSellCalcRequest true "details[], additionalCosts"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Router       /pond/sell/calc [post]
+func (h *pondHandlerImpl) SellPondCalc(c fiber.Ctx) error {
+
+	var request dto.PondSellCalcRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+	return http.Success(c, h.pondService.CalcSellPond(c.Context(), request))
+}
+
+// GET /pond/template
+// Download the bulk-import Excel template (1 farm + many ponds with area).
+// @Summary      Download bulk-import pond template
+// @Description  Returns the .xlsx template users fill in to bulk-create ponds for a single farm.
+// @Tags         pond
+// @Produce      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {file}    file
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/template [get]
+func (h *pondHandlerImpl) DownloadTemplate(c fiber.Ctx) error {
+
+	const templatePath = "./src/assets/templates/pond_template.xlsx"
+	const downloadName = "pond_template.xlsx"
+
+	c.Set(fiber.HeaderContentType, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	if err := c.Download(templatePath, downloadName); err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return nil
+}
+
+// POST /pond/bulk-import/:clientId
+// Bulk-import farms and ponds for a client. Idempotent: missing farms and ponds are created,
+// existing ponds get their area updated when provided. Nothing is ever deleted.
+// Allowed for super admin (any client) or client admin (their own client only).
+// @Summary      Bulk import farms and ponds
+// @Description  Upsert farms and ponds from a parsed template. Missing farms are created. Missing ponds are created with status maintenance. Existing ponds get their area updated when an area is provided. No deletes. Requires client-admin role or above.
+// @Tags         pond
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        clientId path int true "Client ID"
+// @Param        body body dto.BulkImportFarmPondRequest true "farms[] with ponds[]"
+// @Success      200  {object}  http.ResponseModel{data=dto.BulkImportFarmPondResponse}
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /pond/bulk-import/{clientId} [post]
+func (h *pondHandlerImpl) BulkImportFarmPond(c fiber.Ctx) error {
+
+	clientId, err := parseParamInt(c, "clientId", "Invalid client ID")
+	if err != nil {
+		return err
+	}
+
+	// Must be client admin or super admin.
+	if err := requireClientAdmin(c); err != nil {
+		return err
+	}
+
+	// Super admin can target any client; client admin can only target their own.
+	if err := requireClientAccess(c, clientId); err != nil {
+		return err
+	}
+
+	var request dto.BulkImportFarmPondRequest
+	if err := validateAndParse(c, &request); err != nil {
+		return err
+	}
+
+	resp, err := h.pondService.BulkImportFarmPond(c.Context(), clientId, request)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+	return http.Success(c, resp)
 }

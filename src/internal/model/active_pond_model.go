@@ -17,6 +17,10 @@ type ActivePond struct {
 	NetResult   decimal.Decimal `json:"netResult" gorm:"column:net_result"`
 	TotalFish   int             `json:"totalFish" gorm:"column:total_fish"`
 	FishTypes   []string        `json:"fishTypes" gorm:"column:fish_types;serializer:json"`
+	// FeedCost is the cycle's total feed cost, snapshotted (frozen) when the pond
+	// is closed. Invalid (NULL) for still-active cycles (feed cost is derived on
+	// read) and for legacy cycles closed before feed-cost accounting existed.
+	FeedCost decimal.NullDecimal `json:"feedCost" gorm:"column:feed_cost"`
 	// Feed collections for daily log for this active cycle (resolved via active_pond_id, not stored per daily_logs row).
 	FreshFeedCollectionId  *int `json:"freshFeedCollectionId,omitempty" gorm:"column:fresh_feed_collection_id"`
 	PelletFeedCollectionId *int `json:"pelletFeedCollectionId,omitempty" gorm:"column:pellet_feed_collection_id"`

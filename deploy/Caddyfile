@@ -1,0 +1,39 @@
+# Caddy — automatic HTTPS for the Boonma Farm API.
+#
+# Caddy obtains and renews a Let's Encrypt certificate for {$API_DOMAIN} on its
+# own (HTTP-01 / TLS-ALPN-01) as long as ports 80 and 443 reach this container
+# and the DNS A record points at the droplet. Nothing else to configure.
+#
+# GoDaddy: create a single A record  api  ->  168.144.99.22  (see DEPLOY.md).
+
+{
+	email {$ACME_EMAIL}
+	# For a dry run against Let's Encrypt staging (avoids burning rate limits
+	# while testing DNS/firewall), uncomment the next line, start Caddy, confirm
+	# a cert is issued, then re-comment and restart to get the real cert:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+
+	# Proxy everything to the Fiber app on the internal network. Caddy polls
+	# /health so it stops routing to the app if it goes unhealthy.
+	reverse_proxy app:8080 {
+		health_uri /health
+		health_interval 30s
+		health_timeout 5s
+	}
+
+	header {
+		# HSTS: force HTTPS for a year. Safe once TLS is confirmed working.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Don't advertise the server software.
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

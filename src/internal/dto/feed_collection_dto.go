@@ -7,6 +7,8 @@ type CreateFeedCollectionRequest struct {
 	Unit               string                              `json:"unit" validate:"required"`
 	FeedType           string                              `json:"feedType" validate:"omitempty,oneof=fresh pellet"`
 	Fcr                *float64                            `json:"fcr,omitempty"`
+	PackSizeKg         *float64                            `json:"packSizeKg,omitempty"`
+	Supplier           *string                             `json:"supplier,omitempty"`
 	ClientId           *int                                `json:"clientId,omitempty"` // when JWT has no clientId (e.g. super admin), required for create
 	FeedPriceHistories []CreateFeedPriceHistoryItemRequest `json:"feedPriceHistories"`
 }
@@ -17,24 +19,28 @@ type CreateFeedPriceHistoryItemRequest struct {
 }
 
 type UpdateFeedCollectionRequest struct {
-	Id       int      `json:"id" validate:"required"`
-	Name     string   `json:"name"`
-	Unit     string   `json:"unit"`
-	FeedType string   `json:"feedType" validate:"omitempty,oneof=fresh pellet"`
-	Fcr      *float64 `json:"fcr,omitempty"`
+	Id         int      `json:"id" validate:"required"`
+	Name       string   `json:"name"`
+	Unit       string   `json:"unit"`
+	FeedType   string   `json:"feedType" validate:"omitempty,oneof=fresh pellet"`
+	Fcr        *float64 `json:"fcr,omitempty"`
+	PackSizeKg *float64 `json:"packSizeKg,omitempty"`
+	Supplier   *string  `json:"supplier,omitempty"`
 }
 
 type FeedCollectionResponse struct {
-	Id        int       `json:"id"`
-	ClientId  int       `json:"clientId"`
-	Name      string    `json:"name"`
-	Unit      string    `json:"unit"`
-	FeedType  string    `json:"feedType"`
-	Fcr       *float64  `json:"fcr,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
-	CreatedBy string    `json:"createdBy"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	UpdatedBy string    `json:"updatedBy"`
+	Id         int       `json:"id"`
+	ClientId   int       `json:"clientId"`
+	Name       string    `json:"name"`
+	Unit       string    `json:"unit"`
+	FeedType   string    `json:"feedType"`
+	Fcr        *float64  `json:"fcr,omitempty"`
+	PackSizeKg *float64  `json:"packSizeKg,omitempty"`
+	Supplier   *string   `json:"supplier,omitempty"`
+	CreatedAt  time.Time `json:"createdAt"`
+	CreatedBy  string    `json:"createdBy"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+	UpdatedBy  string    `json:"updatedBy"`
 }
 
 type FeedCollectionPageResponse struct {

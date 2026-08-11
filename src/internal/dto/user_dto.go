@@ -4,7 +4,7 @@ import "time"
 
 type CreateUserRequest struct {
 	Username      string  `json:"username" validate:"required"`
-	Password      string  `json:"password" validate:"required,min=8,ascii,alphanum"`
+	Password      string  `json:"password" validate:"required,password"`
 	Email         *string `json:"email" validate:"omitempty,email"`
 	FirstName     string  `json:"firstName" validate:"required"`
 	LastName      *string `json:"lastName"`
@@ -40,7 +40,14 @@ type AdminUpdateUserRequest struct {
 // AdminResetPasswordRequest is used by super-admins via PUT /user/:id/password
 // to reset another user's password without knowing the current one.
 type AdminResetPasswordRequest struct {
-	Password string `json:"password" validate:"required,min=8,ascii,alphanum"`
+	Password string `json:"password" validate:"required,password"`
+}
+
+// ChangePasswordRequest is used by an authenticated user via PUT /user/password
+// to change their own password. Requires the current password for verification.
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword" validate:"required"`
+	NewPassword     string `json:"newPassword" validate:"required,password"`
 }
 
 type UserListQuery struct {
@@ -50,16 +57,21 @@ type UserListQuery struct {
 }
 
 type UserResponse struct {
-	Id            int       `json:"id"`
-	ClientId      *int      `json:"clientId"`
-	Username      string    `json:"username"`
-	Email         *string   `json:"email"`
-	FirstName     string    `json:"firstName"`
-	LastName      *string   `json:"lastName"`
-	UserLevel     int       `json:"userLevel"`
-	ContactNumber string    `json:"contactNumber"`
-	CreatedAt     time.Time `json:"createdAt"`
-	CreatedBy     string    `json:"createdBy"`
-	UpdatedAt     time.Time `json:"updatedAt"`
-	UpdatedBy     string    `json:"updatedBy"`
+	Id            int     `json:"id"`
+	ClientId      *int    `json:"clientId"`
+	Username      string  `json:"username"`
+	Email         *string `json:"email"`
+	FirstName     string  `json:"firstName"`
+	LastName      *string `json:"lastName"`
+	UserLevel     int     `json:"userLevel"`
+	ContactNumber string  `json:"contactNumber"`
+	// PasswordUpdatedAt is when the current password was set. Null for accounts
+	// whose password predates the tracking column — clients must render that as
+	// "unknown", not as a date. Distinct from UpdatedAt, which moves on any
+	// profile edit.
+	PasswordUpdatedAt *time.Time `json:"passwordUpdatedAt"`
+	CreatedAt         time.Time  `json:"createdAt"`
+	CreatedBy         string     `json:"createdBy"`
+	UpdatedAt         time.Time  `json:"updatedAt"`
+	UpdatedBy         string     `json:"updatedBy"`
 }

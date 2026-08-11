@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
@@ -10,15 +9,15 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=FeedPriceHistoryHandler --output=./mocks --outpkg=handler --filename=feed_price_history_handler.go --structname=MockFeedPriceHistoryHandler --with-expecter=false
 type FeedPriceHistoryHandler interface {
-	AddFeedPriceHistory(c *fiber.Ctx) error
-	GetFeedPriceHistory(c *fiber.Ctx) error
-	UpdateFeedPriceHistory(c *fiber.Ctx) error
-	GetAllFeedPriceHistory(c *fiber.Ctx) error
+	AddFeedPriceHistory(c fiber.Ctx) error
+	GetFeedPriceHistory(c fiber.Ctx) error
+	UpdateFeedPriceHistory(c fiber.Ctx) error
+	DeleteFeedPriceHistory(c fiber.Ctx) error
+	GetAllFeedPriceHistory(c fiber.Ctx) error
 }
 
 type feedPriceHistoryHandlerImpl struct {
@@ -33,25 +32,19 @@ func NewFeedPriceHistoryHandler(feedPriceHistoryService service.FeedPriceHistory
 	}
 }
 
-func (h *feedPriceHistoryHandlerImpl) AddFeedPriceHistory(c *fiber.Ctx) error {
+func (h *feedPriceHistoryHandlerImpl) AddFeedPriceHistory(c fiber.Ctx) error {
 	var createFeedPriceHistoryRequest dto.CreateFeedPriceHistoryRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &createFeedPriceHistoryRequest); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	result, err := h.feedPriceHistoryService.Create(c.UserContext(), createFeedPriceHistoryRequest, username)
+	result, err := h.feedPriceHistoryService.Create(c.Context(), createFeedPriceHistoryRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -59,17 +52,11 @@ func (h *feedPriceHistoryHandlerImpl) AddFeedPriceHistory(c *fiber.Ctx) error {
 	return http.Success(c, result)
 }
 
-func (h *feedPriceHistoryHandlerImpl) GetFeedPriceHistory(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *feedPriceHistoryHandlerImpl) GetFeedPriceHistory(c fiber.Ctx) error {
 
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseParamInt(c, "id", "Invalid feed price history ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid feed price history ID")
+		return err
 	}
 
 	result, err := h.feedPriceHistoryService.Get(id)
@@ -80,25 +67,19 @@ func (h *feedPriceHistoryHandlerImpl) GetFeedPriceHistory(c *fiber.Ctx) error {
 	return http.Success(c, result)
 }
 
-func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c *fiber.Ctx) error {
+func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c fiber.Ctx) error {
 	var updateFeedPriceHistory dto.UpdateFeedPriceHistoryRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &updateFeedPriceHistory); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.feedPriceHistoryService.Update(c.UserContext(), updateFeedPriceHistory, username)
+	err = h.feedPriceHistoryService.Update(c.Context(), updateFeedPriceHistory, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -106,12 +87,20 @@ func (h *feedPriceHistoryHandlerImpl) UpdateFeedPriceHistory(c *fiber.Ctx) error
 	return http.SuccessWithoutData(c)
 }
 
-func (h *feedPriceHistoryHandlerImpl) GetAllFeedPriceHistory(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *feedPriceHistoryHandlerImpl) DeleteFeedPriceHistory(c fiber.Ctx) error {
+	id, err := parseParamInt(c, "id", "Invalid feed price history ID")
+	if err != nil {
+		return err
+	}
+
+	if err := h.feedPriceHistoryService.Delete(c.Context(), id); err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.SuccessWithoutData(c)
+}
+
+func (h *feedPriceHistoryHandlerImpl) GetAllFeedPriceHistory(c fiber.Ctx) error {
 
 	feedCollectionIdStr := c.Query("feedCollectionId")
 	feedCollectionId, err := strconv.Atoi(feedCollectionIdStr)
@@ -124,9 +113,8 @@ func (h *feedPriceHistoryHandlerImpl) GetAllFeedPriceHistory(c *fiber.Ctx) error
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
-	canAccess, accessErr := utils.CanAccessClient(c.UserContext(), feedCollection.ClientId)
-	if accessErr != nil || !canAccess {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAccess(c, feedCollection.ClientId); err != nil {
+		return err
 	}
 
 	result, err := h.feedPriceHistoryService.GetAll(feedCollectionId)

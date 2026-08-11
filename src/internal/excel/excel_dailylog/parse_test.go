@@ -1,6 +1,7 @@
 package excel_dailylog
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 )
 
 // febBlockHeaders writes Thai headers for one month block starting at 1-based Excel col startCol.
+// Layout: col(0)=fresh (single), col(1)=pellet morning, col(2)=pellet evening, col(3)=death, col(4)=tourist.
 func febBlockHeaders(t *testing.T, f *excelize.File, sheet string, startCol int, withTourist bool) {
 	t.Helper()
 	col := func(offset int) string {
@@ -18,17 +20,14 @@ func febBlockHeaders(t *testing.T, f *excelize.File, sheet string, startCol int,
 		return name
 	}
 	require.NoError(t, f.SetCellValue(sheet, col(0)+"2", "เหยื่อ"))
-	require.NoError(t, f.SetCellValue(sheet, col(1)+"2", "เหยื่อ"))
+	require.NoError(t, f.SetCellValue(sheet, col(1)+"2", "อาหาร"))
 	require.NoError(t, f.SetCellValue(sheet, col(2)+"2", "อาหาร"))
-	require.NoError(t, f.SetCellValue(sheet, col(3)+"2", "อาหาร"))
-	require.NoError(t, f.SetCellValue(sheet, col(4)+"2", "ตาย"))
+	require.NoError(t, f.SetCellValue(sheet, col(3)+"2", "ตาย"))
 	if withTourist {
-		require.NoError(t, f.SetCellValue(sheet, col(5)+"2", "ตกปลา"))
+		require.NoError(t, f.SetCellValue(sheet, col(4)+"2", "ตกปลา"))
 	}
-	require.NoError(t, f.SetCellValue(sheet, col(0)+"3", "เช้า"))
-	require.NoError(t, f.SetCellValue(sheet, col(1)+"3", "เย็น"))
-	require.NoError(t, f.SetCellValue(sheet, col(2)+"3", "เช้า"))
-	require.NoError(t, f.SetCellValue(sheet, col(3)+"3", "เย็น"))
+	require.NoError(t, f.SetCellValue(sheet, col(1)+"3", "เช้า"))
+	require.NoError(t, f.SetCellValue(sheet, col(2)+"3", "เย็น"))
 }
 
 func TestParseEnglishMonthBEHeader(t *testing.T) {
@@ -45,8 +44,9 @@ func TestParseSheet_BECalendarAndFeed(t *testing.T) {
 	require.NoError(t, f.SetCellValue(sheet, "B1", "Feb-69"))
 	febBlockHeaders(t, f, sheet, 2, false)
 	require.NoError(t, f.SetCellValue(sheet, "A5", "1"))
-	require.NoError(t, f.SetCellValue(sheet, "D5", "40"))
-	require.NoError(t, f.SetCellValue(sheet, "E5", "5"))
+	// Feb block (startCol=2): B=fresh, C=pelletMorning, D=pelletEvening, E=death.
+	require.NoError(t, f.SetCellValue(sheet, "C5", "40"))
+	require.NoError(t, f.SetCellValue(sheet, "D5", "5"))
 
 	ref := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
 	ps, err := ParseSheetAt(f, sheet, ref)
@@ -66,8 +66,9 @@ func TestParseSheet_TouristColumn(t *testing.T) {
 	require.NoError(t, f.SetCellValue(sheet, "B1", "Feb-69"))
 	febBlockHeaders(t, f, sheet, 2, true)
 	require.NoError(t, f.SetCellValue(sheet, "A5", "1"))
-	require.NoError(t, f.SetCellValue(sheet, "D5", "10"))
-	require.NoError(t, f.SetCellValue(sheet, "G5", "3"))
+	// Feb block (startCol=2): B=fresh, C=pelletMorning, D=pelletEvening, E=death, F=tourist.
+	require.NoError(t, f.SetCellValue(sheet, "C5", "10"))
+	require.NoError(t, f.SetCellValue(sheet, "F5", "3"))
 
 	ref := time.Date(2026, 2, 28, 0, 0, 0, 0, time.UTC)
 	ps, err := ParseSheetAt(f, sheet, ref)
@@ -84,12 +85,13 @@ func TestParseSheet_FutureRowOmitted(t *testing.T) {
 	sheet := f.GetSheetName(0)
 	require.NoError(t, f.SetCellValue(sheet, "B1", "Feb-69"))
 	febBlockHeaders(t, f, sheet, 2, false)
+	// Feb block (startCol=2): B=fresh, C=pelletMorning, D=pelletEvening, E=death.
 	require.NoError(t, f.SetCellValue(sheet, "A5", "1"))
-	require.NoError(t, f.SetCellValue(sheet, "D5", "1"))
+	require.NoError(t, f.SetCellValue(sheet, "C5", "1"))
 	require.NoError(t, f.SetCellValue(sheet, "A6", "2"))
-	require.NoError(t, f.SetCellValue(sheet, "D6", "2"))
+	require.NoError(t, f.SetCellValue(sheet, "C6", "2"))
 	require.NoError(t, f.SetCellValue(sheet, "A7", "25"))
-	require.NoError(t, f.SetCellValue(sheet, "D7", "99"))
+	require.NoError(t, f.SetCellValue(sheet, "C7", "99"))
 
 	ref := time.Date(2026, 2, 10, 0, 0, 0, 0, time.UTC)
 	ps, err := ParseSheetAt(f, sheet, ref)
@@ -106,7 +108,8 @@ func TestParseSheet_FutureMonthBlockSkipped(t *testing.T) {
 	febBlockHeaders(t, f, sheet, 2, false)
 	febBlockHeaders(t, f, sheet, 9, false)
 	require.NoError(t, f.SetCellValue(sheet, "A5", "1"))
-	require.NoError(t, f.SetCellValue(sheet, "D5", "5"))
+	// Feb block: C=pelletMorning. Apr block (startCol=9): J=pelletMorning.
+	require.NoError(t, f.SetCellValue(sheet, "C5", "5"))
 	require.NoError(t, f.SetCellValue(sheet, "J5", "9"))
 
 	ref := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
@@ -125,7 +128,8 @@ func TestParseSheet_FirstBlockEmptySecondHasFeed(t *testing.T) {
 	febBlockHeaders(t, f, sheet, 2, false)
 	febBlockHeaders(t, f, sheet, 9, false)
 	require.NoError(t, f.SetCellValue(sheet, "A5", "1"))
-	require.NoError(t, f.SetCellValue(sheet, "K5", "7"))
+	// Mar block (startCol=9): I=fresh, J=pelletMorning, K=pelletEvening.
+	require.NoError(t, f.SetCellValue(sheet, "J5", "7"))
 
 	ref := time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC)
 	ps, err := ParseSheetAt(f, sheet, ref)
@@ -146,14 +150,16 @@ func TestParseSheet_SecondBlockNoFeedStopsRest(t *testing.T) {
 	febBlockHeaders(t, f, sheet, 9, false)
 	febBlockHeaders(t, f, sheet, 16, false)
 	require.NoError(t, f.SetCellValue(sheet, "A5", "1"))
-	require.NoError(t, f.SetCellValue(sheet, "D5", "3"))
-	require.NoError(t, f.SetCellValue(sheet, "F5", "2"))
+	// Feb block (startCol=2): B=fresh, C=pelletMorning, D=pelletEvening, E=death.
+	// Mar block (startCol=9): I=fresh, J=pelletMorning, K=pelletEvening, L=death.
+	// Apr block (startCol=16): P=fresh, Q=pelletMorning, R=pelletEvening, S=death.
+	require.NoError(t, f.SetCellValue(sheet, "C5", "3"))
+	require.NoError(t, f.SetCellValue(sheet, "E5", "2"))
 	require.NoError(t, f.SetCellValue(sheet, "I5", "0"))
 	require.NoError(t, f.SetCellValue(sheet, "J5", "0"))
 	require.NoError(t, f.SetCellValue(sheet, "K5", "0"))
 	require.NoError(t, f.SetCellValue(sheet, "L5", "0"))
-	require.NoError(t, f.SetCellValue(sheet, "M5", "5"))
-	require.NoError(t, f.SetCellValue(sheet, "R5", "9"))
+	require.NoError(t, f.SetCellValue(sheet, "Q5", "9"))
 
 	ref := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	ps, err := ParseSheetAt(f, sheet, ref)
@@ -165,7 +171,7 @@ func TestParseSheet_SecondBlockNoFeedStopsRest(t *testing.T) {
 func TestToDailyLog(t *testing.T) {
 	e := ExtractedDailyLogRow{
 		FeedDate:       time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
-		FreshMorning:   decimal.NewFromInt(1),
+		Fresh:          decimal.NewFromInt(1),
 		PelletEvening:  decimal.NewFromInt(2),
 		DeathFishCount: 1,
 	}
@@ -175,12 +181,36 @@ func TestToDailyLog(t *testing.T) {
 	require.Equal(t, "alice", m.UpdatedBy)
 }
 
-func TestParseFile_NoFishing(t *testing.T) {
+func TestParseSheet_NoFishing(t *testing.T) {
+	f := excelize.NewFile()
+	defer func() { _ = f.Close() }()
+	sheet := "1 ซ้าย"
+	require.NoError(t, f.SetSheetName(f.GetSheetName(0), sheet))
+
+	// Mar block at column 2 (B). Layout after collapse: B=fresh, C=pelletMorning,
+	// D=pelletEvening, E=death.
+	require.NoError(t, f.SetCellValue(sheet, "B1", "Mar-69"))
+	febBlockHeaders(t, f, sheet, 2, false)
+
+	// Day-of-month cells in column A. A5 holds day 1, A9 holds day 5, etc.
+	// Days 1–4 have no signal so they're skipped by the parser.
+	for i := 0; i < 7; i++ {
+		cell := "A" + strconv.Itoa(5+i)
+		require.NoError(t, f.SetCellValue(sheet, cell, strconv.Itoa(i+1)))
+	}
+	require.NoError(t, f.SetCellValue(sheet, "B9", "2"))  // day 5 fresh
+	require.NoError(t, f.SetCellValue(sheet, "C10", "1")) // day 6 pellet morning
+	require.NoError(t, f.SetCellValue(sheet, "D11", "1")) // day 7 pellet evening
+
+	// B42/B43 carry the feed collection IDs in the template.
+	require.NoError(t, f.SetCellValue(sheet, "B42", "1"))
+	require.NoError(t, f.SetCellValue(sheet, "B43", "2"))
+
 	ref := time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC)
-	ps, err := ParseFile("test_no_fishing.xlsx", "1 ซ้าย", ref)
+	ps, err := ParseSheetAt(f, sheet, ref)
 	require.NoError(t, err)
 
-	require.Equal(t, "1 ซ้าย", ps.PondName)
+	require.Equal(t, sheet, ps.PondName)
 	require.NotNil(t, ps.FreshFeedCollectionId)
 	require.NotNil(t, ps.PelletFeedCollectionId)
 	require.Equal(t, 1, *ps.FreshFeedCollectionId)
@@ -190,8 +220,7 @@ func TestParseFile_NoFishing(t *testing.T) {
 
 	day5 := ps.Rows[0]
 	require.True(t, day5.FeedDate.Equal(time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)))
-	require.True(t, day5.FreshMorning.Equal(decimal.NewFromInt(1)))
-	require.True(t, day5.FreshEvening.Equal(decimal.NewFromInt(1)))
+	require.True(t, day5.Fresh.Equal(decimal.NewFromInt(2)))
 	require.True(t, day5.PelletMorning.Equal(decimal.Zero))
 	require.True(t, day5.PelletEvening.Equal(decimal.Zero))
 	require.Equal(t, 0, day5.DeathFishCount)

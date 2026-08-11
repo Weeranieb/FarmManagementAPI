@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -47,8 +47,8 @@ func TestHandlerSuite(t *testing.T) {
 
 // Helper middleware to set context values for testing
 func setLocalsMiddleware(locals map[string]any) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.UserContext()
+	return func(c fiber.Ctx) error {
+		ctx := c.Context()
 		if ctx == nil {
 			ctx = context.Background()
 		}
@@ -67,7 +67,7 @@ func setLocalsMiddleware(locals map[string]any) fiber.Handler {
 			ctx = context.WithValue(ctx, constants.UserLevelKey, userLevel)
 		}
 
-		c.SetUserContext(ctx)
+		c.SetContext(ctx)
 		return c.Next()
 	}
 }
@@ -77,7 +77,7 @@ func (s *UserHandlerTestSuite) TestAddUser_Success() {
 	// GIVEN — valid CreateUserRequest; service returns success
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
-		Password:      "password123",
+		Password:      "Password123",
 		FirstName:     "Test",
 		LastName:      lo.ToPtr("User"),
 		UserLevel:     1,
@@ -104,7 +104,7 @@ func (s *UserHandlerTestSuite) TestAddUser_Success() {
 	userLevel := 3 // Super admin
 	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil }), *createReq, username, clientId).Return(expectedResponse, nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  username,
 		"clientId":  clientIdInt, // Set as int, handler will convert to *int
@@ -130,7 +130,7 @@ func (s *UserHandlerTestSuite) TestAddUser_InvalidBody() {
 	emptyReq := dto.CreateUserRequest{}
 	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), emptyReq, "admin", (*int)(nil)).Return(nil, errors.New("validation error"))
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  "admin",
 		"userLevel": 3,
@@ -157,7 +157,7 @@ func (s *UserHandlerTestSuite) TestAddUser_ValidationError() {
 
 	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *req, "admin", (*int)(nil)).Return(nil, errors.New("validation error"))
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  "admin",
 		"userLevel": 3,
@@ -180,13 +180,13 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingUsername() {
 	// GIVEN — valid body; no username in context
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
-		Password:      "password123",
+		Password:      "Password123",
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
 	}
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"userLevel": 3,
 	}))
@@ -199,16 +199,16 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingUsername() {
 	// WHEN — POST /api/v1/user is sent
 	resp, err := app.Test(req)
 
-	// THEN — permission denied
+	// THEN — 401 (auth token invalid: username missing in context)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusUnauthorized, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
 	// GIVEN — valid body; no clientId in context
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
-		Password:      "password123",
+		Password:      "Password123",
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
@@ -216,7 +216,7 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
 
 	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "admin", (*int)(nil)).Return(nil, errors.New("service error"))
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  "admin",
 		"userLevel": 3,
@@ -229,22 +229,23 @@ func (s *UserHandlerTestSuite) TestAddUser_MissingClientId() {
 
 	resp, err := app.Test(req)
 
+	// THEN — 500 (service returned an unknown error, mapped via ErrGeneric)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
 	// GIVEN — valid body; service returns error (e.g. user already exists)
 	createReq := &dto.CreateUserRequest{
 		Username:      "testuser",
-		Password:      "password123",
+		Password:      "Password123",
 		FirstName:     "Test",
 		UserLevel:     1,
 		ContactNumber: "1234567890",
 	}
 	s.userService.On("Create", mock.MatchedBy(func(ctx context.Context) bool { return true }), *createReq, "admin", (*int)(nil)).Return(nil, errors.New("user already exist"))
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username":  "admin",
 		"userLevel": 3,
@@ -258,9 +259,9 @@ func (s *UserHandlerTestSuite) TestAddUser_ServiceError() {
 	// WHEN — POST /api/v1/user is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200
+	// THEN — 500 (service returned an unknown error, mapped via ErrGeneric)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }
 
@@ -284,7 +285,7 @@ func (s *UserHandlerTestSuite) TestGetUser_Success() {
 
 	s.userService.On("GetUser", userID).Return(expectedResponse, nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"userId": userID,
 	}))
@@ -303,7 +304,7 @@ func (s *UserHandlerTestSuite) TestGetUser_Success() {
 
 func (s *UserHandlerTestSuite) TestGetUser_MissingUserId() {
 	// GIVEN — no userId in context
-	app := fiber.New()
+	app := newTestApp()
 	app.Get("/api/v1/user", s.userHandler.GetUser)
 
 	req := httptest.NewRequest("GET", "/api/v1/user", nil)
@@ -311,9 +312,9 @@ func (s *UserHandlerTestSuite) TestGetUser_MissingUserId() {
 	// WHEN — GET /api/v1/user is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 (handler may return error in body)
+	// THEN — 500 (handler returns ErrGeneric when userId missing from context)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
@@ -321,7 +322,7 @@ func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
 	userID := 1
 	s.userService.On("GetUser", userID).Return(nil, errors.New("user not found"))
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"userId": userID,
 	}))
@@ -332,15 +333,15 @@ func (s *UserHandlerTestSuite) TestGetUser_ServiceError() {
 	// WHEN — GET /api/v1/user is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 and expectations met
+	// THEN — 500 (service returned an unknown error, mapped via ErrGeneric)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }
 
 // Test UpdateUser handler
 func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
-	// GIVEN — valid update body; service returns nil
+	// GIVEN — valid update body; service returns updated user
 	updateUser := dto.UpdateUserRequest{
 		Username:      "updateduser",
 		FirstName:     "Updated",
@@ -350,9 +351,22 @@ func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
 
 	username := "admin"
 	userID := 1
-	s.userService.On("Update", mock.Anything, userID, updateUser, username).Return(nil)
+	updatedResponse := &dto.UserResponse{
+		Id:            userID,
+		ClientId:      lo.ToPtr(1),
+		Username:      updateUser.Username,
+		FirstName:     updateUser.FirstName,
+		LastName:      updateUser.LastName,
+		UserLevel:     1,
+		ContactNumber: updateUser.ContactNumber,
+		CreatedAt:     time.Now(),
+		CreatedBy:     username,
+		UpdatedAt:     time.Now(),
+		UpdatedBy:     username,
+	}
+	s.userService.On("Update", mock.Anything, userID, updateUser, username).Return(updatedResponse, nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username": username,
 		"userId":   userID,
@@ -373,8 +387,8 @@ func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
 }
 
 func (s *UserHandlerTestSuite) TestUpdateUser_InvalidBody() {
-	// GIVEN — invalid JSON body
-	app := fiber.New()
+	// GIVEN — invalid JSON body, no auth context
+	app := newTestApp()
 	app.Put("/api/v1/user", s.userHandler.UpdateUser)
 
 	req := httptest.NewRequest("PUT", "/api/v1/user", bytes.NewBuffer([]byte("invalid json")))
@@ -383,9 +397,10 @@ func (s *UserHandlerTestSuite) TestUpdateUser_InvalidBody() {
 	// WHEN — PUT with invalid JSON is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 (handler may return error in body)
+	// THEN — 400 (ErrInvalidRequestBody). validateAndParse short-circuits via the
+	// sentinel, so the missing-username check is never reached.
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusBadRequest, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestUpdateUser_MissingUsername() {
@@ -395,7 +410,7 @@ func (s *UserHandlerTestSuite) TestUpdateUser_MissingUsername() {
 		FirstName: "Updated",
 	}
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Put("/api/v1/user", s.userHandler.UpdateUser)
 
 	body, _ := json.Marshal(updateUser)
@@ -405,9 +420,9 @@ func (s *UserHandlerTestSuite) TestUpdateUser_MissingUsername() {
 	// WHEN — PUT /api/v1/user is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200
+	// THEN — 500 (handler returns ErrGeneric when username missing in UpdateUser)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
@@ -419,9 +434,9 @@ func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
 
 	username := "admin"
 	userID := 1
-	s.userService.On("Update", mock.Anything, userID, updateUser, username).Return(errors.New("update failed"))
+	s.userService.On("Update", mock.Anything, userID, updateUser, username).Return(nil, errors.New("update failed"))
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"username": username,
 		"userId":   userID,
@@ -435,9 +450,9 @@ func (s *UserHandlerTestSuite) TestUpdateUser_ServiceError() {
 	// WHEN — PUT /api/v1/user is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 and expectations met
+	// THEN — 500 (service returned an unknown error, mapped via ErrGeneric)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }
 
@@ -481,7 +496,7 @@ func (s *UserHandlerTestSuite) TestGetUserList_Success() {
 		return ok
 	}), dto.UserListQuery{}).Return(expectedUsers, nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"userLevel": 3, // Super admin - doesn't need clientId
 	}))
@@ -499,8 +514,8 @@ func (s *UserHandlerTestSuite) TestGetUserList_Success() {
 }
 
 func (s *UserHandlerTestSuite) TestGetUserList_MissingClientId() {
-	// GIVEN — no clientId in context
-	app := fiber.New()
+	// GIVEN — no clientId/userLevel in context
+	app := newTestApp()
 	app.Get("/api/v1/user/list", s.userHandler.GetUserList)
 
 	req := httptest.NewRequest("GET", "/api/v1/user/list", nil)
@@ -508,9 +523,9 @@ func (s *UserHandlerTestSuite) TestGetUserList_MissingClientId() {
 	// WHEN — GET /api/v1/user/list is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200
+	// THEN — 401 (auth token invalid when userLevel context is missing)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusUnauthorized, resp.StatusCode)
 }
 
 func (s *UserHandlerTestSuite) TestGetUserList_ServiceError() {
@@ -520,7 +535,7 @@ func (s *UserHandlerTestSuite) TestGetUserList_ServiceError() {
 		return ok
 	}), dto.UserListQuery{}).Return(nil, errors.New("database error"))
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{
 		"userLevel": 3, // Super admin - doesn't need clientId
 	}))
@@ -531,8 +546,8 @@ func (s *UserHandlerTestSuite) TestGetUserList_ServiceError() {
 	// WHEN — GET /api/v1/user/list is sent
 	resp, err := app.Test(req)
 
-	// THEN — 200 and expectations met
+	// THEN — 500 (service returned an unknown error, mapped via ErrGeneric)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	assert.Equal(s.T(), fiber.StatusInternalServerError, resp.StatusCode)
 	s.userService.AssertExpectations(s.T())
 }

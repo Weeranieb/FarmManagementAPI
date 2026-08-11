@@ -5,7 +5,7 @@ import "time"
 type RegisterRequest struct {
 	ClientId      int     `json:"clientId" validate:"required"`
 	Username      string  `json:"username" validate:"required"`
-	Password      string  `json:"password" validate:"required,min=8,ascii,alphanum"`
+	Password      string  `json:"password" validate:"required,password"`
 	FirstName     string  `json:"firstName" validate:"required"`
 	LastName      *string `json:"lastName"`
 	UserLevel     int     `json:"userLevel"`

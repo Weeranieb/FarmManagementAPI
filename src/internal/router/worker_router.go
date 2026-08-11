@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func (r *Router) setupWorkerRoutes(group fiber.Router) {
@@ -15,4 +15,3 @@ func (r *Router) setupWorkerRoutes(group fiber.Router) {
 	worker.Put("", r.handlers.WorkerHandler.UpdateWorker)
 	worker.Get("", r.handlers.WorkerHandler.ListWorker)
 }
-

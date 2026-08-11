@@ -74,8 +74,7 @@ func blockEndCol(starts []int, idx int, maxCol int) int {
 }
 
 type columnMap struct {
-	freshMorning      int
-	freshEvening      int
+	fresh             int
 	pelletMorning     int
 	pelletEvening     int
 	deathFishCount    int
@@ -86,8 +85,7 @@ type columnMap struct {
 
 func newColumnMap() columnMap {
 	return columnMap{
-		freshMorning:      -1,
-		freshEvening:      -1,
+		fresh:             -1,
 		pelletMorning:     -1,
 		pelletEvening:     -1,
 		deathFishCount:    -1,
@@ -133,12 +131,8 @@ func mapBlockColumns(rows [][]string, start, end int) (columnMap, error) {
 		if normalizedHeader == "" {
 			continue
 		}
-		if headerLooksLikeFreshMorning(normalizedHeader) && cm.freshMorning < 0 {
-			cm.freshMorning = c
-			continue
-		}
-		if headerLooksLikeFreshEvening(normalizedHeader) && cm.freshEvening < 0 {
-			cm.freshEvening = c
+		if headerLooksLikeFresh(normalizedHeader) && cm.fresh < 0 {
+			cm.fresh = c
 			continue
 		}
 		if headerLooksLikePelletMorning(normalizedHeader) && cm.pelletMorning < 0 {
@@ -162,8 +156,8 @@ func mapBlockColumns(rows [][]string, start, end int) (columnMap, error) {
 			continue
 		}
 	}
-	if cm.freshMorning < 0 || cm.freshEvening < 0 || cm.pelletMorning < 0 || cm.pelletEvening < 0 {
-		return cm, fmt.Errorf("missing bait/feed morning/evening headers")
+	if cm.fresh < 0 || cm.pelletMorning < 0 || cm.pelletEvening < 0 {
+		return cm, fmt.Errorf("missing bait/feed headers")
 	}
 	if cm.deathFishCount >= 0 && cm.deathFishCount+1 <= end {
 		nhAdj := normalizeHeader(compositeColHeader(rows, cm.deathFishCount+1, top, bot))
@@ -233,8 +227,7 @@ func rowHasAnySignal(e ExtractedDailyLogRow, touristColPresent bool) bool {
 
 func anyNonZeroFeed(e ExtractedDailyLogRow) bool {
 	return lo.SomeBy([]decimal.Decimal{
-		e.FreshMorning,
-		e.FreshEvening,
+		e.Fresh,
 		e.PelletMorning,
 		e.PelletEvening,
 	}, func(d decimal.Decimal) bool { return !d.IsZero() })
@@ -270,11 +263,7 @@ func extractBlock(
 			continue
 		}
 
-		freshMorning, err := parseDecimalCell(cellStr(rows, r, cm.freshMorning))
-		if err != nil {
-			return nil, err
-		}
-		freshEvening, err := parseDecimalCell(cellStr(rows, r, cm.freshEvening))
+		fresh, err := parseDecimalCell(cellStr(rows, r, cm.fresh))
 		if err != nil {
 			return nil, err
 		}
@@ -316,8 +305,7 @@ func extractBlock(
 		}
 		e := ExtractedDailyLogRow{
 			FeedDate:          feedDate,
-			FreshMorning:      freshMorning,
-			FreshEvening:      freshEvening,
+			Fresh:             fresh,
 			PelletMorning:     pelletMorning,
 			PelletEvening:     pelletEvening,
 			DeathFishCount:    deaths,

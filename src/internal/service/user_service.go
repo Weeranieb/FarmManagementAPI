@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -18,9 +20,10 @@ import (
 type UserService interface {
 	Create(ctx context.Context, request dto.CreateUserRequest, userIdentity string, clientId *int) (*dto.UserResponse, error)
 	GetUser(id int) (*dto.UserResponse, error)
-	Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) error
+	Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) (*dto.UserResponse, error)
 	AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error
 	AdminResetPassword(ctx context.Context, userId int, request dto.AdminResetPasswordRequest, userIdentity string) error
+	ChangePassword(ctx context.Context, userId int, request dto.ChangePasswordRequest, userIdentity string) error
 	Delete(ctx context.Context, userId int, userIdentity string) error
 	GetUserList(ctx context.Context, filters dto.UserListQuery) ([]*dto.UserResponse, error)
 }
@@ -75,20 +78,21 @@ func (s *userService) Create(ctx context.Context, request dto.CreateUserRequest,
 	}
 
 	// hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcryptCost)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
 
 	newUser := &model.User{
-		Username:      request.Username,
-		Email:         request.Email,
-		Password:      string(hashedPassword),
-		FirstName:     request.FirstName,
-		LastName:      request.LastName,
-		UserLevel:     request.UserLevel,
-		ContactNumber: request.ContactNumber,
-		ClientId:      targetClientId,
+		Username:          request.Username,
+		Email:             request.Email,
+		Password:          string(hashedPassword),
+		PasswordUpdatedAt: lo.ToPtr(time.Now()),
+		FirstName:         request.FirstName,
+		LastName:          request.LastName,
+		UserLevel:         request.UserLevel,
+		ContactNumber:     request.ContactNumber,
+		ClientId:          targetClientId,
 	}
 
 	// create user (CreatedBy/UpdatedBy set via BaseModel hook from ctx)
@@ -113,22 +117,24 @@ func (s *userService) GetUser(id int) (*dto.UserResponse, error) {
 
 // Update is the self-update path. It intentionally does NOT allow changing
 // UserLevel or ClientId; those are privileged fields handled by AdminUpdate.
-func (s *userService) Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) error {
+// Returns the updated user so callers can refresh their local snapshot
+// without an extra round-trip.
+func (s *userService) Update(ctx context.Context, userId int, request dto.UpdateUserRequest, userIdentity string) (*dto.UserResponse, error) {
 	existingUser, err := s.userRepo.GetByID(userId)
 	if err != nil {
-		return errors.ErrGeneric.Wrap(err)
+		return nil, errors.ErrGeneric.Wrap(err)
 	}
 	if existingUser == nil {
-		return errors.ErrUserNotFound
+		return nil, errors.ErrUserNotFound
 	}
 
 	if request.Username != "" && request.Username != existingUser.Username {
 		clash, err := s.userRepo.GetByUsername(request.Username)
 		if err != nil {
-			return errors.ErrGeneric.Wrap(err)
+			return nil, errors.ErrGeneric.Wrap(err)
 		}
 		if clash != nil && clash.Id != existingUser.Id {
-			return errors.ErrUserAlreadyExists
+			return nil, errors.ErrUserAlreadyExists
 		}
 		existingUser.Username = request.Username
 	}
@@ -136,10 +142,10 @@ func (s *userService) Update(ctx context.Context, userId int, request dto.Update
 		if *request.Email != "" {
 			clash, err := s.userRepo.GetByEmail(*request.Email)
 			if err != nil {
-				return errors.ErrGeneric.Wrap(err)
+				return nil, errors.ErrGeneric.Wrap(err)
 			}
 			if clash != nil && clash.Id != existingUser.Id {
-				return errors.ErrUserEmailAlreadyExists
+				return nil, errors.ErrUserEmailAlreadyExists
 			}
 		}
 		existingUser.Email = request.Email
@@ -155,14 +161,42 @@ func (s *userService) Update(ctx context.Context, userId int, request dto.Update
 	}
 
 	if err := s.userRepo.Update(ctx, existingUser); err != nil {
+		return nil, errors.ErrGeneric.Wrap(err)
+	}
+	return s.toUserResponse(existingUser), nil
+}
+
+// assertCanManageUser gates the admin-facing user mutations. The handler only
+// knows the caller's level; which client the *target* belongs to is only
+// knowable here, so this is where cross-client access is stopped.
+//
+//	· super-admin records are never reachable through these endpoints
+//	· a client admin may only act on users inside its own client
+func (s *userService) assertCanManageUser(ctx context.Context, target *model.User) error {
+	if target.UserLevel == constants.UserLevelSuperAdmin {
+		return errors.ErrUserCannotModifySuperAdmin
+	}
+	if target.ClientId == nil {
+		// Nothing to scope against, so only a super admin may act on it.
+		if isSuper, _ := utils.IsSuperAdmin(ctx); !isSuper {
+			return errors.ErrAuthPermissionDenied
+		}
+		return nil
+	}
+	ok, err := utils.CanAccessClient(ctx, *target.ClientId)
+	if err != nil {
 		return errors.ErrGeneric.Wrap(err)
+	}
+	if !ok {
+		return errors.ErrAuthPermissionDenied
 	}
 	return nil
 }
 
-// AdminUpdate is the super-admin-only path. It can change every field
-// on a user except that it refuses to promote anyone to SuperAdmin
-// or demote an existing SuperAdmin (those are out-of-band operations).
+// AdminUpdate is the admin path (client admin and above). It can change every
+// field on a user except that it refuses to promote anyone to SuperAdmin or
+// demote an existing SuperAdmin (those are out-of-band operations), and it
+// keeps a client admin inside its own client.
 func (s *userService) AdminUpdate(ctx context.Context, userId int, request dto.AdminUpdateUserRequest, userIdentity string) error {
 	existingUser, err := s.userRepo.GetByID(userId)
 	if err != nil {
@@ -172,13 +206,23 @@ func (s *userService) AdminUpdate(ctx context.Context, userId int, request dto.A
 		return errors.ErrUserNotFound
 	}
 
-	// Never touch super-admin records via this endpoint.
-	if existingUser.UserLevel == constants.UserLevelSuperAdmin {
-		return errors.ErrUserCannotModifySuperAdmin
+	// Never touch super-admin records, and never reach outside the caller's
+	// client.
+	if err := s.assertCanManageUser(ctx, existingUser); err != nil {
+		return err
 	}
 	// Never promote to super-admin via this endpoint.
 	if request.UserLevel != nil && *request.UserLevel == constants.UserLevelSuperAdmin {
 		return errors.ErrUserCannotAssignSuperAdmin
+	}
+	// Moving a user between clients is a super-admin operation. Refusing beats
+	// ignoring the field: a client admin sending it is trying to leave its own
+	// scope, and a silent no-op would look like it worked.
+	if request.ClientId != nil {
+		isSuper, _ := utils.IsSuperAdmin(ctx)
+		if !isSuper {
+			return errors.ErrAuthPermissionDenied
+		}
 	}
 
 	if request.Username != "" && request.Username != existingUser.Username {
@@ -226,7 +270,8 @@ func (s *userService) AdminUpdate(ctx context.Context, userId int, request dto.A
 }
 
 // AdminResetPassword overwrites a user's password. Callers must already be
-// verified super-admin. Refuses to reset a super admin's password.
+// verified client-admin or above; this refuses a super admin's password and any
+// target outside the caller's client.
 func (s *userService) AdminResetPassword(ctx context.Context, userId int, request dto.AdminResetPasswordRequest, userIdentity string) error {
 	existingUser, err := s.userRepo.GetByID(userId)
 	if err != nil {
@@ -236,15 +281,16 @@ func (s *userService) AdminResetPassword(ctx context.Context, userId int, reques
 		return errors.ErrUserNotFound
 	}
 
-	if existingUser.UserLevel == constants.UserLevelSuperAdmin {
-		return errors.ErrUserCannotModifySuperAdmin
+	if err := s.assertCanManageUser(ctx, existingUser); err != nil {
+		return err
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcryptCost)
 	if err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
 	existingUser.Password = string(hashedPassword)
+	existingUser.PasswordUpdatedAt = lo.ToPtr(time.Now())
 
 	if err := s.userRepo.Update(ctx, existingUser); err != nil {
 		return errors.ErrGeneric.Wrap(err)
@@ -252,8 +298,37 @@ func (s *userService) AdminResetPassword(ctx context.Context, userId int, reques
 	return nil
 }
 
-// Delete soft-deletes a user. Callers must already be verified super-admin.
-// Refuses to delete the acting user or another super admin.
+// ChangePassword lets an authenticated user change their own password by
+// verifying the current password before hashing and storing the new one.
+func (s *userService) ChangePassword(ctx context.Context, userId int, request dto.ChangePasswordRequest, userIdentity string) error {
+	existingUser, err := s.userRepo.GetByID(userId)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	if existingUser == nil {
+		return errors.ErrUserNotFound
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(request.CurrentPassword)); err != nil {
+		return errors.ErrAuthInvalidCredentials
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), bcryptCost)
+	if err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	existingUser.Password = string(hashedPassword)
+	existingUser.PasswordUpdatedAt = lo.ToPtr(time.Now())
+
+	if err := s.userRepo.Update(ctx, existingUser); err != nil {
+		return errors.ErrGeneric.Wrap(err)
+	}
+	return nil
+}
+
+// Delete soft-deletes a user. Callers must already be verified client-admin or
+// above. Refuses the acting user, a super admin, and anyone outside the
+// caller's client.
 func (s *userService) Delete(ctx context.Context, userId int, userIdentity string) error {
 	existingUser, err := s.userRepo.GetByID(userId)
 	if err != nil {
@@ -267,8 +342,8 @@ func (s *userService) Delete(ctx context.Context, userId int, userIdentity strin
 	if err == nil && actingUserId == existingUser.Id {
 		return errors.ErrUserCannotDeleteSelf
 	}
-	if existingUser.UserLevel == constants.UserLevelSuperAdmin {
-		return errors.ErrUserCannotModifySuperAdmin
+	if err := s.assertCanManageUser(ctx, existingUser); err != nil {
+		return err
 	}
 
 	if err := s.userRepo.Delete(ctx, existingUser.Id); err != nil {
@@ -297,17 +372,18 @@ func (s *userService) GetUserList(ctx context.Context, filters dto.UserListQuery
 
 func (s *userService) toUserResponse(user *model.User) *dto.UserResponse {
 	return &dto.UserResponse{
-		Id:            user.Id,
-		ClientId:      user.ClientId,
-		Username:      user.Username,
-		Email:         user.Email,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		UserLevel:     user.UserLevel,
-		ContactNumber: user.ContactNumber,
-		CreatedAt:     user.CreatedAt,
-		CreatedBy:     user.CreatedBy,
-		UpdatedAt:     user.UpdatedAt,
-		UpdatedBy:     user.UpdatedBy,
+		Id:                user.Id,
+		ClientId:          user.ClientId,
+		Username:          user.Username,
+		Email:             user.Email,
+		FirstName:         user.FirstName,
+		LastName:          user.LastName,
+		UserLevel:         user.UserLevel,
+		ContactNumber:     user.ContactNumber,
+		PasswordUpdatedAt: user.PasswordUpdatedAt,
+		CreatedAt:         user.CreatedAt,
+		CreatedBy:         user.CreatedBy,
+		UpdatedAt:         user.UpdatedAt,
+		UpdatedBy:         user.UpdatedBy,
 	}
 }

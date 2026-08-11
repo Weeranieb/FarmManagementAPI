@@ -115,8 +115,8 @@ func setDefaults() {
 	viper.SetDefault("cors.allowed_origins", "*")
 
 	// Security defaults
-	viper.SetDefault("security.rate_limit_max", 100)    // max requests per window
-	viper.SetDefault("security.rate_limit_window", 60)  // window in seconds
+	viper.SetDefault("security.rate_limit_max", 100)   // max requests per window
+	viper.SetDefault("security.rate_limit_window", 60) // window in seconds
 }
 
 // GetDSN returns the database connection string

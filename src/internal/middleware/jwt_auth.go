@@ -10,12 +10,12 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // JWTAuthMiddleware validates JWT tokens and sets user context
 func JWTAuthMiddleware(jwtSecret string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Public paths that don't require authentication
 		publicPaths := []string{
 			"/api/v1/auth/register",
@@ -24,6 +24,8 @@ func JWTAuthMiddleware(jwtSecret string) fiber.Handler {
 			// "/api/v1/user", // System setup user endpoint
 			"/swagger",
 			"/health",
+			"/ready",
+			"/metrics",
 		}
 
 		// Check if the current path is public
@@ -73,7 +75,7 @@ func JWTAuthMiddleware(jwtSecret string) fiber.Handler {
 		}
 
 		// Set user context in context.Context
-		ctx := c.UserContext()
+		ctx := c.Context()
 		if ctx == nil {
 			ctx = context.Background()
 		}
@@ -91,7 +93,7 @@ func JWTAuthMiddleware(jwtSecret string) fiber.Handler {
 		}
 
 		// Update the context in the fiber context
-		c.SetUserContext(ctx)
+		c.SetContext(ctx)
 
 		// Token is valid, continue processing the request
 		return c.Next()

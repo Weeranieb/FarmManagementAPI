@@ -11,7 +11,6 @@ import (
 //go:generate go run github.com/vektra/mockery/v2@latest --name=AdditionalCostRepository --output=./mocks --outpkg=mocks --filename=additional_cost_repository.go --structname=MockAdditionalCostRepository --with-expecter=false
 type AdditionalCostRepository interface {
 	WithTx(tx *gorm.DB) AdditionalCostRepository
-	Create(ctx context.Context, ac *model.AdditionalCost) error
 	CreateBatch(ctx context.Context, items []*model.AdditionalCost) error
 }
 
@@ -25,10 +24,6 @@ func NewAdditionalCostRepository(db *gorm.DB) AdditionalCostRepository {
 
 func (r *additionalCostRepository) WithTx(tx *gorm.DB) AdditionalCostRepository {
 	return &additionalCostRepository{db: tx}
-}
-
-func (r *additionalCostRepository) Create(ctx context.Context, ac *model.AdditionalCost) error {
-	return r.db.WithContext(ctx).Create(ac).Error
 }
 
 func (r *additionalCostRepository) CreateBatch(ctx context.Context, items []*model.AdditionalCost) error {

@@ -3,12 +3,14 @@ package model
 import "github.com/shopspring/decimal"
 
 type FeedCollection struct {
-	Id       int              `json:"id" gorm:"column:id;primaryKey;autoIncrement"`
-	ClientId int              `json:"clientId" gorm:"column:client_id"`
-	Name     string           `json:"name" gorm:"column:name"`
-	Unit     string           `json:"unit" gorm:"column:unit"`
-	FeedType string           `json:"feedType" gorm:"column:feed_type;not null;default:pellet"`
-	Fcr      *decimal.Decimal `json:"fcr,omitempty" gorm:"column:fcr"`
+	Id         int                 `json:"id" gorm:"column:id;primaryKey;autoIncrement"`
+	ClientId   int                 `json:"clientId" gorm:"column:client_id"`
+	Name       string              `json:"name" gorm:"column:name"`
+	Unit       string              `json:"unit" gorm:"column:unit"`
+	FeedType   string              `json:"feedType" gorm:"column:feed_type;not null;default:pellet"`
+	Fcr        decimal.NullDecimal `json:"fcr" gorm:"column:fcr"`
+	PackSizeKg decimal.NullDecimal `json:"packSizeKg" gorm:"column:pack_size_kg;not null"`
+	Supplier   *string             `json:"supplier" gorm:"column:supplier"`
 	BaseModel
 }
 

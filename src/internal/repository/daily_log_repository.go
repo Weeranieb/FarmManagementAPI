@@ -22,6 +22,7 @@ type DailyLogRepository interface {
 	ListIDAndFeedDateByActivePondRange(ctx context.Context, activePondId int, min, max time.Time) ([]DailyLogIDFeedDate, error)
 	HardDeleteByIDs(ctx context.Context, ids []int) error
 	ListByActivePondAndMonth(ctx context.Context, activePondId int, start, end time.Time) ([]*model.DailyLog, error)
+	ListByActivePondIds(ctx context.Context, activePondIds []int) ([]*model.DailyLog, error)
 	HardDeleteByActivePondAndDates(ctx context.Context, activePondId int, dates []time.Time) error
 }
 
@@ -64,7 +65,7 @@ func (r *dailyLogRepository) Upsert(ctx context.Context, logs []*model.DailyLog)
 			TargetWhere: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: "deleted_at IS NULL"}}},
 			// Feed collection IDs live on active_ponds only; created_by comes from BaseModel hooks on insert.
 			DoUpdates: clause.AssignmentColumns([]string{
-				"fresh_morning", "fresh_evening", "pellet_morning", "pellet_evening",
+				"fresh", "pellet_morning", "pellet_evening",
 				"death_fish_count", "tourist_catch_count",
 				"updated_by", "updated_at",
 			}),
@@ -86,6 +87,21 @@ func (r *dailyLogRepository) ListByActivePondAndMonth(ctx context.Context, activ
 	err := r.db.WithContext(ctx).
 		Where("active_pond_id = ? AND feed_date >= ? AND feed_date <= ? AND deleted_at IS NULL", activePondId, start, end).
 		Order("feed_date").
+		Find(&logs).Error
+	return logs, err
+}
+
+// ListByActivePondIds returns every (non-deleted) daily log for the given active
+// ponds in one query, so callers can aggregate whole-cycle feed cost without an
+// N+1 per-pond loop. Returns an empty slice when no ids are given.
+func (r *dailyLogRepository) ListByActivePondIds(ctx context.Context, activePondIds []int) ([]*model.DailyLog, error) {
+	if len(activePondIds) == 0 {
+		return []*model.DailyLog{}, nil
+	}
+	var logs []*model.DailyLog
+	err := r.db.WithContext(ctx).
+		Where("active_pond_id IN ? AND deleted_at IS NULL", activePondIds).
+		Order("active_pond_id, feed_date").
 		Find(&logs).Error
 	return logs, err
 }

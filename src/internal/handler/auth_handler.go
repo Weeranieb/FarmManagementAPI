@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
@@ -9,14 +8,13 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=AuthHandler --output=./mocks --outpkg=handler --filename=auth_handler.go --structname=MockAuthHandler --with-expecter=false
 type AuthHandler interface {
-	Register(c *fiber.Ctx) error
-	Login(c *fiber.Ctx) error
-	Logout(c *fiber.Ctx) error
+	Register(c fiber.Ctx) error
+	Login(c fiber.Ctx) error
+	Logout(c fiber.Ctx) error
 }
 
 type authHandlerImpl struct {
@@ -41,14 +39,8 @@ func NewAuthHandler(authService service.AuthService) AuthHandler {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /auth/register [post]
-func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
+func (h *authHandlerImpl) Register(c fiber.Ctx) error {
 	var registerRequest dto.RegisterRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &registerRequest); err != nil {
 		return err
@@ -75,14 +67,8 @@ func (h *authHandlerImpl) Register(c *fiber.Ctx) error {
 // @Failure      401  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /auth/login [post]
-func (h *authHandlerImpl) Login(c *fiber.Ctx) error {
+func (h *authHandlerImpl) Login(c fiber.Ctx) error {
 	var loginRequest dto.LoginRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &loginRequest); err != nil {
 		return err
@@ -133,7 +119,7 @@ func (h *authHandlerImpl) Login(c *fiber.Ctx) error {
 // @Success      200  {object}  http.ResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /auth/logout [post]
-func (h *authHandlerImpl) Logout(c *fiber.Ctx) error {
+func (h *authHandlerImpl) Logout(c fiber.Ctx) error {
 	// Clear the JWT token cookie
 	cookie := &fiber.Cookie{
 		Name:     "jwt_token",

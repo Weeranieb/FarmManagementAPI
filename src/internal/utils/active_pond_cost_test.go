@@ -10,22 +10,28 @@ import (
 )
 
 func TestFillCost(t *testing.T) {
-	t.Run("amount and price only", func(t *testing.T) {
-		// GIVEN — amount 10, price 5, no additional costs
+	t.Run("amount, price and weight only", func(t *testing.T) {
+		// GIVEN — amount 10, price 5/kg, weight 2 kg/fish, no additional costs
 		// WHEN — CalculateFillCost is called
-		got := CalculateFillCost(10, decimal.RequireFromString("5"), nil)
-		// THEN — total is 50
-		assert.True(t, got.Equal(decimal.RequireFromString("50")))
+		got := CalculateFillCost(10, decimal.RequireFromString("5"), decimal.RequireFromString("2"), nil)
+		// THEN — total is 100 (10 fish × 2 kg/fish × 5 baht/kg)
+		assert.True(t, got.Equal(decimal.RequireFromString("100")))
 	})
 	t.Run("with additional costs", func(t *testing.T) {
-		// GIVEN — amount 2, price 100, two additional costs 10 and 25
+		// GIVEN — amount 2, price 100/kg, weight 1 kg/fish, two additional costs 10 and 25
 		// WHEN — CalculateFillCost is called
-		got := CalculateFillCost(2, decimal.RequireFromString("100"), []dto.AdditionalCostItem{
+		got := CalculateFillCost(2, decimal.RequireFromString("100"), decimal.RequireFromString("1"), []dto.AdditionalCostItem{
 			{Cost: decimal.RequireFromString("10")},
 			{Cost: decimal.RequireFromString("25")},
 		})
-		// THEN — total is 235 (200 + 10 + 25)
+		// THEN — total is 235 (2 × 1 × 100 + 10 + 25)
 		assert.True(t, got.Equal(decimal.RequireFromString("235")))
+	})
+	t.Run("realistic fill: 2000 fish × 1.1 kg × ฿70/kg", func(t *testing.T) {
+		// Regression for the 140k-vs-154k bug: the fill formula multiplies by
+		// average weight because pricePerUnit is per-kilogram.
+		got := CalculateFillCost(2000, decimal.RequireFromString("70"), decimal.RequireFromString("1.1"), nil)
+		assert.True(t, got.Equal(decimal.RequireFromString("154000")), "2000 × 1.1 × 70 = 154000")
 	})
 }
 

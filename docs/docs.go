@@ -15,6 +15,139 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/activity": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Newest discrete events (fill/move/sell) across all of the client's ponds, ordered by activity date desc. Daily-log saves are not included. Optional ?limit caps the row count (omit or 0 for the full history). To page, pass beforeDate + beforeId from the last row of the previous page; the response is a plain array, so a page shorter than ?limit means the end.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "activity"
+                ],
+                "summary": "Get the activity feed",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max rows to return; 0 or omitted = all",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor: activityDate of the last row already seen (YYYY-MM-DD or RFC3339). Requires beforeId.",
+                        "name": "beforeDate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor: id of the last row already seen. Requires beforeDate.",
+                        "name": "beforeId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/activity/{activityId}/sell-details": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Size-grade lines for one sell activity (weight, ฿/kg, head count and line total per grade), smallest grade first. Returns an empty list when the activity is not a sell, does not exist, or belongs to another client.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "activity"
+                ],
+                "summary": "Get a sale's size-grade breakdown",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sell activity id",
+                        "name": "activityId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login user with provided credentials and return JWT token. Token is also set as HTTP-only cookie.",
@@ -309,6 +442,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/client/summaries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Returns each client with farmCount, pondCount, userCount. Super admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client"
+                ],
+                "summary": "Get client summaries",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
         "/client/{id}": {
             "get": {
                 "security": [
@@ -432,7 +608,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Add a new farm entry with the provided details. Super admin only.",
+                "description": "Add a new farm entry with the provided details. Requires client-admin role or above.",
                 "consumes": [
                     "application/json"
                 ],
@@ -794,7 +970,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.FeedCollection"
+                            "$ref": "#/definitions/dto.UpdateFeedCollectionRequest"
                         }
                     }
                 ],
@@ -1203,7 +1379,7 @@ const docTemplate = `{
         },
         "/pond": {
             "get": {
-                "description": "Retrieve a list of ponds belonging to a specific farm",
+                "description": "Retrieve a list of ponds belonging to a specific farm. Scoped to the caller's client.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1227,11 +1403,32 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.PondResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -1253,7 +1450,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Create multiple ponds for a farm. Request: farmId, array of names. New ponds have status maintenance.",
+                "description": "Create multiple ponds for a farm. Request: farmId, array of names. New ponds have status maintenance. Requires client-admin role or above.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1288,6 +1485,269 @@ const docTemplate = `{
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/bulk-import/{clientId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Upsert farms and ponds from a parsed template. Missing farms are created. Missing ponds are created with status maintenance. Existing ponds get their area updated when an area is provided. No deletes. Requires client-admin role or above.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Bulk import farms and ponds",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Client ID",
+                        "name": "clientId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "farms[] with ponds[]",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.BulkImportFarmPondRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BulkImportFarmPondResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/fill/calc": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Compute live cost/weight totals for the fill (add stock) form. Pure math, no validation against pond state. Used for live form updates as the user types.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Calculate fill totals",
+                "parameters": [
+                    {
+                        "description": "amount, fishWeight, pricePerUnit, additionalCosts",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondFillCalcRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/move/calc": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Compute live cost/weight totals for the move (transfer) form. Pure math, no validation against pond state.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Calculate move totals",
+                "parameters": [
+                    {
+                        "description": "amount, fishWeight, pricePerUnit, additionalCosts",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondMoveCalcRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/sell/calc": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Compute live revenue/weight totals for the sell form. Pure math, no fish-size-grade validation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Calculate sell totals",
+                "parameters": [
+                    {
+                        "description": "details[], additionalCosts",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PondSellCalcRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/template": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Returns the .xlsx template users fill in to bulk-create ponds for a single farm.",
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "Download bulk-import pond template",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -1299,7 +1759,7 @@ const docTemplate = `{
         },
         "/pond/{id}": {
             "get": {
-                "description": "Retrieve a pond by its ID",
+                "description": "Retrieve a pond by its ID. Scoped to the caller's client.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1323,11 +1783,29 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PondResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -1355,7 +1833,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Update an existing pond. Id in path; body contains optional farmId, name, status.",
+                "description": "Update an existing pond. Id in path; body contains optional farmId, name, status. Requires client-admin role or above.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1397,6 +1875,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -1414,7 +1898,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Delete a pond by its ID",
+                "description": "Delete a pond by its ID. Requires client-admin role or above.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1443,6 +1927,139 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/{pondId}/activities": {
+            "get": {
+                "description": "Return the chronological fill/move/sell activity timeline for a pond, ordered by activity_date desc. Scoped to the caller's client.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "List pond activity history",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/pond/{pondId}/cycles": {
+            "get": {
+                "description": "Return every production cycle (active + closed) for a pond, newest first, each with its P\u0026L (totalCost, totalRevenue, feedCost, netResult). Feed cost for the active cycle is derived live; closed cycles use the value frozen at close.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pond"
+                ],
+                "summary": "List pond production cycles",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pond ID",
+                        "name": "pondId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.PondCycleResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
@@ -1527,7 +2144,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.ResponseModel"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/http.ResponseModel"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DailyLogMonthResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -1998,7 +2627,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.User"
+                            "$ref": "#/definitions/dto.UpdateUserRequest"
                         }
                     }
                 ],
@@ -2032,7 +2661,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Create a new user with the provided details. Only super admin can create users.",
+                "description": "Create a new user. Requires client-admin or above; a client admin's new user always lands in the caller's own client. Cannot create a SuperAdmin.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2067,6 +2696,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/http.ErrorResponseModel"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -2086,7 +2721,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Retrieve a list of users associated with the current client ID",
+                "description": "Retrieve users. Super admins see all users and can filter; non-admins are scoped to their own client.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2097,6 +2732,26 @@ const docTemplate = `{
                     "user"
                 ],
                 "summary": "Get a list of users",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Substring match across username, email, firstName, lastName",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by user level",
+                        "name": "userLevel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by client id (super admin only)",
+                        "name": "clientId",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2118,9 +2773,270 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/user/password": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Authenticated user changes their own password. Requires current password.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Change own password",
+                "parameters": [
+                    {
+                        "description": "Current and new password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Update a user. Requires client-admin or above; a client admin is limited to users in its own client and cannot reassign clientId. Cannot promote to SuperAdmin or modify an existing SuperAdmin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Admin-update a user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated user data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AdminUpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Soft-delete a user. Requires client-admin or above; a client admin is limited to users in its own client. Cannot delete self or a super admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Delete a user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{id}/password": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Reset another user's password. Requires client-admin or above; a client admin is limited to users in its own client. Cannot reset a SuperAdmin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Admin-reset a user's password",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AdminResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseModel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponseModel"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "dto.AdditionalCostCalcItem": {
+            "type": "object",
+            "properties": {
+                "cost": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.AdditionalCostItem": {
             "type": "object",
             "required": [
@@ -2132,6 +3048,155 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.AdminResetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.AdminUpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "clientId": {
+                    "type": "integer"
+                },
+                "contactNumber": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "userLevel": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.BulkImportFarmItem": {
+            "type": "object",
+            "required": [
+                "name",
+                "ponds"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "ponds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/dto.BulkImportPondItem"
+                    }
+                }
+            }
+        },
+        "dto.BulkImportFarmPondRequest": {
+            "type": "object",
+            "required": [
+                "farms"
+            ],
+            "properties": {
+                "farms": {
+                    "type": "array",
+                    "maxItems": 1000,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/dto.BulkImportFarmItem"
+                    }
+                }
+            }
+        },
+        "dto.BulkImportFarmPondResponse": {
+            "type": "object",
+            "properties": {
+                "farms": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.BulkImportFarmResult"
+                    }
+                },
+                "farmsCreated": {
+                    "type": "integer"
+                },
+                "farmsExisting": {
+                    "type": "integer"
+                },
+                "pondsCreated": {
+                    "type": "integer"
+                },
+                "pondsUnchanged": {
+                    "type": "integer"
+                },
+                "pondsUpdated": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.BulkImportFarmResult": {
+            "type": "object",
+            "properties": {
+                "isNew": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pondsCreated": {
+                    "type": "integer"
+                },
+                "pondsUnchanged": {
+                    "type": "integer"
+                },
+                "pondsUpdated": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.BulkImportPondItem": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "area": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
+        "dto.ChangePasswordRequest": {
+            "type": "object",
+            "required": [
+                "currentPassword",
+                "newPassword"
+            ],
+            "properties": {
+                "currentPassword": {
+                    "type": "string"
+                },
+                "newPassword": {
                     "type": "string"
                 }
             }
@@ -2200,6 +3265,12 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "packSizeKg": {
+                    "type": "number"
+                },
+                "supplier": {
+                    "type": "string"
+                },
                 "unit": {
                     "type": "string"
                 }
@@ -2226,6 +3297,10 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
+                "clientId": {
+                    "description": "ClientId is used only by super admins (no client in token) to target a\nclient. Normal users' client is taken from the JWT and this is ignored.",
+                    "type": "integer"
+                },
                 "contactNumber": {
                     "type": "string"
                 },
@@ -2237,21 +3312,35 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.CreatePondItem": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "area": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.CreatePondsRequest": {
             "type": "object",
             "required": [
                 "farmId",
-                "names"
+                "ponds"
             ],
             "properties": {
                 "farmId": {
                     "type": "integer"
                 },
-                "names": {
+                "ponds": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/dto.CreatePondItem"
                     }
                 }
             }
@@ -2268,6 +3357,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "contactNumber": {
+                    "type": "string"
+                },
+                "email": {
                     "type": "string"
                 },
                 "firstName": {
@@ -2332,10 +3424,7 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 0
                 },
-                "freshEvening": {
-                    "type": "number"
-                },
-                "freshMorning": {
+                "fresh": {
                     "type": "number"
                 },
                 "pelletEvening": {
@@ -2359,10 +3448,7 @@ const docTemplate = `{
                 "deathFishCount": {
                     "type": "integer"
                 },
-                "freshEvening": {
-                    "type": "number"
-                },
-                "freshMorning": {
+                "fresh": {
                     "type": "number"
                 },
                 "freshUnitPrice": {
@@ -2463,12 +3549,72 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PondCycleResponse": {
+            "type": "object",
+            "properties": {
+                "endDate": {
+                    "type": "string"
+                },
+                "feedCost": {
+                    "type": "number"
+                },
+                "fishTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "netResult": {
+                    "type": "number"
+                },
+                "startDate": {
+                    "type": "string"
+                },
+                "totalCost": {
+                    "type": "number"
+                },
+                "totalFish": {
+                    "type": "integer"
+                },
+                "totalRevenue": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.PondFillCalcRequest": {
+            "type": "object",
+            "properties": {
+                "additionalCosts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdditionalCostCalcItem"
+                    }
+                },
+                "amount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "fishWeight": {
+                    "type": "number"
+                },
+                "pricePerUnit": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.PondFillRequest": {
             "type": "object",
             "required": [
                 "activityDate",
                 "amount",
                 "fishType",
+                "fishWeight",
                 "pricePerUnit"
             ],
             "properties": {
@@ -2489,6 +3635,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "fishWeight": {
+                    "description": "FishWeight (avg kg/fish) is required: fill cost = amount × fishWeight ×\npricePerUnit, so a missing weight would silently book a zero stock cost.",
                     "type": "number"
                 },
                 "pricePerUnit": {
@@ -2499,12 +3646,34 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PondMoveCalcRequest": {
+            "type": "object",
+            "properties": {
+                "additionalCosts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdditionalCostCalcItem"
+                    }
+                },
+                "amount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "fishWeight": {
+                    "type": "number"
+                },
+                "pricePerUnit": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.PondMoveRequest": {
             "type": "object",
             "required": [
                 "activityDate",
                 "amount",
                 "fishType",
+                "fishWeight",
                 "pricePerUnit",
                 "toPondId"
             ],
@@ -2542,16 +3711,119 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PondResponse": {
+            "type": "object",
+            "properties": {
+                "ageDays": {
+                    "type": "integer"
+                },
+                "area": {
+                    "type": "number"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "farmId": {
+                    "type": "integer"
+                },
+                "feedCost": {
+                    "type": "number"
+                },
+                "fishTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "latestActivityDate": {
+                    "type": "string"
+                },
+                "latestActivityType": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "netResult": {
+                    "type": "number"
+                },
+                "startDate": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "totalCost": {
+                    "description": "Cycle P\u0026L for the currently-active cycle (nil when the pond has none).\nTotalCost/TotalRevenue are the accumulated transactional figures;\nFeedCost is derived live from daily logs + feed price history; NetResult\n= TotalRevenue − TotalCost − FeedCost.",
+                    "type": "number"
+                },
+                "totalFish": {
+                    "type": "integer"
+                },
+                "totalRevenue": {
+                    "type": "number"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PondSellCalcDetailItem": {
+            "type": "object",
+            "properties": {
+                "fishCount": {
+                    "type": "integer"
+                },
+                "fishSizeGradeId": {
+                    "type": "integer"
+                },
+                "pricePerUnit": {
+                    "type": "number"
+                },
+                "weight": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.PondSellCalcRequest": {
+            "type": "object",
+            "properties": {
+                "additionalCosts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdditionalCostCalcItem"
+                    }
+                },
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PondSellCalcDetailItem"
+                    }
+                }
+            }
+        },
         "dto.PondSellDetailItem": {
             "type": "object",
             "required": [
+                "fishCount",
                 "fishSizeGradeId",
                 "pricePerUnit",
                 "weight"
             ],
             "properties": {
                 "fishCount": {
-                    "type": "integer"
+                    "description": "FishCount is required: the active pond tracks stock by head count, so every\nsold line must state how many fish it removes to keep total_fish accurate.",
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "fishSizeGradeId": {
                     "type": "integer"
@@ -2635,6 +3907,39 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.UpdateFeedCollectionRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "fcr": {
+                    "type": "number"
+                },
+                "feedType": {
+                    "type": "string",
+                    "enum": [
+                        "fresh",
+                        "pellet"
+                    ]
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "packSizeKg": {
+                    "type": "number"
+                },
+                "supplier": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.UpdateMerchantRequest": {
             "type": "object",
             "required": [
@@ -2658,6 +3963,9 @@ const docTemplate = `{
         "dto.UpdatePondBody": {
             "type": "object",
             "properties": {
+                "area": {
+                    "type": "number"
+                },
                 "farmId": {
                     "type": "integer"
                 },
@@ -2673,16 +3981,70 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "contactNumber": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "http.ErrorResponseModel": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "string",
-                    "example": "100001"
+                    "example": "500010"
+                },
+                "details": {
+                    "type": "string",
+                    "example": "freshFeedCollectionId is required"
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/http.FieldError"
+                    }
                 },
                 "message": {
                     "type": "string",
-                    "example": "User already exists"
+                    "example": "Validation failed"
+                },
+                "request_id": {
+                    "type": "string",
+                    "example": "01HXYZ123ABC"
+                }
+            }
+        },
+        "http.FieldError": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string",
+                    "example": "freshFeedCollectionId"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "is required"
+                },
+                "tag": {
+                    "type": "string",
+                    "example": "required"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         },
@@ -2727,79 +4089,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_by": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.FeedCollection": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "fcr": {
-                    "type": "number"
-                },
-                "feedType": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "unit": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.User": {
-            "type": "object",
-            "properties": {
-                "clientId": {
-                    "type": "integer"
-                },
-                "contactNumber": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "firstName": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "lastName": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
-                },
-                "userLevel": {
-                    "type": "integer"
-                },
-                "username": {
                     "type": "string"
                 }
             }

@@ -13,6 +13,7 @@ type PondFillQueryRow struct {
 	PondFarmId         int            `gorm:"column:pond_farm_id"`
 	PondName           string         `gorm:"column:pond_name"`
 	PondStatus         string         `gorm:"column:pond_status"`
+	PondArea           *string        `gorm:"column:pond_area_rai"`
 	PondDeletedAt      gorm.DeletedAt `gorm:"column:pond_deleted_at"`
 	PondCreatedAt      time.Time      `gorm:"column:pond_created_at"`
 	PondCreatedBy      string         `gorm:"column:pond_created_by"`
@@ -27,6 +28,7 @@ type PondFillQueryRow struct {
 	ApTotalCost        *string        `gorm:"column:ap_total_cost"`
 	ApTotalProfit      *string        `gorm:"column:ap_total_profit"`
 	ApNetResult        *string        `gorm:"column:ap_net_result"`
+	ApFeedCost         *string        `gorm:"column:ap_feed_cost"`
 	ApTotalFish        *int           `gorm:"column:ap_total_fish"`
 	ApFishTypes        *string        `gorm:"column:ap_fish_types"`
 	ApFreshFcId        *int           `gorm:"column:ap_fresh_feed_collection_id"`

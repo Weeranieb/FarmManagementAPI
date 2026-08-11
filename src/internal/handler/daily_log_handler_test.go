@@ -10,7 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,7 +44,7 @@ func TestDailyLogHandlerSuite(t *testing.T) {
 func (s *DailyLogHandlerTestSuite) TestGetMonth_Success() {
 	s.dailyLogService.On("GetMonth", mock.Anything, 7, "2024-03").Return(
 		&dto.DailyLogMonthResponse{Entries: []dto.DailyLogEntryResponse{}}, nil)
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "u", "userLevel": 1}))
 	app.Get("/api/v1/pond/:pondId/daily-logs", s.handler.GetMonth)
 
@@ -60,7 +60,7 @@ func (s *DailyLogHandlerTestSuite) TestGetMonth_Success() {
 }
 
 func (s *DailyLogHandlerTestSuite) TestGetMonth_MissingMonthQuery() {
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "u"}))
 	app.Get("/api/v1/pond/:pondId/daily-logs", s.handler.GetMonth)
 
@@ -68,7 +68,8 @@ func (s *DailyLogHandlerTestSuite) TestGetMonth_MissingMonthQuery() {
 	resp, err := app.Test(req)
 
 	require.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — 422 (ErrValidationFailed: month query parameter required)
+	assert.Equal(s.T(), fiber.StatusUnprocessableEntity, resp.StatusCode)
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
@@ -76,7 +77,7 @@ func (s *DailyLogHandlerTestSuite) TestGetMonth_MissingMonthQuery() {
 }
 
 func (s *DailyLogHandlerTestSuite) TestGetMonth_InvalidPondId() {
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "u"}))
 	app.Get("/api/v1/pond/:pondId/daily-logs", s.handler.GetMonth)
 
@@ -84,7 +85,8 @@ func (s *DailyLogHandlerTestSuite) TestGetMonth_InvalidPondId() {
 	resp, err := app.Test(req)
 
 	require.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — 422 (ErrValidationFailed: pondId param failed strconv.Atoi)
+	assert.Equal(s.T(), fiber.StatusUnprocessableEntity, resp.StatusCode)
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
@@ -97,7 +99,7 @@ func (s *DailyLogHandlerTestSuite) TestBulkUpsert_Success() {
 		Month: "2024-04",
 		Entries: []dto.DailyLogEntryInput{
 			{
-				Day: 1, FreshMorning: decimal.Zero, FreshEvening: decimal.Zero,
+				Day: 1, Fresh: decimal.Zero,
 				PelletMorning: decimal.Zero, PelletEvening: decimal.Zero,
 				DeathFishCount: 0, TouristCatchCount: &tc,
 			},
@@ -106,8 +108,12 @@ func (s *DailyLogHandlerTestSuite) TestBulkUpsert_Success() {
 	s.dailyLogService.On("BulkUpsert", mock.Anything, 3, mock.MatchedBy(func(req dto.DailyLogBulkUpsertRequest) bool {
 		return req.Month == body.Month && len(req.Entries) == 1 && req.Entries[0].Day == 1
 	}), "alice").Return(nil)
+	// Handler now refetches the month after a successful upsert so the
+	// response body can prime the client cache.
+	s.dailyLogService.On("GetMonth", mock.Anything, 3, "2024-04").Return(
+		&dto.DailyLogMonthResponse{Entries: []dto.DailyLogEntryResponse{}}, nil)
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "alice", "userLevel": 1}))
 	app.Put("/api/v1/pond/:pondId/daily-logs", s.handler.BulkUpsert)
 
@@ -121,6 +127,7 @@ func (s *DailyLogHandlerTestSuite) TestBulkUpsert_Success() {
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.Equal(s.T(), true, result["result"])
+	assert.NotNil(s.T(), result["data"])
 	s.dailyLogService.AssertExpectations(s.T())
 }
 
@@ -129,12 +136,12 @@ func (s *DailyLogHandlerTestSuite) TestBulkUpsert_MissingUsername() {
 		Month: "2024-04",
 		Entries: []dto.DailyLogEntryInput{
 			{
-				Day: 1, FreshMorning: decimal.Zero, FreshEvening: decimal.Zero,
+				Day: 1, Fresh: decimal.Zero,
 				PelletMorning: decimal.Zero, PelletEvening: decimal.Zero,
 			},
 		},
 	}
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"userLevel": 1}))
 	app.Put("/api/v1/pond/:pondId/daily-logs", s.handler.BulkUpsert)
 
@@ -144,7 +151,8 @@ func (s *DailyLogHandlerTestSuite) TestBulkUpsert_MissingUsername() {
 	resp, err := app.Test(req)
 
 	require.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — 401 (ErrAuthTokenInvalid: username missing in context)
+	assert.Equal(s.T(), fiber.StatusUnauthorized, resp.StatusCode)
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
@@ -176,7 +184,7 @@ func (s *DailyLogHandlerTestSuite) TestUploadTemplate_Success() {
 	require.NoError(s.T(), err)
 	require.NoError(s.T(), writer.Close())
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "alice", "userLevel": 1}))
 	app.Post("/api/v1/farm/:farmId/daily-logs/import-template", s.handler.UploadTemplate)
 
@@ -201,7 +209,7 @@ func (s *DailyLogHandlerTestSuite) TestUploadTemplate_MissingPondIds() {
 	require.NoError(s.T(), err)
 	require.NoError(s.T(), writer.Close())
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "u", "userLevel": 1}))
 	app.Post("/api/v1/farm/:farmId/daily-logs/import-template", s.handler.UploadTemplate)
 
@@ -210,7 +218,8 @@ func (s *DailyLogHandlerTestSuite) TestUploadTemplate_MissingPondIds() {
 
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — 422 (ErrValidationFailed: selectedPondIds missing)
+	assert.Equal(s.T(), fiber.StatusUnprocessableEntity, resp.StatusCode)
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])
@@ -227,7 +236,7 @@ func (s *DailyLogHandlerTestSuite) TestUploadTemplate_InvalidFileExtension() {
 	require.NoError(s.T(), err)
 	require.NoError(s.T(), writer.Close())
 
-	app := fiber.New()
+	app := newTestApp()
 	app.Use(setLocalsMiddleware(map[string]any{"username": "u", "userLevel": 1}))
 	app.Post("/api/v1/farm/:farmId/daily-logs/import-template", s.handler.UploadTemplate)
 
@@ -236,7 +245,8 @@ func (s *DailyLogHandlerTestSuite) TestUploadTemplate_InvalidFileExtension() {
 
 	resp, err := app.Test(req)
 	require.NoError(s.T(), err)
-	assert.Equal(s.T(), fiber.StatusOK, resp.StatusCode)
+	// THEN — 422 (ErrValidationFailed: only .xlsx files allowed)
+	assert.Equal(s.T(), fiber.StatusUnprocessableEntity, resp.StatusCode)
 	var result map[string]any
 	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&result))
 	assert.NotNil(s.T(), result["error"])

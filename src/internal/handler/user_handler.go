@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
@@ -10,18 +9,18 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=UserHandler --output=./mocks --outpkg=handler --filename=user_handler.go --structname=MockUserHandler --with-expecter=false
 type UserHandler interface {
-	AddUser(c *fiber.Ctx) error
-	GetUser(c *fiber.Ctx) error
-	UpdateUser(c *fiber.Ctx) error
-	AdminUpdateUser(c *fiber.Ctx) error
-	AdminResetPassword(c *fiber.Ctx) error
-	DeleteUser(c *fiber.Ctx) error
-	GetUserList(c *fiber.Ctx) error
+	AddUser(c fiber.Ctx) error
+	GetUser(c fiber.Ctx) error
+	UpdateUser(c fiber.Ctx) error
+	AdminUpdateUser(c fiber.Ctx) error
+	AdminResetPassword(c fiber.Ctx) error
+	ChangePassword(c fiber.Ctx) error
+	DeleteUser(c fiber.Ctx) error
+	GetUserList(c fiber.Ctx) error
 }
 
 type userHandlerImpl struct {
@@ -37,7 +36,7 @@ func NewUserHandler(userService service.UserService) UserHandler {
 // POST /api/v1/user
 // Add a new user.
 // @Summary      Add a new user
-// @Description  Create a new user with the provided details. Only super admin can create users.
+// @Description  Create a new user. Requires client-admin or above; a client admin's new user always lands in the caller's own client. Cannot create a SuperAdmin.
 // @Tags         user
 // @Accept       json
 // @Produce      json
@@ -46,33 +45,30 @@ func NewUserHandler(userService service.UserService) UserHandler {
 // @Param        body body dto.CreateUserRequest true "User data"
 // @Success      200  {object}  http.ResponseModel
 // @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user [post]
-func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
+func (h *userHandlerImpl) AddUser(c fiber.Ctx) error {
 	var addUser dto.CreateUserRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &addUser); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
-	clientId := utils.GetClientId(c.UserContext())
+	clientId := utils.GetClientId(c.Context())
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	// Client admin or above. A client admin may only mint accounts inside its
+	// own client: the service takes the target client from the caller's token
+	// unless a super admin names one explicitly.
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
-	newUser, err := h.userService.Create(c.UserContext(), addUser, username, clientId)
+	newUser, err := h.userService.Create(c.Context(), addUser, username, clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -94,14 +90,9 @@ func (h *userHandlerImpl) AddUser(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user [get]
-func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *userHandlerImpl) GetUser(c fiber.Ctx) error {
 
-	id, err := utils.GetUserId(c.UserContext())
+	id, err := utils.GetUserId(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
 	}
@@ -128,41 +119,35 @@ func (h *userHandlerImpl) GetUser(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user [put]
-func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
+func (h *userHandlerImpl) UpdateUser(c fiber.Ctx) error {
 	var updateUser dto.UpdateUserRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &updateUser); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrGeneric.Code, errors.ErrGeneric.Message)
 	}
 
-	userId, err := utils.GetUserId(c.UserContext())
+	userId, err := utils.GetUserId(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.userService.Update(c.UserContext(), userId, updateUser, username)
+	updated, err := h.userService.Update(c.Context(), userId, updateUser, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
-	return http.SuccessWithoutData(c)
+	return http.Success(c, updated)
 }
 
 // PUT /api/v1/user/:id
-// Super-admin update of any user.
+// Admin update of a user (client admin within its own client, or super admin).
 // @Summary      Admin-update a user
-// @Description  Update any user. Super-admin only. Cannot promote to SuperAdmin or modify an existing SuperAdmin.
+// @Description  Update a user. Requires client-admin or above; a client admin is limited to users in its own client and cannot reassign clientId. Cannot promote to SuperAdmin or modify an existing SuperAdmin.
 // @Tags         user
 // @Accept       json
 // @Produce      json
@@ -175,35 +160,30 @@ func (h *userHandlerImpl) UpdateUser(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/{id} [put]
-func (h *userHandlerImpl) AdminUpdateUser(c *fiber.Ctx) error {
+func (h *userHandlerImpl) AdminUpdateUser(c fiber.Ctx) error {
 	var body dto.AdminUpdateUserRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	// Client admin or above. Per-client scoping and the privileged-field rules
+	// (clientId, userLevel) are enforced in userService.AdminUpdate.
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
-	userId, err := strconv.Atoi(c.Params("id"))
+	userId, err := parseParamInt(c, "id", "Invalid user ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid user ID")
+		return err
 	}
 
 	if err := validateAndParse(c, &body); err != nil {
 		return err
 	}
 
-	actor, err := utils.GetUsername(c.UserContext())
+	actor, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	if err := h.userService.AdminUpdate(c.UserContext(), userId, body, actor); err != nil {
+	if err := h.userService.AdminUpdate(c.Context(), userId, body, actor); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
@@ -211,9 +191,9 @@ func (h *userHandlerImpl) AdminUpdateUser(c *fiber.Ctx) error {
 }
 
 // PUT /api/v1/user/:id/password
-// Super-admin reset of another user's password.
+// Admin reset of another user's password (client admin within its own client, or super admin).
 // @Summary      Admin-reset a user's password
-// @Description  Reset another user's password. Super-admin only. Cannot reset a SuperAdmin.
+// @Description  Reset another user's password. Requires client-admin or above; a client admin is limited to users in its own client. Cannot reset a SuperAdmin.
 // @Tags         user
 // @Accept       json
 // @Produce      json
@@ -226,35 +206,69 @@ func (h *userHandlerImpl) AdminUpdateUser(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/{id}/password [put]
-func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
+func (h *userHandlerImpl) AdminResetPassword(c fiber.Ctx) error {
 	var body dto.AdminResetPasswordRequest
 
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
-
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	// Client admin or above. userService.AdminResetPassword verifies the target
+	// belongs to the caller's client before overwriting anything.
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
-	userId, err := strconv.Atoi(c.Params("id"))
+	userId, err := parseParamInt(c, "id", "Invalid user ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid user ID")
+		return err
 	}
 
 	if err := validateAndParse(c, &body); err != nil {
 		return err
 	}
 
-	actor, err := utils.GetUsername(c.UserContext())
+	actor, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	if err := h.userService.AdminResetPassword(c.UserContext(), userId, body, actor); err != nil {
+	if err := h.userService.AdminResetPassword(c.Context(), userId, body, actor); err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.SuccessWithoutData(c)
+}
+
+// PUT /api/v1/user/password
+// Change the current user's own password.
+// @Summary      Change own password
+// @Description  Authenticated user changes their own password. Requires current password.
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body body dto.ChangePasswordRequest true "Current and new password"
+// @Success      200  {object}  http.ResponseModel
+// @Failure      400  {object}  http.ErrorResponseModel
+// @Failure      401  {object}  http.ErrorResponseModel
+// @Failure      500  {object}  http.ErrorResponseModel
+// @Router       /user/password [put]
+func (h *userHandlerImpl) ChangePassword(c fiber.Ctx) error {
+	var body dto.ChangePasswordRequest
+
+	userId, err := utils.GetUserId(c.Context())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	if err := validateAndParse(c, &body); err != nil {
+		return err
+	}
+
+	actor, err := utils.GetUsername(c.Context())
+	if err != nil {
+		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
+	}
+
+	if err := h.userService.ChangePassword(c.Context(), userId, body, actor); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
@@ -262,9 +276,9 @@ func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
 }
 
 // DELETE /api/v1/user/:id
-// Soft-delete a user. Super-admin only.
+// Soft-delete a user (client admin within its own client, or super admin).
 // @Summary      Delete a user
-// @Description  Soft-delete a user. Super-admin only. Cannot delete self or another super admin.
+// @Description  Soft-delete a user. Requires client-admin or above; a client admin is limited to users in its own client. Cannot delete self or a super admin.
 // @Tags         user
 // @Accept       json
 // @Produce      json
@@ -276,29 +290,25 @@ func (h *userHandlerImpl) AdminResetPassword(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/{id} [delete]
-func (h *userHandlerImpl) DeleteUser(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *userHandlerImpl) DeleteUser(c fiber.Ctx) error {
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	// Client admin or above. userService.Delete verifies the target belongs to the
+	// caller's client, and still refuses self-deletion and super admins.
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
-	userId, err := strconv.Atoi(c.Params("id"))
+	userId, err := parseParamInt(c, "id", "Invalid user ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid user ID")
+		return err
 	}
 
-	actor, err := utils.GetUsername(c.UserContext())
+	actor, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	if err := h.userService.Delete(c.UserContext(), userId, actor); err != nil {
+	if err := h.userService.Delete(c.Context(), userId, actor); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
@@ -321,14 +331,9 @@ func (h *userHandlerImpl) DeleteUser(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /user/list [get]
-func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *userHandlerImpl) GetUserList(c fiber.Ctx) error {
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
+	isSuperAdmin, err := utils.IsSuperAdmin(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
@@ -351,10 +356,10 @@ func (h *userHandlerImpl) GetUserList(c *fiber.Ctx) error {
 
 	// Non-super-admins are forcibly scoped to their own client, ignoring any query param.
 	if !isSuperAdmin {
-		filters.ClientId = utils.GetClientId(c.UserContext())
+		filters.ClientId = utils.GetClientId(c.Context())
 	}
 
-	users, err := h.userService.GetUserList(c.UserContext(), filters)
+	users, err := h.userService.GetUserList(c.Context(), filters)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

@@ -5,10 +5,11 @@ package service
 import (
 	"bytes"
 	"context"
-	"os"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -177,8 +178,8 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_Success_WithPrices() {
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
 		Id:                     activePondId,
 		PondId:                 1,
-		FreshFeedCollectionId:  intPtr(freshID),
-		PelletFeedCollectionId: intPtr(pelletID),
+		FreshFeedCollectionId:  lo.ToPtr(freshID),
+		PelletFeedCollectionId: lo.ToPtr(pelletID),
 	}), nil)
 	fd := time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)
 	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, activePondId, mock.Anything, mock.Anything).Return([]*model.DailyLog{
@@ -186,7 +187,7 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_Success_WithPrices() {
 			Id:            1,
 			ActivePondId:  activePondId,
 			FeedDate:      fd,
-			FreshMorning:  decimal.RequireFromString("1"),
+			Fresh:         decimal.RequireFromString("1"),
 			PelletMorning: decimal.RequireFromString("2"),
 		},
 	}, nil)
@@ -207,6 +208,83 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_Success_WithPrices() {
 	assert.True(s.T(), out.Entries[0].FreshUnitPrice.Equal(price10))
 }
 
+// Pellet is now logged and priced per ถุง, so GetMonth exposes the per-ถุง
+// headline Price directly — same as fresh (per ลัง). The client's quantity(ถุง)
+// × price is the correct cost with no further conversion.
+func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceIsPerBag() {
+	ctx := dailyLogCtxSuperAdmin()
+	activePondId := 10
+	freshID, pelletID := 11, 12
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
+		Id:                     activePondId,
+		PondId:                 1,
+		FreshFeedCollectionId:  lo.ToPtr(freshID),
+		PelletFeedCollectionId: lo.ToPtr(pelletID),
+	}), nil)
+	fd := time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)
+	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, activePondId, mock.Anything, mock.Anything).Return([]*model.DailyLog{
+		{
+			Id:            1,
+			ActivePondId:  activePondId,
+			FeedDate:      fd,
+			Fresh:         decimal.RequireFromString("1"),
+			PelletMorning: decimal.RequireFromString("2"),
+		},
+	}, nil)
+	s.feedCollectionRepo.On("GetByID", freshID).Return(&model.FeedCollection{Id: freshID, Name: "F", Unit: "ลัง", FeedType: constants.FeedTypeFresh}, nil)
+	s.feedCollectionRepo.On("GetByID", pelletID).Return(&model.FeedCollection{Id: pelletID, Name: "P", Unit: "ถุง", FeedType: constants.FeedTypePellet}, nil)
+
+	freshPerCrate := decimal.RequireFromString("250")
+	pelletPerBag := decimal.RequireFromString("500") // per ถุง — exposed directly
+	updated := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	s.priceHistoryRepo.On("ListByFeedCollectionId", freshID).Return([]*model.FeedPriceHistory{
+		{FeedCollectionId: freshID, Price: freshPerCrate, PriceUpdatedDate: updated},
+	}, nil)
+	s.priceHistoryRepo.On("ListByFeedCollectionId", pelletID).Return([]*model.FeedPriceHistory{
+		{FeedCollectionId: pelletID, Price: pelletPerBag, PriceUpdatedDate: updated},
+	}, nil)
+
+	out, err := s.svc.GetMonth(ctx, 1, "2024-03")
+	assert.NoError(s.T(), err)
+	require.Len(s.T(), out.Entries, 1)
+	require.NotNil(s.T(), out.Entries[0].FreshUnitPrice)
+	require.NotNil(s.T(), out.Entries[0].PelletUnitPrice)
+	assert.True(s.T(), out.Entries[0].FreshUnitPrice.Equal(freshPerCrate), "fresh unit price is per ลัง (Price)")
+	assert.True(s.T(), out.Entries[0].PelletUnitPrice.Equal(pelletPerBag), "pellet unit price is per ถุง (Price)")
+}
+
+// A pellet log dated before any recorded price resolves to a blank cell (nil),
+// same as fresh — resolvePrices reports no price for a day that predates the
+// history rather than falling back to a future price (that fallback is only for
+// whole-cycle cost accounting).
+func (s *DailyLogServiceTestSuite) TestGetMonth_PelletUnitPriceBlankWhenPredatesHistory() {
+	ctx := dailyLogCtxSuperAdmin()
+	activePondId := 10
+	freshID, pelletID := 11, 12
+	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
+		Id:                     activePondId,
+		PondId:                 1,
+		FreshFeedCollectionId:  lo.ToPtr(freshID),
+		PelletFeedCollectionId: lo.ToPtr(pelletID),
+	}), nil)
+	fd := time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)
+	s.dailyLogRepo.On("ListByActivePondAndMonth", mock.Anything, activePondId, mock.Anything, mock.Anything).Return([]*model.DailyLog{
+		{Id: 1, ActivePondId: activePondId, FeedDate: fd, PelletMorning: decimal.RequireFromString("2")},
+	}, nil)
+	s.feedCollectionRepo.On("GetByID", freshID).Return(&model.FeedCollection{Id: freshID, Name: "F", Unit: "ลัง", FeedType: constants.FeedTypeFresh}, nil)
+	s.feedCollectionRepo.On("GetByID", pelletID).Return(&model.FeedCollection{Id: pelletID, Name: "P", Unit: "ถุง", FeedType: constants.FeedTypePellet}, nil)
+	s.priceHistoryRepo.On("ListByFeedCollectionId", freshID).Return([]*model.FeedPriceHistory{}, nil)
+	// The only price is dated after the log day, so that day predates the history.
+	s.priceHistoryRepo.On("ListByFeedCollectionId", pelletID).Return([]*model.FeedPriceHistory{
+		{FeedCollectionId: pelletID, Price: decimal.RequireFromString("500"), PriceUpdatedDate: time.Date(2024, 3, 10, 0, 0, 0, 0, time.UTC)},
+	}, nil)
+
+	out, err := s.svc.GetMonth(ctx, 1, "2024-03")
+	assert.NoError(s.T(), err)
+	require.Len(s.T(), out.Entries, 1)
+	assert.Nil(s.T(), out.Entries[0].PelletUnitPrice, "pellet log before any price resolves to blank")
+}
+
 func (s *DailyLogServiceTestSuite) TestGetMonth_DayUsesThailandCalendarWhenUTCDateDiffers() {
 	ctx := dailyLogCtxSuperAdmin()
 	activePondId := 10
@@ -214,8 +292,8 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_DayUsesThailandCalendarWhenUTCDa
 	s.pondRepo.On("GetByIDWithFarmAndActivePond", mock.Anything, 1).Return(pondRow(1, 1, 1, &model.ActivePond{
 		Id:                     activePondId,
 		PondId:                 1,
-		FreshFeedCollectionId:  intPtr(freshID),
-		PelletFeedCollectionId: intPtr(pelletID),
+		FreshFeedCollectionId:  lo.ToPtr(freshID),
+		PelletFeedCollectionId: lo.ToPtr(pelletID),
 	}), nil)
 	// Same civil calendar day as 2026-04-02 in Asia/Bangkok (midnight ICT).
 	fd := time.Date(2026, 4, 1, 17, 0, 0, 0, time.UTC)
@@ -239,13 +317,39 @@ func (s *DailyLogServiceTestSuite) TestGetMonth_DayUsesThailandCalendarWhenUTCDa
 	assert.Equal(s.T(), 2, out.Entries[0].Day)
 }
 
-func intPtr(v int) *int { return &v }
-
+// readTestXlsx builds an in-memory daily-log template with the post-collapse
+// single-fresh-column layout. Sheet name "1 ซ้าย" matches the legacy fixture so
+// caller assertions on `firstSheetName` continue to work.
 func readTestXlsx(t *testing.T) []byte {
 	t.Helper()
-	data, err := os.ReadFile("../excel/excel_dailylog/test_no_fishing.xlsx")
+	f := excelize.NewFile()
+	defer func() { _ = f.Close() }()
+	sheet := "1 ซ้าย"
+	require.NoError(t, f.SetSheetName(f.GetSheetName(0), sheet))
+
+	// Mar block at column 2 (B): B=fresh, C=pelletMorning, D=pelletEvening, E=death.
+	require.NoError(t, f.SetCellValue(sheet, "B1", "Mar-69"))
+	require.NoError(t, f.SetCellValue(sheet, "B2", "เหยื่อ"))
+	require.NoError(t, f.SetCellValue(sheet, "C2", "อาหาร"))
+	require.NoError(t, f.SetCellValue(sheet, "D2", "อาหาร"))
+	require.NoError(t, f.SetCellValue(sheet, "E2", "ตาย"))
+	require.NoError(t, f.SetCellValue(sheet, "C3", "เช้า"))
+	require.NoError(t, f.SetCellValue(sheet, "D3", "เย็น"))
+
+	for i := 0; i < 7; i++ {
+		cell := "A" + strconv.Itoa(5+i)
+		require.NoError(t, f.SetCellValue(sheet, cell, strconv.Itoa(i+1)))
+	}
+	require.NoError(t, f.SetCellValue(sheet, "B9", "2"))
+	require.NoError(t, f.SetCellValue(sheet, "C10", "1"))
+	require.NoError(t, f.SetCellValue(sheet, "D11", "1"))
+
+	require.NoError(t, f.SetCellValue(sheet, "B42", "1"))
+	require.NoError(t, f.SetCellValue(sheet, "B43", "2"))
+
+	buf, err := f.WriteToBuffer()
 	require.NoError(t, err)
-	return data
+	return buf.Bytes()
 }
 
 func firstSheetName(t *testing.T, xlsxBytes []byte) string {
@@ -264,7 +368,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_PondNotActive() {
 	err := s.svc.BulkUpsert(ctx, 3, dto.DailyLogBulkUpsertRequest{
 		Month: "2024-01",
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.Zero, FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.ErrorIs(s.T(), err, errors.ErrPondNotActive)
@@ -276,7 +380,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_InvalidMonth() {
 	err := s.svc.BulkUpsert(ctx, 1, dto.DailyLogBulkUpsertRequest{
 		Month: "xx",
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.Zero, FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.Error(s.T(), err)
@@ -292,7 +396,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_FeedCollectionWrongType() {
 		Month:                 "2024-01",
 		FreshFeedCollectionId: &pid,
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.RequireFromString("1"), FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.RequireFromString("1"), PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.Error(s.T(), err)
@@ -307,7 +411,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_Success() {
 	s.feedCollectionRepo.On("GetByID", 5).Return(&model.FeedCollection{Id: 5, FeedType: constants.FeedTypePellet}, nil)
 	s.dailyLogRepo.On("Upsert", mock.Anything, mock.MatchedBy(func(logs []*model.DailyLog) bool {
 		return len(logs) == 1 && logs[0].ActivePondId == 10 &&
-			logs[0].FreshMorning.Equal(decimal.RequireFromString("1"))
+			logs[0].Fresh.Equal(decimal.RequireFromString("1"))
 	})).Return(nil)
 	s.dailyLogRepo.On("HardDeleteByActivePondAndDates", mock.Anything, 10, mock.Anything).Return(nil)
 	s.activePondRepo.On("Update", mock.Anything, mock.MatchedBy(func(ap *model.ActivePond) bool {
@@ -320,7 +424,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_Success() {
 		FreshFeedCollectionId:  &fid,
 		PelletFeedCollectionId: &pid,
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.RequireFromString("1"), FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.RequireFromString("1"), PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.NoError(s.T(), err)
@@ -339,7 +443,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_UsesActivePondDefaultsWhenRequ
 	s.feedCollectionRepo.On("GetByID", 5).Return(&model.FeedCollection{Id: 5, FeedType: constants.FeedTypePellet}, nil)
 	s.dailyLogRepo.On("Upsert", mock.Anything, mock.MatchedBy(func(logs []*model.DailyLog) bool {
 		return len(logs) == 1 && logs[0].ActivePondId == 10 &&
-			logs[0].FreshMorning.Equal(decimal.RequireFromString("1"))
+			logs[0].Fresh.Equal(decimal.RequireFromString("1"))
 	})).Return(nil)
 	s.dailyLogRepo.On("HardDeleteByActivePondAndDates", mock.Anything, 10, mock.Anything).Return(nil)
 	s.activePondRepo.On("Update", mock.Anything, mock.MatchedBy(func(ap *model.ActivePond) bool {
@@ -350,7 +454,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_UsesActivePondDefaultsWhenRequ
 	err := s.svc.BulkUpsert(ctx, 1, dto.DailyLogBulkUpsertRequest{
 		Month: "2024-01",
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 1, FreshMorning: decimal.RequireFromString("1"), FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 1, Fresh: decimal.RequireFromString("1"), PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.NoError(s.T(), err)
@@ -500,7 +604,7 @@ func (s *DailyLogServiceTestSuite) TestBulkUpsert_SkipsInvalidDayForMonth() {
 	err := s.svc.BulkUpsert(ctx, 1, dto.DailyLogBulkUpsertRequest{
 		Month: "2024-02",
 		Entries: []dto.DailyLogEntryInput{
-			{Day: 31, FreshMorning: decimal.Zero, FreshEvening: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
+			{Day: 31, Fresh: decimal.Zero, PelletMorning: decimal.Zero, PelletEvening: decimal.Zero},
 		},
 	}, "u")
 	assert.NoError(s.T(), err)

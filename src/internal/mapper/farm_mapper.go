@@ -38,9 +38,6 @@ func ToFarmResponseFromFarmWithPonds(f *model.FarmWithPonds) *dto.FarmResponse {
 		return nil
 	}
 	ponds := f.Ponds
-	if ponds == nil {
-		ponds = []*model.Pond{}
-	}
 	var activePonds int
 	for _, p := range ponds {
 		if p != nil && p.Status == constants.FarmStatusActive {
@@ -70,30 +67,14 @@ func ToFarmResponseListFromFarmWithPonds(list []*model.FarmWithPonds) []*dto.Far
 	return responses
 }
 
-// ToFarmResponseList maps a slice of model.Farm to a slice of dto.FarmResponse
-func ToFarmResponseList(farms []*model.Farm) []*dto.FarmResponse {
-	if farms == nil {
-		return nil
-	}
-	responses := make([]*dto.FarmResponse, 0, len(farms))
-	for _, farm := range farms {
-		responses = append(responses, ToFarmResponse(farm))
-	}
-	return responses
-}
-
 // ToFarmDetailResponse maps model.Farm and its ponds to dto.FarmDetailResponse
 func ToFarmDetailResponse(farm *model.Farm, ponds []*model.Pond) *dto.FarmDetailResponse {
 	if farm == nil {
 		return nil
 	}
-	pondList := ponds
-	if pondList == nil {
-		pondList = []*model.Pond{}
-	}
-	pondItems := make([]dto.FarmDetailPondItem, 0, len(pondList))
+	pondItems := make([]dto.FarmDetailPondItem, 0, len(ponds))
 	var activePonds, maintenancePonds int
-	for _, p := range pondList {
+	for _, p := range ponds {
 		pondItems = append(pondItems, dto.FarmDetailPondItem{Id: p.Id, Name: p.Name, Status: p.Status})
 		switch p.Status {
 		case constants.FarmStatusActive:
@@ -110,12 +91,12 @@ func ToFarmDetailResponse(farm *model.Farm, ponds []*model.Pond) *dto.FarmDetail
 		Id:        farm.Id,
 		ClientId:  farm.ClientId,
 		Name:      farm.Name,
-		Status:    utils.DeriveFarmStatusFromPonds(pondList),
+		Status:    utils.DeriveFarmStatusFromPonds(ponds),
 		CreatedAt: createdAt,
 		Summary: dto.FarmDetailSummary{
 			TotalStock:       0, // FIXME: no stock source yet
 			ActivePonds:      activePonds,
-			TotalPonds:       len(pondList),
+			TotalPonds:       len(ponds),
 			MaintenancePonds: maintenancePonds,
 		},
 		Ponds: pondItems,
@@ -127,19 +108,15 @@ func ToFarmHierarchyItem(farm *model.Farm, ponds []*model.Pond) *dto.FarmHierarc
 	if farm == nil {
 		return nil
 	}
-	pondList := ponds
-	if pondList == nil {
-		pondList = []*model.Pond{}
-	}
-	pondItems := make([]dto.FarmDetailPondItem, 0, len(pondList))
-	for _, p := range pondList {
+	pondItems := make([]dto.FarmDetailPondItem, 0, len(ponds))
+	for _, p := range ponds {
 		pondItems = append(pondItems, dto.FarmDetailPondItem{Id: p.Id, Name: p.Name, Status: p.Status})
 	}
 	return &dto.FarmHierarchyItem{
 		Id:       farm.Id,
 		ClientId: farm.ClientId,
 		Name:     farm.Name,
-		Status:   utils.DeriveFarmStatusFromPonds(pondList),
+		Status:   utils.DeriveFarmStatusFromPonds(ponds),
 		Ponds:    pondItems,
 	}
 }

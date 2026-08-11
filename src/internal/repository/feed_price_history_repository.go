@@ -17,7 +17,9 @@ type FeedPriceHistoryRepository interface {
 	GetByID(id int) (*model.FeedPriceHistory, error)
 	GetByFeedCollectionIdAndDate(feedCollectionId int, priceUpdatedDate time.Time) (*model.FeedPriceHistory, error)
 	ListByFeedCollectionId(feedCollectionId int) ([]*model.FeedPriceHistory, error)
+	ListByFeedCollectionIds(feedCollectionIds []int) ([]*model.FeedPriceHistory, error)
 	Update(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error
+	Delete(ctx context.Context, id int) error
 }
 
 type feedPriceHistoryRepository struct {
@@ -71,6 +73,26 @@ func (r *feedPriceHistoryRepository) ListByFeedCollectionId(feedCollectionId int
 	return feedPriceHistories, err
 }
 
+// ListByFeedCollectionIds returns price history for several feed collections in
+// one query (used by whole-cycle feed-cost aggregation). Returns an empty slice
+// when no ids are given. Callers group and order by FeedCollectionId themselves
+// (see groupPriceHistoryAscending), so no ORDER BY is imposed here.
+func (r *feedPriceHistoryRepository) ListByFeedCollectionIds(feedCollectionIds []int) ([]*model.FeedPriceHistory, error) {
+	if len(feedCollectionIds) == 0 {
+		return []*model.FeedPriceHistory{}, nil
+	}
+	var feedPriceHistories []*model.FeedPriceHistory
+	err := r.db.Where("feed_collection_id IN ? AND deleted_at IS NULL", feedCollectionIds).
+		Find(&feedPriceHistories).Error
+	return feedPriceHistories, err
+}
+
 func (r *feedPriceHistoryRepository) Update(ctx context.Context, feedPriceHistory *model.FeedPriceHistory) error {
 	return r.db.WithContext(ctx).Save(feedPriceHistory).Error
+}
+
+// Delete soft-deletes a price-history row (BaseModel.DeletedAt), so it drops out
+// of every `deleted_at IS NULL` read but stays recoverable.
+func (r *feedPriceHistoryRepository) Delete(ctx context.Context, id int) error {
+	return r.db.WithContext(ctx).Delete(&model.FeedPriceHistory{}, id).Error
 }

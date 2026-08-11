@@ -1,25 +1,21 @@
 package handler
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=MerchantHandler --output=./mocks --outpkg=handler --filename=merchant_handler.go --structname=MockMerchantHandler --with-expecter=false
 type MerchantHandler interface {
-	AddMerchant(c *fiber.Ctx) error
-	GetMerchant(c *fiber.Ctx) error
-	GetMerchantList(c *fiber.Ctx) error
-	UpdateMerchant(c *fiber.Ctx) error
-	DeleteMerchant(c *fiber.Ctx) error
+	AddMerchant(c fiber.Ctx) error
+	GetMerchant(c fiber.Ctx) error
+	GetMerchantList(c fiber.Ctx) error
+	UpdateMerchant(c fiber.Ctx) error
+	DeleteMerchant(c fiber.Ctx) error
 }
 
 type merchantHandlerImpl struct {
@@ -46,31 +42,30 @@ func NewMerchantHandler(merchantService service.MerchantService) MerchantHandler
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant [post]
-func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
+func (h *merchantHandlerImpl) AddMerchant(c fiber.Ctx) error {
 	var createMerchantRequest dto.CreateMerchantRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &createMerchantRequest); err != nil {
 		return err
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	// Client admins manage their own merchant list from the mobile app; the
+	// catalogue is client-scoped operational data, not super-admin master data.
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
-	// Get username
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	newMerchant, err := h.merchantService.Create(c.UserContext(), createMerchantRequest, username)
+	clientId, err := resolveWriteClientId(c, createMerchantRequest.ClientId)
+	if err != nil {
+		return err
+	}
+
+	newMerchant, err := h.merchantService.Create(c.Context(), createMerchantRequest, username, clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -91,18 +86,11 @@ func (h *merchantHandlerImpl) AddMerchant(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant/{id} [get]
-func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *merchantHandlerImpl) GetMerchant(c fiber.Ctx) error {
 
-	// Get id from param
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseParamInt(c, "id", "Invalid merchant ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid merchant ID")
+		return err
 	}
 
 	merchant, err := h.merchantService.Get(id)
@@ -124,14 +112,16 @@ func (h *merchantHandlerImpl) GetMerchant(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant [get]
-func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *merchantHandlerImpl) GetMerchantList(c fiber.Ctx) error {
 
-	merchantList, err := h.merchantService.GetList()
+	// Client-scoped: normal users get their JWT client; super admins get all
+	// (clientId 0) or a specific client via ?clientId=.
+	clientId, err := resolveListClientId(c)
+	if err != nil {
+		return err
+	}
+
+	merchantList, err := h.merchantService.GetList(clientId)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -153,31 +143,23 @@ func (h *merchantHandlerImpl) GetMerchantList(c *fiber.Ctx) error {
 // @Failure      400  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant [put]
-func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
+func (h *merchantHandlerImpl) UpdateMerchant(c fiber.Ctx) error {
 	var updateMerchantRequest dto.UpdateMerchantRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &updateMerchantRequest); err != nil {
 		return err
 	}
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
-	// Get username
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.merchantService.Update(c.UserContext(), updateMerchantRequest, username)
+	err = h.merchantService.Update(c.Context(), updateMerchantRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -200,25 +182,18 @@ func (h *merchantHandlerImpl) UpdateMerchant(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /merchant/{id} [delete]
-func (h *merchantHandlerImpl) DeleteMerchant(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *merchantHandlerImpl) DeleteMerchant(c fiber.Ctx) error {
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAdmin(c); err != nil {
+		return err
 	}
 
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseParamInt(c, "id", "Invalid merchant ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid merchant ID")
+		return err
 	}
 
-	if err := h.merchantService.Delete(c.UserContext(), id); err != nil {
+	if err := h.merchantService.Delete(c.Context(), id); err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 

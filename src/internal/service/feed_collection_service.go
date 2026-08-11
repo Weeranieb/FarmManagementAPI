@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/samber/lo"
 	"github.com/shopspring/decimal"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/constants"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
@@ -59,11 +61,18 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 		return nil, errors.ErrValidationFailed.Wrap(fmt.Errorf("invalid feedType"))
 	}
 
-	var fcr *decimal.Decimal
+	var fcr decimal.NullDecimal
 	if request.Fcr != nil {
-		d := decimal.NewFromFloat(*request.Fcr)
-		fcr = &d
+		fcr = decimal.NullDecimal{Decimal: decimal.NewFromFloat(*request.Fcr), Valid: true}
 	}
+
+	// pack_size_kg is NOT NULL — when the caller omits it, fall back to the
+	// type-based default (fresh 30 / pellet 20 กก.) so the insert always resolves.
+	packSize := constants.DefaultPackSizeKg(feedType)
+	if request.PackSizeKg != nil {
+		packSize = *request.PackSizeKg
+	}
+	packSizeKg := decimal.NullDecimal{Decimal: decimal.NewFromFloat(packSize), Valid: true}
 
 	// Start transaction (ctx used so BaseModel hooks can set CreatedBy/UpdatedBy)
 	tx := s.db.WithContext(ctx).Begin()
@@ -75,11 +84,13 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 
 	// Create feed collection
 	newFeedCollection := &model.FeedCollection{
-		ClientId: clientId,
-		Name:     request.Name,
-		Unit:     request.Unit,
-		FeedType: feedType,
-		Fcr:      fcr,
+		ClientId:   clientId,
+		Name:       request.Name,
+		Unit:       request.Unit,
+		FeedType:   feedType,
+		Fcr:        fcr,
+		PackSizeKg: packSizeKg,
+		Supplier:   normalizeSupplier(request.Supplier),
 	}
 
 	if err := tx.Create(newFeedCollection).Error; err != nil {
@@ -107,12 +118,13 @@ func (s *feedCollectionService) Create(ctx context.Context, request dto.CreateFe
 
 		// Convert to response format
 		for _, ph := range priceHistories {
-			feedPriceHistories = append(feedPriceHistories, map[string]any{
+			entry := map[string]any{
 				"id":               ph.Id,
 				"feedCollectionId": ph.FeedCollectionId,
 				"price":            ph.Price.InexactFloat64(),
 				"priceUpdatedDate": ph.PriceUpdatedDate,
-			})
+			}
+			feedPriceHistories = append(feedPriceHistories, entry)
 		}
 	}
 
@@ -162,8 +174,13 @@ func (s *feedCollectionService) Update(ctx context.Context, request dto.UpdateFe
 		existingFeedCollection.FeedType = request.FeedType
 	}
 	if request.Fcr != nil {
-		d := decimal.NewFromFloat(*request.Fcr)
-		existingFeedCollection.Fcr = &d
+		existingFeedCollection.Fcr = decimal.NullDecimal{Decimal: decimal.NewFromFloat(*request.Fcr), Valid: true}
+	}
+	if request.PackSizeKg != nil {
+		existingFeedCollection.PackSizeKg = decimal.NullDecimal{Decimal: decimal.NewFromFloat(*request.PackSizeKg), Valid: true}
+	}
+	if request.Supplier != nil {
+		existingFeedCollection.Supplier = normalizeSupplier(request.Supplier)
 	}
 
 	// Update feed collection (UpdatedBy set via BaseModel hook from ctx)
@@ -212,9 +229,23 @@ func (s *feedCollectionService) toFeedCollectionResponse(feedCollection *model.F
 		UpdatedAt: feedCollection.UpdatedAt,
 		UpdatedBy: feedCollection.UpdatedBy,
 	}
-	if feedCollection.Fcr != nil {
-		v := feedCollection.Fcr.InexactFloat64()
+	if feedCollection.Fcr.Valid {
+		v := feedCollection.Fcr.Decimal.InexactFloat64()
 		resp.Fcr = &v
 	}
+	if feedCollection.PackSizeKg.Valid {
+		v := feedCollection.PackSizeKg.Decimal.InexactFloat64()
+		resp.PackSizeKg = &v
+	}
+	resp.Supplier = feedCollection.Supplier
 	return resp
+}
+
+// normalizeSupplier trims the optional supplier string, returning nil for a
+// nil or blank value so an empty field is stored as NULL rather than "".
+func normalizeSupplier(s *string) *string {
+	if s == nil {
+		return nil
+	}
+	return lo.EmptyableToPtr(strings.TrimSpace(*s))
 }

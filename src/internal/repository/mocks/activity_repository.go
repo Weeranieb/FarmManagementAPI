@@ -37,6 +37,156 @@ func (_m *MockActivityRepository) Create(ctx context.Context, activity *model.Ac
 	return r0
 }
 
+// ListByPondID provides a mock function with given fields: ctx, pondId
+func (_m *MockActivityRepository) ListByPondID(ctx context.Context, pondId int) ([]repository.ActivityListRow, error) {
+	ret := _m.Called(ctx, pondId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByPondID")
+	}
+
+	var r0 []repository.ActivityListRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]repository.ActivityListRow, error)); ok {
+		return rf(ctx, pondId)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) []repository.ActivityListRow); ok {
+		r0 = rf(ctx, pondId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.ActivityListRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, pondId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListRecentByClientID provides a mock function with given fields: ctx, clientId, limit, before
+func (_m *MockActivityRepository) ListRecentByClientID(ctx context.Context, clientId *int, limit int, before *repository.ActivityFeedCursor) ([]repository.ActivityFeedRow, error) {
+	ret := _m.Called(ctx, clientId, limit, before)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListRecentByClientID")
+	}
+
+	var r0 []repository.ActivityFeedRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *int, int, *repository.ActivityFeedCursor) ([]repository.ActivityFeedRow, error)); ok {
+		return rf(ctx, clientId, limit, before)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *int, int, *repository.ActivityFeedCursor) []repository.ActivityFeedRow); ok {
+		r0 = rf(ctx, clientId, limit, before)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.ActivityFeedRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *int, int, *repository.ActivityFeedCursor) error); ok {
+		r1 = rf(ctx, clientId, limit, before)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListSellDetailsByActivityID provides a mock function with given fields: ctx, activityId, clientId
+func (_m *MockActivityRepository) ListSellDetailsByActivityID(ctx context.Context, activityId int, clientId *int) ([]repository.SellDetailRow, error) {
+	ret := _m.Called(ctx, activityId, clientId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListSellDetailsByActivityID")
+	}
+
+	var r0 []repository.SellDetailRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, *int) ([]repository.SellDetailRow, error)); ok {
+		return rf(ctx, activityId, clientId)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, *int) []repository.SellDetailRow); ok {
+		r0 = rf(ctx, activityId, clientId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.SellDetailRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, *int) error); ok {
+		r1 = rf(ctx, activityId, clientId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// SumAdditionalCostsByActivityIDs provides a mock function with given fields: ctx, activityIds
+func (_m *MockActivityRepository) SumAdditionalCostsByActivityIDs(ctx context.Context, activityIds []int) ([]repository.AdditionalCostTotalRow, error) {
+	ret := _m.Called(ctx, activityIds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SumAdditionalCostsByActivityIDs")
+	}
+
+	var r0 []repository.AdditionalCostTotalRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []int) ([]repository.AdditionalCostTotalRow, error)); ok {
+		return rf(ctx, activityIds)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []int) []repository.AdditionalCostTotalRow); ok {
+		r0 = rf(ctx, activityIds)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.AdditionalCostTotalRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
+		r1 = rf(ctx, activityIds)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// SumSellDetailsByActivityIDs provides a mock function with given fields: ctx, activityIds
+func (_m *MockActivityRepository) SumSellDetailsByActivityIDs(ctx context.Context, activityIds []int) ([]repository.SellTotalRow, error) {
+	ret := _m.Called(ctx, activityIds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SumSellDetailsByActivityIDs")
+	}
+
+	var r0 []repository.SellTotalRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []int) ([]repository.SellTotalRow, error)); ok {
+		return rf(ctx, activityIds)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []int) []repository.SellTotalRow); ok {
+		r0 = rf(ctx, activityIds)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.SellTotalRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
+		r1 = rf(ctx, activityIds)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // WithTx provides a mock function with given fields: tx
 func (_m *MockActivityRepository) WithTx(tx *gorm.DB) repository.ActivityRepository {
 	ret := _m.Called(tx)

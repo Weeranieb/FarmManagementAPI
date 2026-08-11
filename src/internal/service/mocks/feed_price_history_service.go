@@ -44,6 +44,24 @@ func (_m *MockFeedPriceHistoryService) Create(ctx context.Context, request dto.C
 	return r0, r1
 }
 
+// Delete provides a mock function with given fields: ctx, id
+func (_m *MockFeedPriceHistoryService) Delete(ctx context.Context, id int) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Get provides a mock function with given fields: id
 func (_m *MockFeedPriceHistoryService) Get(id int) (*dto.FeedPriceHistoryResponse, error) {
 	ret := _m.Called(id)

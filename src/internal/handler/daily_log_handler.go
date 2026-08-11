@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/service"
@@ -15,11 +13,10 @@ import (
 	"go.uber.org/dig"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=DailyLogHandler --output=./mocks --outpkg=handler --filename=daily_log_handler.go --structname=MockDailyLogHandler --with-expecter=false
 type DailyLogHandler interface {
-	GetMonth(c *fiber.Ctx) error
-	BulkUpsert(c *fiber.Ctx) error
-	UploadTemplate(c *fiber.Ctx) error
+	GetMonth(c fiber.Ctx) error
+	BulkUpsert(c fiber.Ctx) error
+	UploadTemplate(c fiber.Ctx) error
 }
 
 type DailyLogHandlerParams struct {
@@ -46,16 +43,11 @@ func NewDailyLogHandler(p DailyLogHandlerParams) DailyLogHandler {
 // @Param        month query string true "YYYY-MM"
 // @Success      200  {object}  http.ResponseModel{data=dto.DailyLogMonthResponse}
 // @Router       /pond/{pondId}/daily-logs [get]
-func (h *dailyLogHandlerImpl) GetMonth(c *fiber.Ctx) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *dailyLogHandlerImpl) GetMonth(c fiber.Ctx) error {
 
-	pondId, err := strconv.Atoi(c.Params("pondId"))
+	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
 	month := c.Query("month")
@@ -63,7 +55,7 @@ func (h *dailyLogHandlerImpl) GetMonth(c *fiber.Ctx) (err error) {
 		return http.Error(c, errors.ErrValidationFailed.Code, "month query parameter is required (YYYY-MM)")
 	}
 
-	result, err := h.dailyLogService.GetMonth(c.UserContext(), pondId, month)
+	result, err := h.dailyLogService.GetMonth(c.Context(), pondId, month)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -76,18 +68,13 @@ func (h *dailyLogHandlerImpl) GetMonth(c *fiber.Ctx) (err error) {
 // @Tags         pond
 // @Param        pondId path int true "Pond ID"
 // @Param        body body dto.DailyLogBulkUpsertRequest true "Month + optional collection IDs + entries"
-// @Success      200  {object}  http.ResponseModel
+// @Success      200  {object}  http.ResponseModel{data=dto.DailyLogMonthResponse}
 // @Router       /pond/{pondId}/daily-logs [put]
-func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *dailyLogHandlerImpl) BulkUpsert(c fiber.Ctx) error {
 
-	pondId, err := strconv.Atoi(c.Params("pondId"))
+	pondId, err := parseParamInt(c, "pondId", "Invalid pond ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid pond ID")
+		return err
 	}
 
 	var request dto.DailyLogBulkUpsertRequest
@@ -95,17 +82,22 @@ func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.dailyLogService.BulkUpsert(c.UserContext(), pondId, request, username)
+	err = h.dailyLogService.BulkUpsert(c.Context(), pondId, request, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
 
-	return http.SuccessWithoutData(c)
+	result, err := h.dailyLogService.GetMonth(c.Context(), pondId, request.Month)
+	if err != nil {
+		return http.NewError(c, errors.ErrGeneric.Code, err)
+	}
+
+	return http.Success(c, result)
 }
 
 // POST /farm/:farmId/daily-logs/import-template
@@ -116,16 +108,11 @@ func (h *dailyLogHandlerImpl) BulkUpsert(c *fiber.Ctx) (err error) {
 // @Param        file formData file true "xlsx file"
 // @Success      200  {object}  http.ResponseModel{data=dto.DailyLogTemplateImportResponse}
 // @Router       /farm/{farmId}/daily-logs/import-template [post]
-func (h *dailyLogHandlerImpl) UploadTemplate(c *fiber.Ctx) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *dailyLogHandlerImpl) UploadTemplate(c fiber.Ctx) error {
 
-	farmId, err := strconv.Atoi(c.Params("farmId"))
+	farmId, err := parseParamInt(c, "farmId", "Invalid farm ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid farm ID")
+		return err
 	}
 
 	form, err := c.MultipartForm()
@@ -158,12 +145,12 @@ func (h *dailyLogHandlerImpl) UploadTemplate(c *fiber.Ctx) (err error) {
 		return http.NewError(c, errors.ErrGeneric.Code, errors.ErrGeneric.Wrap(err))
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	result, err := h.dailyLogService.ImportFromTemplate(c.UserContext(), farmId, selectedPondIds, fileBytes, username)
+	result, err := h.dailyLogService.ImportFromTemplate(c.Context(), farmId, selectedPondIds, fileBytes, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

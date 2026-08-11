@@ -103,8 +103,19 @@ func (s *dailyLogService) ensureFarmTemplateImportAccess(ctx context.Context, fa
 	return nil
 }
 
-func (s *dailyLogService) resolvePrices(feedCollectionId int, dates []time.Time) (map[time.Time]*decimal.Decimal, error) {
-	history, err := s.feedPriceHistoryRepo.ListByFeedCollectionId(feedCollectionId)
+// resolvePrices returns, per date, the price actually in effect that day (the
+// latest PriceUpdatedDate on or before the date) — or nil when the date
+// predates every recorded price. Both feed types are logged and priced per pack
+// (fresh in ลัง, pellet in ถุง), so the client's quantity × Price is correct
+// without any further conversion.
+//
+// Unlike resolveFeedPrice (used for whole-cycle feed-cost accounting, which
+// falls back to the nearest available price so a pre-history day still
+// contributes a cost), a blank cell here is the correct, honest signal that no
+// price was recorded yet for that day. Do not merge this with resolveFeedPrice
+// — the two callers want different fallbacks.
+func (s *dailyLogService) resolvePrices(fc *model.FeedCollection, dates []time.Time) (map[time.Time]*decimal.Decimal, error) {
+	history, err := s.feedPriceHistoryRepo.ListByFeedCollectionId(fc.Id)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -117,11 +128,12 @@ func (s *dailyLogService) resolvePrices(feedCollectionId int, dates []time.Time)
 	for _, d := range dates {
 		var found *decimal.Decimal
 		for i := len(history) - 1; i >= 0; i-- {
-			if !history[i].PriceUpdatedDate.After(d) {
-				p := history[i].Price
-				found = &p
-				break
+			if history[i].PriceUpdatedDate.After(d) {
+				continue
 			}
+			p := history[i].Price
+			found = &p
+			break
 		}
 		result[d] = found
 	}
@@ -160,7 +172,7 @@ func (s *dailyLogService) validateBulkIDs(req *dto.DailyLogBulkUpsertRequest) er
 	}
 
 	for _, e := range req.Entries {
-		if !e.FreshMorning.IsZero() || !e.FreshEvening.IsZero() {
+		if !e.Fresh.IsZero() {
 			if req.FreshFeedCollectionId == nil || *req.FreshFeedCollectionId <= 0 {
 				return errors.ErrValidationFailed.Wrap(fmt.Errorf("freshFeedCollectionId is required when logging fresh feed amounts"))
 			}
@@ -231,7 +243,7 @@ func (s *dailyLogService) GetMonth(ctx context.Context, pondId int, month string
 		for _, e := range logs {
 			dates = append(dates, e.FeedDate)
 		}
-		freshPriceMap, err = s.resolvePrices(freshFc.Id, dates)
+		freshPriceMap, err = s.resolvePrices(freshFc, dates)
 		if err != nil {
 			return nil, errors.ErrGeneric.Wrap(err)
 		}
@@ -241,7 +253,7 @@ func (s *dailyLogService) GetMonth(ctx context.Context, pondId int, month string
 		for _, e := range logs {
 			dates = append(dates, e.FeedDate)
 		}
-		pelletPriceMap, err = s.resolvePrices(pelletFc.Id, dates)
+		pelletPriceMap, err = s.resolvePrices(pelletFc, dates)
 		if err != nil {
 			return nil, errors.ErrGeneric.Wrap(err)
 		}
@@ -251,8 +263,7 @@ func (s *dailyLogService) GetMonth(ctx context.Context, pondId int, month string
 		er := dto.DailyLogEntryResponse{
 			Id:                e.Id,
 			Day:               utils.CalendarDay(e.FeedDate),
-			FreshMorning:      e.FreshMorning,
-			FreshEvening:      e.FreshEvening,
+			Fresh:             e.Fresh,
 			PelletMorning:     e.PelletMorning,
 			PelletEvening:     e.PelletEvening,
 			DeathFishCount:    e.DeathFishCount,
@@ -304,8 +315,7 @@ func (s *dailyLogService) BulkUpsert(ctx context.Context, pondId int, request dt
 		models = append(models, &model.DailyLog{
 			ActivePondId:      activePondId,
 			FeedDate:          feedDate,
-			FreshMorning:      e.FreshMorning,
-			FreshEvening:      e.FreshEvening,
+			Fresh:             e.Fresh,
 			PelletMorning:     e.PelletMorning,
 			PelletEvening:     e.PelletEvening,
 			DeathFishCount:    e.DeathFishCount,

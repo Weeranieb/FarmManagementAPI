@@ -55,7 +55,9 @@ func NewContainer(conf *config.Config) *dig.Container {
 	mustProvide(c, service.NewFeedCollectionService)
 	mustProvide(c, service.NewFeedPriceHistoryService)
 	mustProvide(c, service.NewFishSizeGradeService)
+	mustProvide(c, service.NewFeedCostCalculator)
 	mustProvide(c, service.NewDailyLogService)
+	mustProvide(c, service.NewActivityService)
 
 	// Handler
 	mustProvide(c, handler.NewUserHandler)
@@ -70,6 +72,7 @@ func NewContainer(conf *config.Config) *dig.Container {
 	mustProvide(c, handler.NewFeedPriceHistoryHandler)
 	mustProvide(c, handler.NewFishSizeGradeHandler)
 	mustProvide(c, handler.NewDailyLogHandler)
+	mustProvide(c, handler.NewActivityHandler)
 	mustProvide(c, handler.NewHandler)
 
 	return c

@@ -1,0 +1,130 @@
+name: Migrate Prod Database
+
+# Applies schema migrations to PRODUCTION. Kept entirely separate from deploys
+# so a code release can never silently mutate the schema. Manual dispatch only,
+# gated by the `prod` GitHub environment (add required reviewers there).
+#
+# The prod DB is bound to 127.0.0.1 on the droplet and is NOT reachable from the
+# internet. This job reaches it exactly the way a human does: over an SSH tunnel.
+# Migrations run as the `sys_admin` role (schema owner) — never the superuser.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Migration command'
+        required: true
+        type: choice
+        options: [up, down]
+        default: up
+      steps:
+        description: 'Optional: number of steps (blank = all for up, 1 for down)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-prod
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply migrations to prod
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Guard — only from main
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "::error::migrate-prod may only run from 'main' (got ${{ github.ref }})"
+            exit 1
+          fi
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install golang-migrate
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/migrate.tar.gz \
+            https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz
+          tar -xzf /tmp/migrate.tar.gz -C /tmp
+          sudo mv /tmp/migrate /usr/local/bin/migrate
+          migrate -version
+
+      - name: Open SSH tunnel to the droplet's Postgres (127.0.0.1:5432)
+        env:
+          SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          SSH_KEY:  ${{ secrets.PROD_SSH_KEY }}
+          SSH_PORT: ${{ secrets.PROD_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          PORT="${SSH_PORT:-22}"
+          ssh-keyscan -p "$PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # Forward local 5432 -> droplet's loopback 5432. Background, fail fast.
+          ssh -f -N -o ExitOnForwardFailure=yes \
+              -i ~/.ssh/id_deploy -p "$PORT" \
+              -L 127.0.0.1:5432:127.0.0.1:5432 \
+              "$SSH_USER@$SSH_HOST"
+          # Wait for the forwarded port to accept connections.
+          for i in $(seq 1 20); do
+            if bash -c '</dev/tcp/127.0.0.1/5432' 2>/dev/null; then
+              echo "tunnel up"; break
+            fi
+            sleep 1
+            [ "$i" = "20" ] && { echo "::error::tunnel never came up"; exit 1; }
+          done
+
+      - name: Print current version (before)
+        env:
+          DATABASE_URL: ${{ secrets.PROD_MIGRATE_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::PROD_MIGRATE_DATABASE_URL secret is not set on the 'prod' environment."
+            echo "         Expected: postgres://sys_admin:PASS@127.0.0.1:5432/boonmafarm?sslmode=disable"
+            exit 1
+          fi
+          echo "Current prod DB version:"
+          migrate -path migrations/dev -database "$DATABASE_URL" version || true
+
+      - name: Execute migration
+        env:
+          DATABASE_URL: ${{ secrets.PROD_MIGRATE_DATABASE_URL }}
+          ACTION: ${{ inputs.action }}
+          STEPS: ${{ inputs.steps }}
+        run: |
+          set -euo pipefail
+          case "$ACTION" in
+            up)
+              if [ -n "$STEPS" ]; then
+                migrate -path migrations/dev -database "$DATABASE_URL" up "$STEPS"
+              else
+                migrate -path migrations/dev -database "$DATABASE_URL" up
+              fi ;;
+            down)
+              N="${STEPS:-1}"
+              migrate -path migrations/dev -database "$DATABASE_URL" down "$N" ;;
+            *)
+              echo "::error::Unknown action: $ACTION"; exit 1 ;;
+          esac
+          # Break-glass (dirty state after a failed migrate, or set version) stays a
+          # manual op over the SSH tunnel: migrate ... force <version>.
+
+      - name: Print new version (after)
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.PROD_MIGRATE_DATABASE_URL }}
+        run: |
+          echo "New prod DB version:"
+          migrate -path migrations/dev -database "$DATABASE_URL" version || true

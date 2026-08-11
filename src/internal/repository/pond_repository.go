@@ -2,13 +2,13 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"time"
 
-	"github.com/shopspring/decimal"
+	"github.com/samber/lo"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/model"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/repository/projection"
+	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -72,12 +72,13 @@ func (r *pondRepository) GetByID(id int) (*model.Pond, error) {
 const pondWithFarmAndActivePondQuery = `
 SELECT
   p.id AS pond_id, p.farm_id AS pond_farm_id, p.name AS pond_name, p.status AS pond_status,
+  p.area_rai AS pond_area_rai,
   p.deleted_at AS pond_deleted_at, p.created_at AS pond_created_at, p.created_by AS pond_created_by,
   p.updated_at AS pond_updated_at, p.updated_by AS pond_updated_by,
   f.client_id,
   ap.id AS ap_id, ap.pond_id AS ap_pond_id, ap.start_date AS ap_start_date, ap.end_date AS ap_end_date,
   ap.is_active AS ap_is_active, ap.total_cost AS ap_total_cost, ap.total_profit AS ap_total_profit,
-  ap.net_result AS ap_net_result, ap.total_fish AS ap_total_fish, ap.fish_types AS ap_fish_types,
+  ap.net_result AS ap_net_result, ap.feed_cost AS ap_feed_cost, ap.total_fish AS ap_total_fish, ap.fish_types AS ap_fish_types,
   ap.fresh_feed_collection_id AS ap_fresh_feed_collection_id,
   ap.pellet_feed_collection_id AS ap_pellet_feed_collection_id,
   ap.created_at AS ap_created_at, ap.created_by AS ap_created_by,
@@ -92,12 +93,13 @@ WHERE p.id = ? AND p.deleted_at IS NULL`
 const pondListWithActivePondQuery = `
 SELECT
   p.id AS pond_id, p.farm_id AS pond_farm_id, p.name AS pond_name, p.status AS pond_status,
+  p.area_rai AS pond_area_rai,
   p.deleted_at AS pond_deleted_at, p.created_at AS pond_created_at, p.created_by AS pond_created_by,
   p.updated_at AS pond_updated_at, p.updated_by AS pond_updated_by,
   f.client_id,
   ap.id AS ap_id, ap.pond_id AS ap_pond_id, ap.start_date AS ap_start_date, ap.end_date AS ap_end_date,
   ap.is_active AS ap_is_active, ap.total_cost AS ap_total_cost, ap.total_profit AS ap_total_profit,
-  ap.net_result AS ap_net_result, ap.total_fish AS ap_total_fish, ap.fish_types AS ap_fish_types,
+  ap.net_result AS ap_net_result, ap.feed_cost AS ap_feed_cost, ap.total_fish AS ap_total_fish, ap.fish_types AS ap_fish_types,
   ap.fresh_feed_collection_id AS ap_fresh_feed_collection_id,
   ap.pellet_feed_collection_id AS ap_pellet_feed_collection_id,
   ap.created_at AS ap_created_at, ap.created_by AS ap_created_by,
@@ -115,6 +117,7 @@ func rowToPondWithFarmAndActivePond(row *projection.PondFillQueryRow) *PondWithF
 		FarmId: row.PondFarmId,
 		Name:   row.PondName,
 		Status: row.PondStatus,
+		Area:   utils.NullDecimalFromStringPtr(row.PondArea),
 		BaseModel: model.BaseModel{
 			DeletedAt: row.PondDeletedAt,
 			CreatedAt: row.PondCreatedAt,
@@ -125,25 +128,10 @@ func rowToPondWithFarmAndActivePond(row *projection.PondFillQueryRow) *PondWithF
 	}
 	out := &PondWithFarmAndActivePond{Pond: pond, ClientId: row.ClientId, LatestActivityDate: row.LatestActivityDate, LatestActivityType: row.LatestActivityType}
 	if row.ApId != nil {
-		totalCost := decimal.Zero
-		if row.ApTotalCost != nil {
-			if d, err := decimal.NewFromString(*row.ApTotalCost); err == nil {
-				totalCost = d
-			}
-		}
-		totalProfit := decimal.Zero
-		if row.ApTotalProfit != nil {
-			if d, err := decimal.NewFromString(*row.ApTotalProfit); err == nil {
-				totalProfit = d
-			}
-		}
-		netResult := decimal.Zero
-		if row.ApNetResult != nil {
-			if d, err := decimal.NewFromString(*row.ApNetResult); err == nil {
-				netResult = d
-			}
-		}
-		fishTypes := parseFishTypesJSON(row.ApFishTypes)
+		totalCost := utils.DecimalFromStringPtrOrZero(row.ApTotalCost)
+		totalProfit := utils.DecimalFromStringPtrOrZero(row.ApTotalProfit)
+		netResult := utils.DecimalFromStringPtrOrZero(row.ApNetResult)
+		fishTypes := utils.StringSliceFromJSONPtr(row.ApFishTypes)
 		ap := &model.ActivePond{
 			Id:                     *row.ApId,
 			PondId:                 *row.ApPondId,
@@ -153,10 +141,11 @@ func rowToPondWithFarmAndActivePond(row *projection.PondFillQueryRow) *PondWithF
 			TotalCost:              totalCost,
 			TotalProfit:            totalProfit,
 			NetResult:              netResult,
-			TotalFish:              ptrToInt(row.ApTotalFish),
+			FeedCost:               utils.NullDecimalFromStringPtr(row.ApFeedCost),
+			TotalFish:              lo.FromPtr(row.ApTotalFish),
 			FishTypes:              fishTypes,
-			FreshFeedCollectionId:  copyIntPtr(row.ApFreshFcId),
-			PelletFeedCollectionId: copyIntPtr(row.ApPelletFcId),
+			FreshFeedCollectionId:  lo.EmptyableToPtr(lo.FromPtr(row.ApFreshFcId)),
+			PelletFeedCollectionId: lo.EmptyableToPtr(lo.FromPtr(row.ApPelletFcId)),
 		}
 		if row.ApCreatedAt != nil && row.ApCreatedBy != nil && row.ApUpdatedAt != nil && row.ApUpdatedBy != nil {
 			ap.BaseModel = model.BaseModel{
@@ -196,32 +185,6 @@ func (r *pondRepository) ListByFarmIdWithActivePond(ctx context.Context, farmId 
 	return out, nil
 }
 
-func ptrToInt(p *int) int {
-	if p == nil {
-		return 0
-	}
-	return *p
-}
-
-func copyIntPtr(p *int) *int {
-	if p == nil {
-		return nil
-	}
-	v := *p
-	return &v
-}
-
-func parseFishTypesJSON(s *string) []string {
-	if s == nil || *s == "" {
-		return nil
-	}
-	var out []string
-	if err := json.Unmarshal([]byte(*s), &out); err != nil {
-		return nil
-	}
-	return out
-}
-
 func (r *pondRepository) GetByFarmIdAndName(farmId int, name string) (*model.Pond, error) {
 	var pond model.Pond
 	err := r.db.Where("farm_id = ? AND name = ? AND deleted_at IS NULL", farmId, name).First(&pond).Error
@@ -253,9 +216,9 @@ func (r *pondRepository) Delete(ctx context.Context, id int) error {
 func (r *pondRepository) CountAllByClient() ([]*model.PondCountPerClient, error) {
 	var rows []*model.PondCountPerClient
 	err := r.db.Raw(
-		"SELECT f.client_id AS client_id, COUNT(*) AS total "+
-			"FROM ponds p JOIN farms f ON p.farm_id = f.id "+
-			"WHERE p.deleted_at IS NULL AND f.deleted_at IS NULL "+
+		"SELECT f.client_id AS client_id, COUNT(*) AS total " +
+			"FROM ponds p JOIN farms f ON p.farm_id = f.id " +
+			"WHERE p.deleted_at IS NULL AND f.deleted_at IS NULL " +
 			"GROUP BY f.client_id",
 	).Scan(&rows).Error
 	if err != nil {

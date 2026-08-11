@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"fmt"
-	"strconv"
 
 	"github.com/weeranieb/boonmafarm-backend/src/internal/dto"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/errors"
@@ -10,16 +8,15 @@ import (
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils"
 	"github.com/weeranieb/boonmafarm-backend/src/internal/utils/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@latest --name=ClientHandler --output=./mocks --outpkg=handler --filename=client_handler.go --structname=MockClientHandler --with-expecter=false
 type ClientHandler interface {
-	AddClient(c *fiber.Ctx) error
-	GetClient(c *fiber.Ctx) error
-	GetClientList(c *fiber.Ctx) error
-	GetClientSummaries(c *fiber.Ctx) error
-	UpdateClient(c *fiber.Ctx) error
+	AddClient(c fiber.Ctx) error
+	GetClient(c fiber.Ctx) error
+	GetClientList(c fiber.Ctx) error
+	GetClientSummaries(c fiber.Ctx) error
+	UpdateClient(c fiber.Ctx) error
 }
 
 type clientHandlerImpl struct {
@@ -47,25 +44,19 @@ func NewClientHandler(clientService service.ClientService) ClientHandler {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client [post]
-func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
+func (h *clientHandlerImpl) AddClient(c fiber.Ctx) error {
 	var createClientRequest dto.CreateClientRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &createClientRequest); err != nil {
 		return err
 	}
 
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	newClient, err := h.clientService.Create(c.UserContext(), createClientRequest, username)
+	newClient, err := h.clientService.Create(c.Context(), createClientRequest, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}
@@ -89,24 +80,16 @@ func (h *clientHandlerImpl) AddClient(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client/{id} [get]
-func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *clientHandlerImpl) GetClient(c fiber.Ctx) error {
 
-	// Get id from param
-	idStr := c.Params("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseParamInt(c, "id", "Invalid client ID")
 	if err != nil {
-		return http.Error(c, errors.ErrValidationFailed.Code, "Invalid client ID")
+		return err
 	}
 
 	// Check if user can access this client
-	canAccess, err := utils.CanAccessClient(c.UserContext(), id)
-	if err != nil || !canAccess {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAccess(c, id); err != nil {
+		return err
 	}
 
 	client, err := h.clientService.Get(id)
@@ -130,16 +113,10 @@ func (h *clientHandlerImpl) GetClient(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client/list [get]
-func (h *clientHandlerImpl) GetClientList(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *clientHandlerImpl) GetClientList(c fiber.Ctx) error {
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
 	dropdown, err := h.clientService.GetClientDropdown()
@@ -163,16 +140,10 @@ func (h *clientHandlerImpl) GetClientList(c *fiber.Ctx) error {
 // @Failure      403  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client/summaries [get]
-func (h *clientHandlerImpl) GetClientSummaries(c *fiber.Ctx) error {
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
+func (h *clientHandlerImpl) GetClientSummaries(c fiber.Ctx) error {
 
-	isSuperAdmin, err := utils.IsSuperAdmin(c.UserContext())
-	if err != nil || !isSuperAdmin {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireSuperAdmin(c); err != nil {
+		return err
 	}
 
 	summaries, err := h.clientService.GetSummaries()
@@ -199,32 +170,24 @@ func (h *clientHandlerImpl) GetClientSummaries(c *fiber.Ctx) error {
 // @Failure      404  {object}  http.ErrorResponseModel
 // @Failure      500  {object}  http.ErrorResponseModel
 // @Router       /client [put]
-func (h *clientHandlerImpl) UpdateClient(c *fiber.Ctx) error {
+func (h *clientHandlerImpl) UpdateClient(c fiber.Ctx) error {
 	var updateClient dto.UpdateClientRequest
-
-	defer func() {
-		if r := recover(); r != nil {
-			_ = http.Error(c, errors.ErrGeneric.Code, fmt.Sprintf("%s: %v", errors.ErrGeneric.Message, r))
-		}
-	}()
 
 	if err := validateAndParse(c, &updateClient); err != nil {
 		return err
 	}
 
 	// Check if user can access this client
-	canAccess, err := utils.CanAccessClient(c.UserContext(), updateClient.Id)
-	if err != nil || !canAccess {
-		return http.Error(c, errors.ErrAuthPermissionDenied.Code, errors.ErrAuthPermissionDenied.Message)
+	if err := requireClientAccess(c, updateClient.Id); err != nil {
+		return err
 	}
 
-	// Get username
-	username, err := utils.GetUsername(c.UserContext())
+	username, err := utils.GetUsername(c.Context())
 	if err != nil {
 		return http.Error(c, errors.ErrAuthTokenInvalid.Code, errors.ErrAuthTokenInvalid.Message)
 	}
 
-	err = h.clientService.Update(c.UserContext(), updateClient, username)
+	err = h.clientService.Update(c.Context(), updateClient, username)
 	if err != nil {
 		return http.NewError(c, errors.ErrGeneric.Code, err)
 	}

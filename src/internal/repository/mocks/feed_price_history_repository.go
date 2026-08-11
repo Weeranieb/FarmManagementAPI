@@ -52,6 +52,24 @@ func (_m *MockFeedPriceHistoryRepository) CreateBatch(ctx context.Context, feedP
 	return r0
 }
 
+// Delete provides a mock function with given fields: ctx, id
+func (_m *MockFeedPriceHistoryRepository) Delete(ctx context.Context, id int) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetByFeedCollectionIdAndDate provides a mock function with given fields: feedCollectionId, priceUpdatedDate
 func (_m *MockFeedPriceHistoryRepository) GetByFeedCollectionIdAndDate(feedCollectionId int, priceUpdatedDate time.Time) (*model.FeedPriceHistory, error) {
 	ret := _m.Called(feedCollectionId, priceUpdatedDate)
@@ -135,6 +153,36 @@ func (_m *MockFeedPriceHistoryRepository) ListByFeedCollectionId(feedCollectionI
 
 	if rf, ok := ret.Get(1).(func(int) error); ok {
 		r1 = rf(feedCollectionId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListByFeedCollectionIds provides a mock function with given fields: feedCollectionIds
+func (_m *MockFeedPriceHistoryRepository) ListByFeedCollectionIds(feedCollectionIds []int) ([]*model.FeedPriceHistory, error) {
+	ret := _m.Called(feedCollectionIds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByFeedCollectionIds")
+	}
+
+	var r0 []*model.FeedPriceHistory
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]int) ([]*model.FeedPriceHistory, error)); ok {
+		return rf(feedCollectionIds)
+	}
+	if rf, ok := ret.Get(0).(func([]int) []*model.FeedPriceHistory); ok {
+		r0 = rf(feedCollectionIds)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.FeedPriceHistory)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func([]int) error); ok {
+		r1 = rf(feedCollectionIds)
 	} else {
 		r1 = ret.Error(1)
 	}
