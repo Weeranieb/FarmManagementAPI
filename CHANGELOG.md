@@ -9,6 +9,13 @@ Linear issue references use the `FAR-N` format and link to https://linear.app/fa
 
 ---
 
+## [0.2.14](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.13...v0.2.14) (2026-08-11)
+
+
+### Features
+
+* **deploy:** self-host production on DigitalOcean droplet ([#59](https://github.com/Weeranieb/FarmManagementAPI/issues/59)) ([37f6550](https://github.com/Weeranieb/FarmManagementAPI/commit/37f65507c58c924444ef29f900ffae96fbc4cf0e))
+
 ## [0.2.13](https://github.com/Weeranieb/FarmManagementAPI/compare/v0.2.12...v0.2.13) (2026-08-05)
 
 
