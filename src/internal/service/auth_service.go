@@ -17,6 +17,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// bcryptCost is the work factor for password hashing. 12 exceeds the library
+// default (10) to meet the production security baseline. Raising it affects only
+// newly created/updated hashes — existing hashes still verify, because bcrypt
+// embeds the cost in each hash.
+const bcryptCost = 12
+
 //go:generate go run github.com/vektra/mockery/v2@latest --name=AuthService --output=./mocks --outpkg=service --filename=auth_service.go --structname=MockAuthService --with-expecter=false
 type AuthService interface {
 	Register(request dto.RegisterRequest) (*dto.UserResponse, error)
@@ -54,7 +60,7 @@ func (s *authService) Register(request dto.RegisterRequest) (*dto.UserResponse, 
 	}
 
 	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcryptCost)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}

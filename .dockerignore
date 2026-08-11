@@ -1,0 +1,25 @@
+# Keep the build context small and secret-free.
+.git
+.github
+deploy
+tmp
+bin
+data
+vendor
+
+# Local secrets / env — never bake these into an image.
+.env
+**/.env
+config/.env
+configuration/config.env
+
+# Coverage & docs artifacts not needed to build the server binary.
+coverage.out
+coverage.html
+*.md
+
+# Editor / OS cruft
+.vscode
+.idea
+.DS_Store
+Thumbs.db

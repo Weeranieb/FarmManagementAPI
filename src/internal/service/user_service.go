@@ -78,7 +78,7 @@ func (s *userService) Create(ctx context.Context, request dto.CreateUserRequest,
 	}
 
 	// hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcryptCost)
 	if err != nil {
 		return nil, errors.ErrGeneric.Wrap(err)
 	}
@@ -285,7 +285,7 @@ func (s *userService) AdminResetPassword(ctx context.Context, userId int, reques
 		return err
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcryptCost)
 	if err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
@@ -313,7 +313,7 @@ func (s *userService) ChangePassword(ctx context.Context, userId int, request dt
 		return errors.ErrAuthInvalidCredentials
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), bcryptCost)
 	if err != nil {
 		return errors.ErrGeneric.Wrap(err)
 	}
